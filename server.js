@@ -1032,26 +1032,49 @@ app.post('/api/vnc/start', async (req, res) => {
     
     console.log('Starting websockify...');
     
-    // Start websockify process
+    // Kill any existing websockify processes
+    try {
+      const { exec } = await import('child_process');
+      if (process.platform === 'win32') {
+        exec('taskkill /f /im python.exe', () => {});
+      } else {
+        exec('pkill -f websockify', () => {});
+      }
+    } catch (error) {
+      console.log('No existing websockify processes to kill');
+    }
+    
+    // Start websockify process with better error handling
     const websockifyProcess = spawn('python', [
       '-m', 'websockify',
       webPort.toString(),
       `${host}:${port}`,
       '--web', novncDir,
-      '--verbose'
+      '--verbose',
+      '--log-file', 'websockify.log'
     ], {
       cwd: novncDir,
       detached: true,
-      stdio: 'ignore'
+      stdio: ['ignore', 'pipe', 'pipe']
     });
     
     console.log(`Websockify started with PID: ${websockifyProcess.pid}`);
     
-    // Wait for noVNC to start
+    // Wait for noVNC to start with better checking
     setTimeout(async () => {
       const newStatus = await checkNovncStatus();
       console.log(`noVNC status: ${newStatus}`);
-    }, 2000);
+      
+      if (!newStatus) {
+        console.log('noVNC failed to start, checking logs...');
+        try {
+          const logContent = fs.readFileSync('websockify.log', 'utf8');
+          console.log('Websockify log:', logContent);
+        } catch (error) {
+          console.log('No log file found');
+        }
+      }
+    }, 3000);
     
     res.json({
       success: true,

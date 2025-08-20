@@ -173,9 +173,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
     savePinnedComputers(pinnedMachineIDs);
   };
 
-  const handleVNC = async (ip: string) => {
+  const handleVNC = async (ip: string, computerName: string) => {
     try {
-      console.log(`Starting VNC for IP: ${ip}`);
+      console.log(`Starting VNC for IP: ${ip} (${computerName})`);
       
       // Start noVNC
       const response = await fetch(API_CONFIG.VNC_START, {
@@ -204,7 +204,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
         
         toast({
           title: "VNC Started",
-          description: `Connecting to ${ip}...`,
+          description: `Connecting to ${computerName} (${ip})...`,
         });
       } else {
         console.error('Failed to start noVNC:', data.message);

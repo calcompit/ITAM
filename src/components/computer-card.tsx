@@ -58,69 +58,24 @@ export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardPr
       
       <CardContent>
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Primary IP</span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onVNC && computer.ipAddresses[0]) {
-                    onVNC(computer.ipAddresses[0], computer.computerName);
-                  }
-                }}
-                className="h-auto p-1 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                title={`VNC to ${computer.ipAddresses[0] || 'N/A'}`}
-                disabled={!computer.ipAddresses[0]}
-              >
-                <ClickableText 
-                  text={computer.ipAddresses[0] || "N/A"} 
-                  title="Click to VNC to this IP"
-                  className="text-sm font-mono text-foreground hover:text-blue-600 dark:hover:text-blue-400"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                {onVNC && computer.ipAddresses[0] && (
-                  <Eye className="h-3 w-3 text-blue-500 ml-1" />
-                )}
-              </Button>
-            </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Monitor className="h-4 w-4" />
+            <span>IP Addresses:</span>
           </div>
-          
-          {computer.ipAddresses.length > 1 && (
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground font-medium">All IP Addresses:</div>
-              {computer.ipAddresses.slice(1).map((ip, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">IP {index + 2}</span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onVNC) {
-                          onVNC(ip, computer.computerName);
-                        }
-                      }}
-                      className="h-auto p-1 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                      title={`VNC to ${ip}`}
-                    >
-                      <ClickableText 
-                        text={ip} 
-                        title="Click to VNC to this IP"
-                        className="text-xs font-mono text-foreground hover:text-blue-600 dark:hover:text-blue-400"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      {onVNC && (
-                        <Eye className="h-3 w-3 text-blue-500 ml-1" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {computer.ipAddresses.map((ip, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => onVNC(ip, computer.computerName)}
+              >
+                <Eye className="h-3 w-3 mr-1" />
+                {ip}
+              </Button>
+            ))}
+          </div>
           
           {/* Status with relative time */}
           <div className="text-xs">
