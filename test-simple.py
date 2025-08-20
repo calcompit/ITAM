@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple websockify test without web directory
+Main websockify test script
 """
 import subprocess
 import sys
@@ -17,9 +17,9 @@ def check_port(port):
     except OSError:
         return False
 
-def test_websockify_simple():
-    """Test websockify without web directory"""
-    print("=== Simple Websockify Test ===")
+def test_websockify():
+    """Test websockify functionality"""
+    print("=== Websockify Test ===")
     
     # Check Python
     print(f"Python version: {sys.version}")
@@ -49,8 +49,8 @@ def test_websockify_simple():
         print("❌ Port 6081 is in use")
         return False
     
-    # Test websockify command without --web
-    print("\nTesting websockify command (simple mode)...")
+    # Test websockify command (simple mode without --web)
+    print("\nTesting websockify command...")
     try:
         cmd = [
             sys.executable, "-m", "websockify",
@@ -80,7 +80,7 @@ def test_websockify_simple():
             # Kill the process
             process.terminate()
             process.wait()
-            print("✅ Simple websockify test completed successfully")
+            print("✅ Websockify test completed successfully")
             return True
         else:
             stdout, stderr = process.communicate()
@@ -94,9 +94,9 @@ def test_websockify_simple():
         return False
 
 if __name__ == "__main__":
-    success = test_websockify_simple()
+    success = test_websockify()
     if success:
-        print("\n🎉 Simple test passed!")
+        print("\n🎉 Test passed!")
         print("\n✅ Websockify is working correctly!")
         print("\n📋 Next steps:")
         print("1. Start the application: start.bat")
@@ -105,9 +105,10 @@ if __name__ == "__main__":
         print("4. VNC will open at: http://localhost:6081/vnc.html")
         print("5. Use password: 123")
     else:
-        print("\n❌ Simple test failed!")
+        print("\n❌ Test failed!")
         print("\n🔧 Troubleshooting:")
         print("1. Check if noVNC directory exists")
         print("2. Run: pip install websockify")
         print("3. Check if port 6081 is available")
+        print("4. Run: setup-novnc.bat")
         sys.exit(1)

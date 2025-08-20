@@ -37,11 +37,7 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 
 3. **Test websockify:**
    ```bash
-   # Use the simple test (recommended)
    python test-simple.py
-   
-   # Or use the full test
-   python test-websockify.py
    ```
 
 4. **Start the application:**
@@ -101,7 +97,7 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 - **"noVNC directory not found"**: Run `setup-novnc.bat`
 - **"websockify not found"**: Run `pip install websockify`
 - **Port 6081 in use**: Kill existing noVNC processes
-- **Test fails**: Use `python test-simple.py` instead of `test-websockify.py`
+- **Test fails**: Check noVNC installation and websockify setup
 
 ## Development
 
@@ -115,8 +111,7 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 ├── server.js              # Backend server
 ├── noVNC/                 # noVNC installation
 ├── setup-novnc.bat        # noVNC setup script
-├── test-simple.py         # Simple websockify test
-├── test-websockify.py     # Full websockify test
+├── test-simple.py         # Websockify test script
 ├── quick-start.bat        # Quick start script
 └── start.bat              # Application startup script
 ```
