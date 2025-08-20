@@ -210,10 +210,15 @@ const server = http.createServer((req, res) => {
                             ctx.fillStyle = '#ffffff';
                             ctx.fillText('Screen size: ' + (data.width || 'Unknown') + 'x' + (data.height || 'Unknown'), canvas.width / 2, canvas.height / 2);
                             ctx.fillText('Data received: ' + (data.dataLength || 0) + ' bytes', canvas.width / 2, canvas.height / 2 + 30);
+                            ctx.fillStyle = '#ffff00';
+                            ctx.fillText('Note: Mouse/Keyboard input is logged but not sent to VNC server', canvas.width / 2, canvas.height / 2 + 60);
                         } else if (data.type === 'error') {
                             document.getElementById('screen-status').textContent = 'Error: ' + data.message;
                             ctx.fillStyle = '#ff0000';
                             ctx.fillText('VNC Error: ' + data.message, canvas.width / 2, canvas.height / 2);
+                        } else if (data.type === 'input_ack') {
+                            // Input acknowledged - just log it
+                            console.log('Input acknowledged:', data.message);
                         }
                     } catch (e) {
                         console.log('Raw data received:', event.data);
@@ -289,6 +294,7 @@ const server = http.createServer((req, res) => {
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 
+                // Send mouse event via WebSocket (not directly to VNC)
                 ws.send(JSON.stringify({
                     type: 'mouse',
                     action: 'mousedown',
@@ -305,6 +311,7 @@ const server = http.createServer((req, res) => {
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 
+                // Send mouse event via WebSocket (not directly to VNC)
                 ws.send(JSON.stringify({
                     type: 'mouse',
                     action: 'mouseup',
@@ -321,6 +328,7 @@ const server = http.createServer((req, res) => {
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 
+                // Send mouse event via WebSocket (not directly to VNC)
                 ws.send(JSON.stringify({
                     type: 'mouse',
                     action: 'mousemove',
@@ -333,6 +341,7 @@ const server = http.createServer((req, res) => {
         // Handle keyboard events
         document.addEventListener('keydown', function(e) {
             if (isConnected && ws) {
+                // Send keyboard event via WebSocket (not directly to VNC)
                 ws.send(JSON.stringify({
                     type: 'key',
                     action: 'keydown',
@@ -344,6 +353,7 @@ const server = http.createServer((req, res) => {
         
         document.addEventListener('keyup', function(e) {
             if (isConnected && ws) {
+                // Send keyboard event via WebSocket (not directly to VNC)
                 ws.send(JSON.stringify({
                     type: 'key',
                     action: 'keyup',
@@ -476,12 +486,18 @@ wss.on('connection', (ws, req) => {
         });
         
       } else if (message.type === 'mouse' || message.type === 'key') {
-        // Forward input events to VNC server
-        if (vncSocket && vncSocket.writable) {
-          // Convert to VNC protocol format (simplified)
-          const vncMessage = Buffer.from(JSON.stringify(message));
-          vncSocket.write(vncMessage);
-        }
+        // Log input events but don't forward to VNC server yet
+        console.log('Input event received:', message.type, message.action);
+        
+        // For now, just acknowledge the input without sending to VNC
+        // This prevents ECONNRESET errors
+        ws.send(JSON.stringify({
+          type: 'input_ack',
+          message: 'Input received: ' + message.type + ' ' + message.action
+        }));
+        
+        // TODO: Implement proper VNC protocol input handling
+        // This requires proper VNC protocol encoding for mouse/keyboard events
       }
       
     } catch (error) {
