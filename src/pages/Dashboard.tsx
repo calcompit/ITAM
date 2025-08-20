@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Filter, Monitor, AlertTriangle, CheckCircle } from "lucide-react";
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardProps {
   activeTab: string;
@@ -27,6 +28,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const { toast } = useToast();
   
   // VNC state
   const [vncOpen, setVncOpen] = useState(false);
@@ -156,6 +158,27 @@ export function Dashboard({ activeTab }: DashboardProps) {
   };
 
   const handleVNC = (ip: string, computerName: string) => {
+    // Open noVNC directly to the selected IP
+    const novncUrl = `http://localhost:6081/vnc.html?host=${ip}&port=5900`;
+    
+    // Try to open in new tab
+    const newWindow = window.open(novncUrl, '_blank');
+    
+    if (newWindow) {
+      toast({
+        title: "VNC Connection",
+        description: `Opening VNC to ${computerName} (${ip})`,
+      });
+    } else {
+      // Fallback: show alert if popup is blocked
+      toast({
+        title: "VNC Connection",
+        description: `Please copy and paste this URL: ${novncUrl}`,
+        variant: "destructive",
+      });
+    }
+    
+    // Also set the state for the modal (if needed)
     setVncIp(ip);
     setVncComputerName(computerName);
     setVncOpen(true);
