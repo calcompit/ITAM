@@ -110,11 +110,20 @@
 
         // Auto-connect when page loads
         window.addEventListener('load', () => {
-            // Load noVNC library
+            // Load noVNC library from unpkg
             const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/lib/rfb.min.js';
+            script.src = 'https://unpkg.com/@novnc/novnc@1.4.0/lib/rfb.min.js';
             script.onload = () => {
                 setTimeout(connectVNC, 1000);
+            };
+            script.onerror = () => {
+                // Fallback to alternative CDN
+                const script2 = document.createElement('script');
+                script2.src = 'https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/lib/rfb.min.js';
+                script2.onload = () => {
+                    setTimeout(connectVNC, 1000);
+                };
+                document.head.appendChild(script2);
             };
             document.head.appendChild(script);
         });

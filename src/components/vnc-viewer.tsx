@@ -55,12 +55,12 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
     window.open(webVncUrl, '_blank', 'width=1024,height=768');
   };
 
-  // Auto-open Web VNC when dialog opens
+  // Auto-open VNC app when dialog opens
   React.useEffect(() => {
     if (isOpen) {
-      // Auto-open Web VNC instead of checking VNC app
+      // Auto-open VNC app instead of Web VNC
       setTimeout(() => {
-        handleWebVNC();
+        handleVNCApp();
         onClose();
       }, 1000);
     }
