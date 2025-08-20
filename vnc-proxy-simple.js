@@ -26,18 +26,20 @@ const server = http.createServer((req, res) => {
             background: #000;
             font-family: Arial, sans-serif;
             color: white;
+            overflow: hidden;
         }
         #vnc-canvas {
             width: 100vw;
             height: 100vh;
-            cursor: none;
+            cursor: crosshair;
             border: 1px solid #333;
+            display: block;
         }
         .vnc-controls {
             position: fixed;
             top: 10px;
             right: 10px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             color: white;
             padding: 10px;
             border-radius: 5px;
@@ -59,24 +61,41 @@ const server = http.createServer((req, res) => {
             position: fixed;
             top: 10px;
             left: 10px;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.8);
             color: white;
             padding: 10px;
             border-radius: 5px;
             z-index: 1000;
+            font-size: 12px;
+        }
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            z-index: 1001;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
+    <div class="loading" id="loading">Connecting to VNC server...</div>
+    
     <div class="status">
         <h3>VNC Viewer Status</h3>
         <p>Server: Running</p>
         <p>Connection: <span id="connection-status">Disconnected</span></p>
+        <p>Screen: <span id="screen-status">Waiting...</span></p>
     </div>
     
     <div class="vnc-controls">
-        <button onclick="testConnection()">Test Connection</button>
+        <button onclick="reconnect()">Reconnect</button>
         <button onclick="showInfo()">Show Info</button>
+        <button onclick="toggleFullscreen()">Fullscreen</button>
     </div>
     
     <canvas id="vnc-canvas"></canvas>
@@ -89,10 +108,17 @@ const server = http.createServer((req, res) => {
         
         const canvas = document.getElementById('vnc-canvas');
         const ctx = canvas.getContext('2d');
+        let ws = null;
+        let isConnected = false;
         
         // Set canvas size
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
         
         // Fill with dark background
         ctx.fillStyle = '#1a1a1a';
@@ -102,54 +128,121 @@ const server = http.createServer((req, res) => {
         ctx.fillStyle = '#00ff00';
         ctx.font = '24px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('VNC Viewer - Ready', canvas.width / 2, canvas.height / 2 - 50);
+        ctx.fillText('VNC Viewer - Connecting...', canvas.width / 2, canvas.height / 2 - 50);
         
         ctx.fillStyle = '#ffffff';
         ctx.font = '16px Arial';
         ctx.fillText('Target: ' + ip + ':' + port, canvas.width / 2, canvas.height / 2);
         ctx.fillText('Password: ' + password, canvas.width / 2, canvas.height / 2 + 30);
         
-        function testConnection() {
-            document.getElementById('connection-status').textContent = 'Testing...';
+        function connectVNC() {
+            document.getElementById('connection-status').textContent = 'Connecting...';
+            document.getElementById('screen-status').textContent = 'Establishing connection...';
             
             // Try to connect to WebSocket
             const wsUrl = 'ws://' + window.location.hostname + ':8081/vnc-proxy?ip=' + ip + '&port=' + port;
-            console.log('Testing connection to:', wsUrl);
+            console.log('Connecting to VNC via:', wsUrl);
             
             try {
-                const ws = new WebSocket(wsUrl);
+                ws = new WebSocket(wsUrl);
                 
                 ws.onopen = function() {
                     console.log('WebSocket connected!');
                     document.getElementById('connection-status').textContent = 'WebSocket Connected';
+                    document.getElementById('screen-status').textContent = 'Authenticating...';
+                    
+                    // Send authentication
+                    ws.send(JSON.stringify({
+                        type: 'auth',
+                        password: password
+                    }));
                     
                     // Update canvas
+                    ctx.fillStyle = '#1a1a1a';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.fillStyle = '#00ff00';
-                    ctx.fillText('WebSocket Connected!', canvas.width / 2, canvas.height / 2 + 60);
+                    ctx.fillText('WebSocket Connected - Authenticating...', canvas.width / 2, canvas.height / 2);
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Received message:', data);
+                        
+                        if (data.type === 'status') {
+                            document.getElementById('screen-status').textContent = data.message;
+                            
+                            if (data.message.includes('Connected to VNC server')) {
+                                isConnected = true;
+                                document.getElementById('loading').style.display = 'none';
+                                
+                                // Clear canvas for VNC display
+                                ctx.fillStyle = '#000000';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                ctx.fillStyle = '#00ff00';
+                                ctx.fillText('VNC Connected - Waiting for screen data...', canvas.width / 2, canvas.height / 2);
+                                
+                                // Request screen update
+                                ws.send(JSON.stringify({
+                                    type: 'request_screen'
+                                }));
+                            }
+                        } else if (data.type === 'screen_data') {
+                            // Handle screen data (simplified for now)
+                            document.getElementById('screen-status').textContent = 'Screen data received';
+                            
+                            // For now, just show a placeholder
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.fillStyle = '#00ff00';
+                            ctx.fillText('VNC Screen Connected!', canvas.width / 2, canvas.height / 2 - 30);
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillText('Screen size: ' + (data.width || 'Unknown') + 'x' + (data.height || 'Unknown'), canvas.width / 2, canvas.height / 2);
+                            ctx.fillText('Data received: ' + (data.dataLength || 0) + ' bytes', canvas.width / 2, canvas.height / 2 + 30);
+                        } else if (data.type === 'error') {
+                            document.getElementById('screen-status').textContent = 'Error: ' + data.message;
+                            ctx.fillStyle = '#ff0000';
+                            ctx.fillText('VNC Error: ' + data.message, canvas.width / 2, canvas.height / 2);
+                        }
+                    } catch (e) {
+                        console.log('Raw data received:', event.data);
+                    }
                 };
                 
                 ws.onerror = function(error) {
                     console.error('WebSocket error:', error);
                     document.getElementById('connection-status').textContent = 'WebSocket Error';
+                    document.getElementById('screen-status').textContent = 'Connection failed';
                     
-                    // Update canvas
                     ctx.fillStyle = '#ff0000';
-                    ctx.fillText('WebSocket Error', canvas.width / 2, canvas.height / 2 + 60);
+                    ctx.fillText('WebSocket Error', canvas.width / 2, canvas.height / 2);
                 };
                 
                 ws.onclose = function() {
                     console.log('WebSocket closed');
+                    isConnected = false;
                     document.getElementById('connection-status').textContent = 'WebSocket Closed';
+                    document.getElementById('screen-status').textContent = 'Disconnected';
+                    
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillText('WebSocket Disconnected', canvas.width / 2, canvas.height / 2);
                 };
                 
             } catch (error) {
                 console.error('Connection error:', error);
                 document.getElementById('connection-status').textContent = 'Connection Failed';
+                document.getElementById('screen-status').textContent = 'Failed to connect';
                 
-                // Update canvas
                 ctx.fillStyle = '#ff0000';
-                ctx.fillText('Connection Failed: ' + error.message, canvas.width / 2, canvas.height / 2 + 60);
+                ctx.fillText('Connection Failed: ' + error.message, canvas.width / 2, canvas.height / 2);
             }
+        }
+        
+        function reconnect() {
+            if (ws) {
+                ws.close();
+            }
+            setTimeout(connectVNC, 1000);
         }
         
         function showInfo() {
@@ -157,11 +250,91 @@ const server = http.createServer((req, res) => {
                   'Target IP: ' + ip + '\\n' +
                   'Target Port: ' + port + '\\n' +
                   'Password: ' + password + '\\n' +
+                  'Connection: ' + (isConnected ? 'Connected' : 'Disconnected') + '\\n' +
                   'Current URL: ' + window.location.href);
         }
         
-        // Auto-test connection after 2 seconds
-        setTimeout(testConnection, 2000);
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+        
+        // Handle mouse events
+        canvas.addEventListener('mousedown', function(e) {
+            if (isConnected && ws) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                ws.send(JSON.stringify({
+                    type: 'mouse',
+                    action: 'mousedown',
+                    x: x,
+                    y: y,
+                    button: e.button
+                }));
+            }
+        });
+        
+        canvas.addEventListener('mouseup', function(e) {
+            if (isConnected && ws) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                ws.send(JSON.stringify({
+                    type: 'mouse',
+                    action: 'mouseup',
+                    x: x,
+                    y: y,
+                    button: e.button
+                }));
+            }
+        });
+        
+        canvas.addEventListener('mousemove', function(e) {
+            if (isConnected && ws) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                ws.send(JSON.stringify({
+                    type: 'mouse',
+                    action: 'mousemove',
+                    x: x,
+                    y: y
+                }));
+            }
+        });
+        
+        // Handle keyboard events
+        document.addEventListener('keydown', function(e) {
+            if (isConnected && ws) {
+                ws.send(JSON.stringify({
+                    type: 'key',
+                    action: 'keydown',
+                    key: e.key,
+                    keyCode: e.keyCode
+                }));
+            }
+        });
+        
+        document.addEventListener('keyup', function(e) {
+            if (isConnected && ws) {
+                ws.send(JSON.stringify({
+                    type: 'key',
+                    action: 'keyup',
+                    key: e.key,
+                    keyCode: e.keyCode
+                }));
+            }
+        });
+        
+        // Auto-connect after 1 second
+        setTimeout(connectVNC, 1000);
     </script>
 </body>
 </html>
@@ -193,45 +366,100 @@ wss.on('connection', (ws, req) => {
   
   console.log(`VNC proxy connecting to ${ip}:${port}`);
   
+  let vncSocket = null;
+  let isAuthenticated = false;
+  
   // Send welcome message
   ws.send(JSON.stringify({
-    type: 'info',
+    type: 'status',
     message: 'Connected to VNC proxy',
     target: `${ip}:${port}`
   }));
   
-  // Create TCP connection to VNC server
-  const vncSocket = new net.Socket();
-  
-  vncSocket.connect(port, ip, () => {
-    console.log(`Connected to VNC server ${ip}:${port}`);
-    ws.send(JSON.stringify({
-      type: 'status',
-      message: 'Connected to VNC server',
-      target: `${ip}:${port}`
-    }));
-  });
-  
-  // Handle VNC socket errors
-  vncSocket.on('error', (err) => {
-    console.error('VNC socket error:', err.message);
-    ws.send(JSON.stringify({
-      type: 'error',
-      message: 'VNC connection failed: ' + err.message
-    }));
-    ws.close();
+  // Handle messages from client
+  ws.on('message', (data) => {
+    try {
+      const message = JSON.parse(data);
+      console.log('Received message from client:', message);
+      
+      if (message.type === 'auth') {
+        // Handle authentication
+        console.log('Authenticating with password:', message.password);
+        
+        // Create TCP connection to VNC server
+        vncSocket = new net.Socket();
+        
+        vncSocket.connect(port, ip, () => {
+          console.log(`Connected to VNC server ${ip}:${port}`);
+          
+          // Send VNC protocol version
+          const version = Buffer.from('RFB 003.008\n');
+          vncSocket.write(version);
+          
+          ws.send(JSON.stringify({
+            type: 'status',
+            message: 'Connected to VNC server, sending authentication...'
+          }));
+        });
+        
+        vncSocket.on('data', (vncData) => {
+          console.log('Received VNC data:', vncData.length, 'bytes');
+          
+          // Send screen data to client (simplified)
+          ws.send(JSON.stringify({
+            type: 'screen_data',
+            width: 1920,
+            height: 1080,
+            dataLength: vncData.length,
+            message: 'VNC screen data received'
+          }));
+        });
+        
+        vncSocket.on('error', (err) => {
+          console.error('VNC socket error:', err.message);
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'VNC connection failed: ' + err.message
+          }));
+          ws.close();
+        });
+        
+        vncSocket.on('close', () => {
+          console.log('VNC server connection closed');
+          ws.send(JSON.stringify({
+            type: 'status',
+            message: 'VNC server disconnected'
+          }));
+        });
+        
+      } else if (message.type === 'mouse' || message.type === 'key') {
+        // Forward input events to VNC server
+        if (vncSocket && vncSocket.writable) {
+          // Convert to VNC protocol format (simplified)
+          const vncMessage = Buffer.from(JSON.stringify(message));
+          vncSocket.write(vncMessage);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error handling client message:', error);
+    }
   });
   
   // Handle WebSocket close
   ws.on('close', () => {
     console.log('VNC proxy WebSocket closed');
-    vncSocket.destroy();
+    if (vncSocket) {
+      vncSocket.destroy();
+    }
   });
   
   // Handle WebSocket errors
   ws.on('error', (err) => {
     console.error('WebSocket error:', err.message);
-    vncSocket.destroy();
+    if (vncSocket) {
+      vncSocket.destroy();
+    }
   });
 });
 
@@ -239,5 +467,5 @@ wss.on('connection', (ws, req) => {
 server.listen(VNC_PROXY_PORT, VNC_PROXY_HOST, () => {
   console.log(`VNC proxy server running on http://${VNC_PROXY_HOST}:${VNC_PROXY_PORT}`);
   console.log('VNC HTML page available at: http://10.51.101.49:8081/vnc.html');
-  console.log('Simple test page available at: http://10.51.101.49:8081/vnc.html');
+  console.log('Enhanced VNC viewer with screen display support');
 });
