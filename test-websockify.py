@@ -56,7 +56,7 @@ def test_websockify():
             sys.executable, "-m", "websockify",
             "6081",
             "10.51.101.83:5900",
-            "--web", os.path.join(novnc_dir, "core"),
+            "--web", novnc_dir,
             "--verbose"
         ]
         

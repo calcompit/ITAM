@@ -14,8 +14,7 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 
 1. **Node.js** (v16 or higher)
 2. **Python** (for noVNC)
-3. **noVNC** (already cloned)
-4. **websockify** (already installed)
+3. **Git** (for cloning noVNC)
 
 ### Installation
 
@@ -24,8 +23,27 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
    npm install
    ```
 
-2. **Start the application:**
+2. **Setup noVNC:**
    ```bash
+   # Windows
+   setup-novnc.bat
+   
+   # Manual setup
+   git clone https://github.com/novnc/noVNC.git
+   pip install websockify
+   ```
+
+3. **Test noVNC:**
+   ```bash
+   python test-websockify.py
+   ```
+
+4. **Start the application:**
+   ```bash
+   # Windows
+   start.bat
+   
+   # Manual
    # Terminal 1: Start backend
    node server.js
    
@@ -33,7 +51,7 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
    npm run dev
    ```
 
-3. **Access the application:**
+5. **Access the application:**
    - Frontend: http://localhost:8080
    - Backend: http://localhost:3002
 
@@ -57,21 +75,21 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 
 ### VNC Not Working?
 
-1. **Check noVNC installation:**
+1. **Run setup script:**
    ```bash
-   ls noVNC/
+   setup-novnc.bat
    ```
 
-2. **Check websockify:**
+2. **Test noVNC:**
    ```bash
-   python -c "import websockify"
+   python test-websockify.py
    ```
 
 3. **Check backend logs** for VNC startup messages
 
 ### Common Issues
 
-- **"noVNC directory not found"**: Run `git clone https://github.com/novnc/noVNC.git`
+- **"noVNC directory not found"**: Run `setup-novnc.bat`
 - **"websockify not found"**: Run `pip install websockify`
 - **Port 6081 in use**: Kill existing noVNC processes
 
@@ -86,7 +104,9 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 │   └── config/           # API configuration
 ├── server.js              # Backend server
 ├── noVNC/                 # noVNC installation
-└── package.json           # Dependencies
+├── setup-novnc.bat        # noVNC setup script
+├── test-websockify.py     # noVNC test script
+└── start.bat              # Application startup script
 ```
 
 ### API Endpoints
