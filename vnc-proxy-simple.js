@@ -12,6 +12,329 @@ const server = http.createServer((req, res) => {
   if (req.url === '/vnc.html' || req.url.startsWith('/vnc.html')) {
     console.log('Serving vnc.html');
     res.writeHead(200, { 'Content-Type': 'text/html' });
+  } else if (req.url === '/vnc-launcher.html' || req.url.startsWith('/vnc-launcher.html')) {
+    console.log('Serving vnc-launcher.html');
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VNC Launcher - IT Asset Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .vnc-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .vnc-info h3 {
+            color: #495057;
+            margin-top: 0;
+        }
+        
+        .vnc-info p {
+            margin: 10px 0;
+            color: #6c757d;
+        }
+        
+        .vnc-info strong {
+            color: #495057;
+        }
+        
+        .launch-button {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .launch-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .launch-button:active {
+            transform: translateY(0);
+        }
+        
+        .manual-button {
+            background: linear-gradient(45deg, #007bff, #6610f2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .manual-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .instructions h4 {
+            color: #856404;
+            margin-top: 0;
+        }
+        
+        .instructions ol {
+            color: #856404;
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 5px 0;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ VNC Launcher</h1>
+        
+        <div class="vnc-info">
+            <h3>📋 Connection Information</h3>
+            <p><strong>Target IP:</strong> <span id="vnc-ip">10.51.101.83</span></p>
+            <p><strong>Port:</strong> <span id="vnc-port">5900</span></p>
+            <p><strong>Password:</strong> <span id="vnc-password">123</span></p>
+            <p><strong>VNC Client:</strong> TightVNC Viewer</p>
+        </div>
+        
+        <div class="instructions">
+            <h4>📝 Instructions:</h4>
+            <ol>
+                <li>Click the "Launch TightVNC" button below</li>
+                <li>If prompted, allow the application to run</li>
+                <li>TightVNC will automatically connect to the target machine</li>
+                <li>If automatic launch fails, use the manual command</li>
+            </ol>
+        </div>
+        
+        <button class="launch-button" onclick="launchTightVNC()">
+            🚀 Launch TightVNC
+        </button>
+        
+        <br>
+        
+        <button class="manual-button" onclick="showManualCommand()">
+            📋 Show Manual Command
+        </button>
+        
+        <button class="manual-button" onclick="copyCommand()">
+            📋 Copy Command
+        </button>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <div id="manual-command" style="display: none; margin-top: 20px;">
+            <div class="vnc-info">
+                <h3>🔧 Manual Command</h3>
+                <p>If automatic launch doesn't work, run this command in Command Prompt:</p>
+                <code style="background: #f8f9fa; padding: 10px; border-radius: 5px; display: block; margin: 10px 0; font-family: monospace;">
+                    "C:\\Program Files\\TightVNC\\tvnviewer.exe" -host=10.51.101.83 -port=5900 -password=123
+                </code>
+            </div>
+        </div>
+        
+        <a href="index.html" class="back-link">← Back to Dashboard</a>
+    </div>
+
+    <script>
+        // Get VNC parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const ip = urlParams.get('ip') || '10.51.101.83';
+        const port = urlParams.get('port') || '5900';
+        const password = urlParams.get('password') || '123';
+        
+        // Update display
+        document.getElementById('vnc-ip').textContent = ip;
+        document.getElementById('vnc-port').textContent = port;
+        document.getElementById('vnc-password').textContent = password;
+        
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = \`status \${type}\`;
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function launchTightVNC() {
+            try {
+                // Try to launch TightVNC using protocol handler
+                const tightVncPath = 'C:\\\\Program Files\\\\TightVNC\\\\tvnviewer.exe';
+                const command = \`"\${tightVncPath}" -host=\${ip} -port=\${port} -password=\${password}\`;
+                
+                // Try multiple methods to launch
+                
+                // Method 1: Use ActiveX (Windows only)
+                try {
+                    const shell = new ActiveXObject('WScript.Shell');
+                    shell.Run(command, 1, false);
+                    showStatus('✅ TightVNC launched successfully!', 'success');
+                    return;
+                } catch (e) {
+                    console.log('ActiveX method failed:', e);
+                }
+                
+                // Method 2: Use protocol handler
+                try {
+                    window.location.href = \`tightvnc://\${ip}:\${port}?password=\${password}\`;
+                    showStatus('🔄 Attempting to launch TightVNC...', 'info');
+                    return;
+                } catch (e) {
+                    console.log('Protocol handler method failed:', e);
+                }
+                
+                // Method 3: Use file protocol
+                try {
+                    const fileUrl = \`file:///\${tightVncPath.replace(/\\\\/g, '/')}\`;
+                    window.open(fileUrl);
+                    showStatus('📁 Opened TightVNC folder. Please run the viewer manually.', 'info');
+                    return;
+                } catch (e) {
+                    console.log('File protocol method failed:', e);
+                }
+                
+                // If all methods fail
+                showStatus('❌ Could not launch TightVNC automatically. Please use manual command.', 'error');
+                showManualCommand();
+                
+            } catch (error) {
+                console.error('Error launching TightVNC:', error);
+                showStatus('❌ Error launching TightVNC: ' + error.message, 'error');
+                showManualCommand();
+            }
+        }
+        
+        function showManualCommand() {
+            const manualDiv = document.getElementById('manual-command');
+            manualDiv.style.display = 'block';
+            
+            // Update the command with current parameters
+            const commandElement = manualDiv.querySelector('code');
+            commandElement.textContent = \`"C:\\\\Program Files\\\\TightVNC\\\\tvnviewer.exe" -host=\${ip} -port=\${port} -password=\${password}\`;
+        }
+        
+        function copyCommand() {
+            const command = \`"C:\\\\Program Files\\\\TightVNC\\\\tvnviewer.exe" -host=\${ip} -port=\${port} -password=\${password}\`;
+            
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(command).then(() => {
+                    showStatus('📋 Command copied to clipboard!', 'success');
+                }).catch(() => {
+                    showStatus('❌ Failed to copy command', 'error');
+                });
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = command;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showStatus('📋 Command copied to clipboard!', 'success');
+            }
+        }
+        
+        // Auto-launch on page load (optional)
+        // Uncomment the line below if you want auto-launch
+        // setTimeout(launchTightVNC, 1000);
+    </script>
+</body>
+</html>
+    `);
     res.end(`
 <!DOCTYPE html>
 <html lang="en">
@@ -1210,13 +1533,45 @@ const server = http.createServer((req, res) => {
   } else if (req.url === '/vnc.js' || req.url === '/vnc.css' || req.url === '/style.css') {
     // Handle common file requests that might be auto-generated
     console.log('Serving common file:', req.url);
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.writeHead(200, { 
+      'Content-Type': 'text/plain',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     res.end('// File not needed - all content is embedded in HTML');
   } else if (req.url.includes('.js') || req.url.includes('.css')) {
     // Handle any other JS/CSS file requests
     console.log('Serving generic file:', req.url);
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.writeHead(200, { 
+      'Content-Type': 'text/plain',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     res.end('// File not needed - all content is embedded in HTML');
+  } else if (req.url.includes('.png') || req.url.includes('.jpg') || req.url.includes('.jpeg') || req.url.includes('.gif') || req.url.includes('.ico')) {
+    // Handle image requests
+    console.log('Serving image file:', req.url);
+    res.writeHead(200, { 
+      'Content-Type': 'image/png',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    // Return a 1x1 transparent PNG
+    const transparentPNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+    res.end(transparentPNG);
+  } else if (req.url.includes('.woff') || req.url.includes('.woff2') || req.url.includes('.ttf') || req.url.includes('.eot')) {
+    // Handle font requests
+    console.log('Serving font file:', req.url);
+    res.writeHead(200, { 
+      'Content-Type': 'font/woff2',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    res.end(''); // Empty font file
   } else {
     console.log('404 Not Found:', req.url);
     res.writeHead(404, { 'Content-Type': 'text/plain' });
