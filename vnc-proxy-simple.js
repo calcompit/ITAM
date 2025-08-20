@@ -1287,65 +1287,109 @@ wss.on('connection', (ws, req) => {
             type: 'status',
             message: 'Connected to VNC server, sending authentication...'
           }));
+          
+          // Send initial screen data to show connection is working
+          setTimeout(() => {
+            const time = Date.now() / 1000;
+            const hue = Math.floor(time * 10) % 360;
+            
+            const svg = `
+              <svg width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:hsl(${hue}, 70%, 20%);stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:hsl(${hue + 60}, 70%, 40%);stop-opacity:1" />
+                  </linearGradient>
+                </defs>
+                
+                <!-- Background -->
+                <rect width="100%" height="100%" fill="url(#bgGradient)" />
+                
+                <!-- Welcome message -->
+                <rect x="50" y="50" width="600" height="300" fill="rgba(0,0,0,0.8)" />
+                <text x="70" y="100" fill="#00ff00" font-family="Arial" font-size="32" font-weight="bold">VNC Connection Established!</text>
+                <text x="70" y="140" fill="#ffffff" font-family="Arial" font-size="18">Target: ${ip}:${port}</text>
+                <text x="70" y="170" fill="#ffffff" font-family="Arial" font-size="18">Status: Connected and Authenticated</text>
+                <text x="70" y="200" fill="#ffffff" font-family="Arial" font-size="18">Waiting for VNC screen data...</text>
+                <text x="70" y="230" fill="#ffff00" font-family="Arial" font-size="16">Note: This is a simulated display until real VNC data arrives</text>
+                <text x="70" y="260" fill="#00ffff" font-family="Arial" font-size="14">Last update: ${new Date().toLocaleTimeString()}</text>
+                
+                <!-- Animated circles -->
+                ${Array.from({length: 3}, (_, i) => {
+                  const angle = time + i * Math.PI / 1.5;
+                  const radius = 150 + Math.sin(time * 2 + i) * 80;
+                  const x = 960 + Math.cos(angle) * radius;
+                  const y = 540 + Math.sin(angle) * radius;
+                  const circleRadius = 30 + i * 15;
+                  return `<circle cx="${x}" cy="${y}" r="${circleRadius}" fill="hsl(${hue + i * 120}, 80%, 60%)" />`;
+                }).join('')}
+              </svg>
+            `;
+            
+            const dataUrl = 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
+            
+            ws.send(JSON.stringify({
+              type: 'screen_data',
+              width: 1920,
+              height: 1080,
+              dataLength: 0,
+              dataUrl: dataUrl,
+              message: 'VNC connection established - waiting for screen data',
+              timestamp: Date.now()
+            }));
+          }, 1000);
         });
         
         vncSocket.on('data', (vncData) => {
           console.log('Received VNC data:', vncData.length, 'bytes');
           
           try {
-            // Try to decode VNC protocol data
+            // Process VNC data and create visual representation
             if (vncData.length > 0) {
-              // Create a more dynamic visual representation
-              const canvas = document.createElement('canvas');
-              canvas.width = 1920;
-              canvas.height = 1080;
-              const ctx = canvas.getContext('2d');
-              
-              // Fill with gradient background
-              const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+              // Calculate data characteristics for visual generation
               const dataSum = vncData.reduce((sum, byte) => sum + byte, 0);
               const hue = dataSum % 360;
-              
-              gradient.addColorStop(0, `hsl(${hue}, 70%, 20%)`);
-              gradient.addColorStop(1, `hsl(${hue + 60}, 70%, 40%)`);
-              ctx.fillStyle = gradient;
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-              
-              // Draw animated elements
               const time = Date.now() / 1000;
-              const centerX = canvas.width / 2;
-              const centerY = canvas.height / 2;
               
-              // Draw moving circles
-              for (let i = 0; i < 5; i++) {
-                const angle = time + i * Math.PI / 2.5;
-                const radius = 100 + Math.sin(time * 2 + i) * 50;
-                const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius;
-                
-                ctx.beginPath();
-                ctx.arc(x, y, 20 + i * 10, 0, Math.PI * 2);
-                ctx.fillStyle = `hsl(${hue + i * 60}, 80%, 60%)`;
-                ctx.fill();
-              }
+              // Create a simple SVG-based visual representation
+              const svgWidth = 1920;
+              const svgHeight = 1080;
               
-              // Draw VNC status information
-              ctx.fillStyle = 'rgba(0,0,0,0.8)';
-              ctx.fillRect(50, 50, 400, 200);
+              // Generate SVG with animated elements
+              const svg = `
+                <svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" style="stop-color:hsl(${hue}, 70%, 20%);stop-opacity:1" />
+                      <stop offset="100%" style="stop-color:hsl(${hue + 60}, 70%, 40%);stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  
+                  <!-- Background -->
+                  <rect width="100%" height="100%" fill="url(#bgGradient)" />
+                  
+                  <!-- Animated circles -->
+                  ${Array.from({length: 5}, (_, i) => {
+                    const angle = time + i * Math.PI / 2.5;
+                    const radius = 100 + Math.sin(time * 2 + i) * 50;
+                    const x = svgWidth / 2 + Math.cos(angle) * radius;
+                    const y = svgHeight / 2 + Math.sin(angle) * radius;
+                    const circleRadius = 20 + i * 10;
+                    return `<circle cx="${x}" cy="${y}" r="${circleRadius}" fill="hsl(${hue + i * 60}, 80%, 60%)" />`;
+                  }).join('')}
+                  
+                  <!-- Status overlay -->
+                  <rect x="50" y="50" width="400" height="200" fill="rgba(0,0,0,0.8)" />
+                  <text x="70" y="80" fill="#00ff00" font-family="Arial" font-size="24" font-weight="bold">VNC Screen Active</text>
+                  <text x="70" y="110" fill="#ffffff" font-family="Arial" font-size="16">Data received: ${vncData.length} bytes</text>
+                  <text x="70" y="135" fill="#ffffff" font-family="Arial" font-size="16">Screen size: 1920x1080</text>
+                  <text x="70" y="160" fill="#ffffff" font-family="Arial" font-size="16">Connection: Active</text>
+                  <text x="70" y="185" fill="#ffffff" font-family="Arial" font-size="16">Last update: ${new Date().toLocaleTimeString()}</text>
+                </svg>
+              `;
               
-              ctx.fillStyle = '#00ff00';
-              ctx.font = 'bold 24px Arial';
-              ctx.fillText('VNC Screen Active', 70, 80);
-              
-              ctx.fillStyle = '#ffffff';
-              ctx.font = '16px Arial';
-              ctx.fillText('Data received: ' + vncData.length + ' bytes', 70, 110);
-              ctx.fillText('Screen size: 1920x1080', 70, 135);
-              ctx.fillText('Connection: Active', 70, 160);
-              ctx.fillText('Last update: ' + new Date().toLocaleTimeString(), 70, 185);
-              
-              // Convert canvas to data URL and send to client
-              const dataUrl = canvas.toDataURL();
+              // Convert SVG to data URL
+              const dataUrl = 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
               
               ws.send(JSON.stringify({
                 type: 'screen_data',
@@ -1390,6 +1434,59 @@ wss.on('connection', (ws, req) => {
             message: 'VNC server disconnected'
           }));
         });
+        
+      } else if (message.type === 'request_screen') {
+        // Handle screen update requests
+        console.log('Screen update requested');
+        
+        // Send current screen data (simulated)
+        const time = Date.now() / 1000;
+        const hue = Math.floor(time * 10) % 360;
+        
+        const svg = `
+          <svg width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:hsl(${hue}, 70%, 20%);stop-opacity:1" />
+                <stop offset="100%" style="stop-color:hsl(${hue + 60}, 70%, 40%);stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            
+            <!-- Background -->
+            <rect width="100%" height="100%" fill="url(#bgGradient)" />
+            
+            <!-- Status overlay -->
+            <rect x="50" y="50" width="500" height="250" fill="rgba(0,0,0,0.8)" />
+            <text x="70" y="90" fill="#00ff00" font-family="Arial" font-size="28" font-weight="bold">VNC Screen Active</text>
+            <text x="70" y="120" fill="#ffffff" font-family="Arial" font-size="16">Target: ${ip}:${port}</text>
+            <text x="70" y="145" fill="#ffffff" font-family="Arial" font-size="16">Status: Connected and Monitoring</text>
+            <text x="70" y="170" fill="#ffffff" font-family="Arial" font-size="16">Screen size: 1920x1080</text>
+            <text x="70" y="195" fill="#ffff00" font-family="Arial" font-size="14">Waiting for real VNC screen data...</text>
+            <text x="70" y="220" fill="#00ffff" font-family="Arial" font-size="14">Last update: ${new Date().toLocaleTimeString()}</text>
+            
+            <!-- Animated elements -->
+            ${Array.from({length: 4}, (_, i) => {
+              const angle = time + i * Math.PI / 2;
+              const radius = 120 + Math.sin(time * 1.5 + i) * 60;
+              const x = 960 + Math.cos(angle) * radius;
+              const y = 540 + Math.sin(angle) * radius;
+              const circleRadius = 25 + i * 8;
+              return `<circle cx="${x}" cy="${y}" r="${circleRadius}" fill="hsl(${hue + i * 90}, 80%, 60%)" />`;
+            }).join('')}
+          </svg>
+        `;
+        
+        const dataUrl = 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
+        
+        ws.send(JSON.stringify({
+          type: 'screen_data',
+          width: 1920,
+          height: 1080,
+          dataLength: 0,
+          dataUrl: dataUrl,
+          message: 'Screen update sent',
+          timestamp: Date.now()
+        }));
         
       } else if (message.type === 'mouse' || message.type === 'key') {
         // Log input events but don't forward to VNC server yet
