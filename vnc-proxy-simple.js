@@ -110,6 +110,8 @@ const server = http.createServer((req, res) => {
         const ctx = canvas.getContext('2d');
         let ws = null;
         let isConnected = false;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 3;
         
         // Set canvas size
         function resizeCanvas() {
@@ -136,6 +138,14 @@ const server = http.createServer((req, res) => {
         ctx.fillText('Password: ' + password, canvas.width / 2, canvas.height / 2 + 30);
         
         function connectVNC() {
+            if (reconnectAttempts >= maxReconnectAttempts) {
+                document.getElementById('connection-status').textContent = 'Max reconnection attempts reached';
+                document.getElementById('screen-status').textContent = 'Please refresh the page';
+                ctx.fillStyle = '#ff0000';
+                ctx.fillText('Max reconnection attempts reached. Please refresh.', canvas.width / 2, canvas.height / 2 + 60);
+                return;
+            }
+            
             document.getElementById('connection-status').textContent = 'Connecting...';
             document.getElementById('screen-status').textContent = 'Establishing connection...';
             
@@ -150,6 +160,7 @@ const server = http.createServer((req, res) => {
                     console.log('WebSocket connected!');
                     document.getElementById('connection-status').textContent = 'WebSocket Connected';
                     document.getElementById('screen-status').textContent = 'Authenticating...';
+                    reconnectAttempts = 0; // Reset reconnect attempts on successful connection
                     
                     // Send authentication
                     ws.send(JSON.stringify({
@@ -226,6 +237,13 @@ const server = http.createServer((req, res) => {
                     
                     ctx.fillStyle = '#ff0000';
                     ctx.fillText('WebSocket Disconnected', canvas.width / 2, canvas.height / 2);
+                    
+                    // Auto-reconnect if not manually disconnected
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        console.log('Auto-reconnecting... Attempt', reconnectAttempts);
+                        setTimeout(connectVNC, 2000);
+                    }
                 };
                 
             } catch (error) {
@@ -239,6 +257,7 @@ const server = http.createServer((req, res) => {
         }
         
         function reconnect() {
+            reconnectAttempts = 0; // Reset reconnect attempts
             if (ws) {
                 ws.close();
             }
@@ -251,6 +270,7 @@ const server = http.createServer((req, res) => {
                   'Target Port: ' + port + '\\n' +
                   'Password: ' + password + '\\n' +
                   'Connection: ' + (isConnected ? 'Connected' : 'Disconnected') + '\\n' +
+                  'Reconnect Attempts: ' + reconnectAttempts + '/' + maxReconnectAttempts + '\\n' +
                   'Current URL: ' + window.location.href);
         }
         
@@ -340,7 +360,16 @@ const server = http.createServer((req, res) => {
 </html>
     `);
   } else if (req.url === '/favicon.ico') {
+    // Serve a simple favicon or 404
     res.writeHead(404);
+    res.end();
+  } else if (req.url === '/robots.txt') {
+    // Serve robots.txt
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('User-agent: *\nDisallow: /');
+  } else if (req.url === '/') {
+    // Redirect root to vnc.html
+    res.writeHead(302, { 'Location': '/vnc.html' });
     res.end();
   } else {
     console.log('404 Not Found:', req.url);
@@ -368,6 +397,7 @@ wss.on('connection', (ws, req) => {
   
   let vncSocket = null;
   let isAuthenticated = false;
+  let connectionTimeout = null;
   
   // Send welcome message
   ws.send(JSON.stringify({
@@ -389,8 +419,19 @@ wss.on('connection', (ws, req) => {
         // Create TCP connection to VNC server
         vncSocket = new net.Socket();
         
+        // Set connection timeout
+        connectionTimeout = setTimeout(() => {
+          console.log('VNC connection timeout');
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'VNC connection timeout'
+          }));
+          ws.close();
+        }, 10000); // 10 seconds timeout
+        
         vncSocket.connect(port, ip, () => {
           console.log(`Connected to VNC server ${ip}:${port}`);
+          clearTimeout(connectionTimeout);
           
           // Send VNC protocol version
           const version = Buffer.from('RFB 003.008\n');
@@ -417,6 +458,7 @@ wss.on('connection', (ws, req) => {
         
         vncSocket.on('error', (err) => {
           console.error('VNC socket error:', err.message);
+          clearTimeout(connectionTimeout);
           ws.send(JSON.stringify({
             type: 'error',
             message: 'VNC connection failed: ' + err.message
@@ -426,6 +468,7 @@ wss.on('connection', (ws, req) => {
         
         vncSocket.on('close', () => {
           console.log('VNC server connection closed');
+          clearTimeout(connectionTimeout);
           ws.send(JSON.stringify({
             type: 'status',
             message: 'VNC server disconnected'
@@ -449,6 +492,7 @@ wss.on('connection', (ws, req) => {
   // Handle WebSocket close
   ws.on('close', () => {
     console.log('VNC proxy WebSocket closed');
+    clearTimeout(connectionTimeout);
     if (vncSocket) {
       vncSocket.destroy();
     }
@@ -457,6 +501,7 @@ wss.on('connection', (ws, req) => {
   // Handle WebSocket errors
   ws.on('error', (err) => {
     console.error('WebSocket error:', err.message);
+    clearTimeout(connectionTimeout);
     if (vncSocket) {
       vncSocket.destroy();
     }
@@ -468,4 +513,5 @@ server.listen(VNC_PROXY_PORT, VNC_PROXY_HOST, () => {
   console.log(`VNC proxy server running on http://${VNC_PROXY_HOST}:${VNC_PROXY_PORT}`);
   console.log('VNC HTML page available at: http://10.51.101.49:8081/vnc.html');
   console.log('Enhanced VNC viewer with screen display support');
+  console.log('Added improved error handling and auto-reconnect');
 });
