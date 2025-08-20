@@ -81,6 +81,10 @@ A comprehensive IT Asset Management system with real-time monitoring, analytics,
    DB_SERVER=your_sql_server_ip
    DB_NAME=your_database_name
    PORT=3001
+   
+   # VNC Cloud API Configuration (optional)
+   VNC_API_KEY=your-API-key
+   VNC_API_SECRET=your-API-secret
    ```
 
 4. **Start the application**
@@ -131,6 +135,16 @@ node vnc-proxy-simple.js
 ```
 http://localhost:8081/vnc.html
 ```
+
+#### VNC Launcher Endpoints
+- `GET /vnc.html` - Main VNC launcher page
+- `GET /vnc.html?ip=...&port=...&password=...` - VNC launcher with parameters
+- `GET /launch-vnc?ip=...&port=...&password=...` - Server-side VNC launch
+- `GET /check-tightvnc` - Check TightVNC installation
+- `GET /create-vnc-static?allowedActions=...&groups=...` - Create VNC Cloud static address
+- `GET /vnc-cloud-status?staticAddress=...` - Get VNC Cloud connection status
+- `GET /favicon.ico` - Favicon
+- `GET /robots.txt` - Robots file
 
 #### URL Parameters
 You can specify connection parameters in the URL:

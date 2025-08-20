@@ -3,9 +3,64 @@ import net from 'net';
 import http from 'http';
 import { exec } from 'child_process';
 import { spawn } from 'child_process';
+import https from 'https';
 
 const VNC_PROXY_PORT = 8081;
 const VNC_PROXY_HOST = '0.0.0.0';
+
+// VNC Cloud API Configuration
+const VNC_CLOUD_API = {
+  baseUrl: 'https://api.vnc.com/cloud/1.1',
+  apiKey: process.env.VNC_API_KEY || 'your-API-key',
+  apiSecret: process.env.VNC_API_SECRET || 'your-API-secret'
+};
+
+// Function to make VNC Cloud API requests
+function makeVncCloudRequest(endpoint, method = 'GET', data = null) {
+  return new Promise((resolve, reject) => {
+    const url = `${VNC_CLOUD_API.baseUrl}${endpoint}`;
+    const auth = Buffer.from(`${VNC_CLOUD_API.apiKey}:${VNC_CLOUD_API.apiSecret}`).toString('base64');
+    
+    const options = {
+      hostname: 'api.vnc.com',
+      port: 443,
+      path: `/cloud/1.1${endpoint}`,
+      method: method,
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let responseData = '';
+      
+      res.on('data', (chunk) => {
+        responseData += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          const jsonData = JSON.parse(responseData);
+          resolve(jsonData);
+        } catch (error) {
+          reject(new Error(`Failed to parse response: ${error.message}`));
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(error);
+    });
+
+    if (data) {
+      req.write(JSON.stringify(data));
+    }
+    
+    req.end();
+  });
+}
 
 // Create HTTP server for serving the VNC launcher page
 const server = http.createServer((req, res) => {
@@ -222,7 +277,20 @@ const server = http.createServer((req, res) => {
             🔍 Check Installation
         </button>
         
+        <button class="manual-button" onclick="createVncCloudStatic()">
+            ☁️ Create VNC Cloud Static
+        </button>
+        
         <div id="status" class="status" style="display: none;"></div>
+        
+        <div id="vnc-cloud-info" style="display: none; margin-top: 20px;">
+            <div class="vnc-info">
+                <h3>☁️ VNC Cloud Static Address</h3>
+                <div id="vnc-cloud-content">
+                    <p>Creating VNC Cloud static address...</p>
+                </div>
+            </div>
+        </div>
         
         <div id="manual-command" style="display: none; margin-top: 20px;">
             <div class="vnc-info">
@@ -486,6 +554,62 @@ const server = http.createServer((req, res) => {
                 });
         }
         
+        function createVncCloudStatic() {
+            const vncCloudInfoDiv = document.getElementById('vnc-cloud-info');
+            const vncCloudContent = document.getElementById('vnc-cloud-content');
+            vncCloudInfoDiv.style.display = 'block';
+            vncCloudContent.innerHTML = '<p>Creating VNC Cloud static address...</p>';
+
+            const allowedActions = 'connect,disconnect,status';
+            const groups = 'test';
+
+            fetch(\`/create-vnc-static?allowedActions=\${allowedActions}&groups=\${groups}\`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const response = data.data;
+                        vncCloudContent.innerHTML = \`
+                            <p style="color: #155724; font-weight: bold;">✅ VNC Cloud static address created!</p>
+                            <p><strong>Address:</strong> <code style="background: #d4edda; padding: 5px; border-radius: 3px;">\${response.staticAddress || 'N/A'}</code></p>
+                            <p><strong>Allowed Actions:</strong> \${response.allowedActions ? response.allowedActions.join(', ') : 'connect'}</p>
+                            <p><strong>Groups:</strong> \${response.groups ? response.groups.join(', ') : 'test'}</p>
+                            <p style="color: #155724;">You can now use this address to connect to your VNC Cloud.</p>
+                            <button class="manual-button" onclick="copyToClipboard('\${response.staticAddress || ''}')">📋 Copy Address</button>
+                        \`;
+                    } else {
+                        vncCloudContent.innerHTML = \`
+                            <p style="color: #721c24; font-weight: bold;">❌ Failed to create VNC Cloud static address: \${data.error}</p>
+                            <p>Please check your API configuration or try again.</p>
+                        \`;
+                    }
+                })
+                .catch(error => {
+                    vncCloudContent.innerHTML = \`
+                        <p style="color: #721c24; font-weight: bold;">❌ Error creating VNC Cloud static address: \${error.message}</p>
+                        <p>Please check your network connection and try again.</p>
+                    \`;
+                });
+        }
+        
+        function copyToClipboard(text) {
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showStatus('📋 VNC Cloud address copied to clipboard!', 'success');
+                }).catch(() => {
+                    showStatus('❌ Failed to copy address', 'error');
+                });
+            } else {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showStatus('📋 VNC Cloud address copied to clipboard!', 'success');
+            }
+        }
+        
         // Auto-launch on page load
         setTimeout(() => {
             console.log('Auto-launching TightVNC...');
@@ -579,7 +703,7 @@ const server = http.createServer((req, res) => {
           // Try next path
           tryLaunch(index + 1);
         } else {
-          console.log(`TightVNC launched successfully from ${path}`);
+          console.log('TightVNC launched successfully from ${path}');
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ 
             success: true, 
@@ -626,6 +750,73 @@ const server = http.createServer((req, res) => {
       path: foundPath,
       triedPaths: triedPaths
     }));
+  } else if (req.url.startsWith('/create-vnc-static')) {
+    // Create VNC Cloud static address
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const allowedActions = url.searchParams.get('allowedActions') || 'connect';
+    const groups = url.searchParams.get('groups') || 'test';
+    
+    console.log(`Creating VNC Cloud static address with actions: ${allowedActions}, groups: ${groups}`);
+    
+    const requestData = {
+      allowedActions: allowedActions.split(','),
+      groups: groups.split(',')
+    };
+    
+    makeVncCloudRequest('/static-address', 'POST', requestData)
+      .then(response => {
+        console.log('VNC Cloud static address created:', response);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          message: 'VNC Cloud static address created successfully',
+          data: response
+        }));
+      })
+      .catch(error => {
+        console.error('Error creating VNC Cloud static address:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: error.message,
+          message: 'Failed to create VNC Cloud static address'
+        }));
+      });
+  } else if (req.url.startsWith('/vnc-cloud-status')) {
+    // Get VNC Cloud connection status
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const staticAddress = url.searchParams.get('staticAddress');
+    
+    if (!staticAddress) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: false,
+        error: 'staticAddress parameter is required'
+      }));
+      return;
+    }
+    
+    console.log(`Checking VNC Cloud status for: ${staticAddress}`);
+    
+    makeVncCloudRequest(`/static-address/${staticAddress}`)
+      .then(response => {
+        console.log('VNC Cloud status:', response);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          message: 'VNC Cloud status retrieved successfully',
+          data: response
+        }));
+      })
+      .catch(error => {
+        console.error('Error getting VNC Cloud status:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: error.message,
+          message: 'Failed to get VNC Cloud status'
+        }));
+      });
   } else {
     console.log('404 Not Found:', req.url);
     res.writeHead(404, { 'Content-Type': 'text/plain' });
