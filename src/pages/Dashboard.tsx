@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ComputerCard } from "@/components/computer-card";
 import { IPGroupCard } from "@/components/ip-group-card";
+import { Analytics } from "@/pages/Analytics";
+import { AlertsPage } from "@/pages/AlertsPage";
 import { API_CONFIG, buildNovncUrl } from "@/config/api";
 import { mockComputers } from "@/data/mock-data";
 import { 
@@ -307,12 +309,12 @@ export function Dashboard({ activeTab }: DashboardProps) {
 
   // Show Analytics page
   if (activeTab === "analytics") {
-    return <div>Analytics Page - Coming Soon</div>;
+    return <Analytics />;
   }
 
   // Show Alerts page
   if (activeTab === "alerts") {
-    return <div>Alerts Page - Coming Soon</div>;
+    return <AlertsPage />;
   }
 
   if (activeTab === "groups" && !selectedSubnet) {
