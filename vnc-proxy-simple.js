@@ -190,11 +190,14 @@ const server = http.createServer((req, res) => {
         <div class="instructions">
             <h4>📝 Instructions:</h4>
             <ol>
-                <li>Click the "Launch TightVNC" button below</li>
-                <li>If prompted, allow the application to run</li>
-                <li>TightVNC will automatically connect to the target machine</li>
-                <li>If automatic launch fails, use the manual command</li>
+                <li>VNC will launch automatically in a few seconds</li>
+                <li>If TightVNC is not installed, download link will appear</li>
+                <li>You can also use manual buttons below</li>
             </ol>
+        </div>
+        
+        <div id="auto-launch-status" class="status info" style="display: block;">
+            🔄 Checking TightVNC installation and preparing to launch...
         </div>
         
         <button class="launch-button" onclick="launchTightVNC()">
@@ -284,6 +287,8 @@ const server = http.createServer((req, res) => {
         }
         
         function launchTightVNC() {
+            const autoLaunchStatus = document.getElementById('auto-launch-status');
+            
             try {
                 // Multiple possible TightVNC paths
                 const possiblePaths = [
@@ -301,6 +306,8 @@ const server = http.createServer((req, res) => {
                         const shell = new ActiveXObject('WScript.Shell');
                         shell.Run(command, 1, false);
                         showStatus('✅ TightVNC launched successfully via ActiveX!', 'success');
+                        autoLaunchStatus.textContent = '✅ TightVNC launched successfully!';
+                        autoLaunchStatus.className = 'status success';
                         return;
                     }
                 } catch (e) {
@@ -310,14 +317,20 @@ const server = http.createServer((req, res) => {
                 // Method 2: Try server-side launch first (most reliable)
                 try {
                     showStatus('🔄 Attempting to launch TightVNC via server...', 'info');
+                    autoLaunchStatus.textContent = '🔄 Launching TightVNC via server...';
+                    autoLaunchStatus.className = 'status info';
                     
                     fetch(\`/launch-vnc?ip=\${ip}&port=\${port}&password=\${password}\`)
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
                                 showStatus('✅ TightVNC launched via server!', 'success');
+                                autoLaunchStatus.textContent = '✅ TightVNC launched successfully!';
+                                autoLaunchStatus.className = 'status success';
                             } else {
                                 showStatus('❌ Server launch failed: ' + data.error, 'error');
+                                autoLaunchStatus.textContent = '❌ Launch failed. Please use manual command.';
+                                autoLaunchStatus.className = 'status error';
                                 // Fallback to manual command
                                 setTimeout(() => {
                                     showManualCommand();
@@ -327,6 +340,8 @@ const server = http.createServer((req, res) => {
                         .catch(error => {
                             console.log('Server launch failed:', error);
                             showStatus('❌ Server launch failed. Trying alternative methods...', 'error');
+                            autoLaunchStatus.textContent = '❌ Server launch failed. Trying alternative methods...';
+                            autoLaunchStatus.className = 'status error';
                             // Try alternative methods
                             tryAlternativeMethods();
                         });
@@ -339,25 +354,35 @@ const server = http.createServer((req, res) => {
             } catch (error) {
                 console.error('Error launching TightVNC:', error);
                 showStatus('❌ Error launching TightVNC: ' + error.message, 'error');
+                autoLaunchStatus.textContent = '❌ Error launching TightVNC. Please use manual command.';
+                autoLaunchStatus.className = 'status error';
                 showManualCommand();
             }
         }
         
         function tryAlternativeMethods() {
+            const autoLaunchStatus = document.getElementById('auto-launch-status');
+            
             // Method 3: Try protocol handler (less reliable)
             try {
                 showStatus('🔄 Trying protocol handler...', 'info');
+                autoLaunchStatus.textContent = '🔄 Trying protocol handler...';
+                autoLaunchStatus.className = 'status info';
                 window.location.href = \`tightvnc://\${ip}:\${port}?password=\${password}\`;
                 
                 // Fallback after 3 seconds if protocol doesn't work
                 setTimeout(() => {
                     showStatus('❌ Protocol launch failed. Please use manual command.', 'error');
+                    autoLaunchStatus.textContent = '❌ All automatic methods failed. Please use manual command.';
+                    autoLaunchStatus.className = 'status error';
                     showManualCommand();
                 }, 3000);
                 return;
             } catch (e) {
                 console.log('Protocol handler method failed:', e);
                 showStatus('❌ All automatic methods failed. Please use manual command.', 'error');
+                autoLaunchStatus.textContent = '❌ All automatic methods failed. Please use manual command.';
+                autoLaunchStatus.className = 'status error';
                 showManualCommand();
             }
         }
@@ -406,6 +431,7 @@ const server = http.createServer((req, res) => {
         }
         
         function downloadTightVNC() {
+            const autoLaunchStatus = document.getElementById('auto-launch-status');
             const downloadDiv = document.getElementById('download-info');
             downloadDiv.style.display = 'block';
             
@@ -413,6 +439,8 @@ const server = http.createServer((req, res) => {
             downloadDiv.scrollIntoView({ behavior: 'smooth' });
             
             showStatus('📥 Opening TightVNC download page...', 'info');
+            autoLaunchStatus.textContent = '📥 Opening TightVNC download page...';
+            autoLaunchStatus.className = 'status info';
             
             // Open download page in new tab
             window.open('https://www.tightvnc.com/download.php', '_blank');
@@ -458,9 +486,42 @@ const server = http.createServer((req, res) => {
                 });
         }
         
-        // Auto-launch on page load (optional)
-        // Uncomment the line below if you want auto-launch
-        // setTimeout(launchTightVNC, 1000);
+        // Auto-launch on page load
+        setTimeout(() => {
+            console.log('Auto-launching TightVNC...');
+            autoLaunchVNC();
+        }, 1000);
+        
+        function autoLaunchVNC() {
+            const autoLaunchStatus = document.getElementById('auto-launch-status');
+            
+            // First check if TightVNC is installed
+            fetch('/check-tightvnc')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.installed) {
+                        console.log('TightVNC found, launching...');
+                        autoLaunchStatus.textContent = '🚀 TightVNC found! Launching automatically...';
+                        autoLaunchStatus.className = 'status info';
+                        launchTightVNC();
+                    } else {
+                        console.log('TightVNC not found, showing download info...');
+                        autoLaunchStatus.textContent = '❌ TightVNC not found. Opening download page...';
+                        autoLaunchStatus.className = 'status error';
+                        setTimeout(() => {
+                            downloadTightVNC();
+                        }, 2000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking installation:', error);
+                    autoLaunchStatus.textContent = '❌ Error checking installation. Trying manual launch...';
+                    autoLaunchStatus.className = 'status error';
+                    setTimeout(() => {
+                        launchTightVNC();
+                    }, 2000);
+                });
+        }
     </script>
 </body>
 </html>
