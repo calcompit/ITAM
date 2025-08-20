@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { X, Maximize2, Minimize2, RotateCcw, Settings } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 
 interface VNCViewerProps {
   isOpen: boolean;
@@ -12,172 +12,81 @@ interface VNCViewerProps {
 }
 
 export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VNCViewerProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rfbRef = useRef<any>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isOpen || !canvasRef.current) return;
-
-    const connectVNC = async () => {
-      try {
-        // Dynamic import to reduce initial bundle size
-        const { RFB } = await import('@novnc/novnc/core/rfb');
-        
-        const wsUrl = `ws://${ip}:${port}`;
-        console.log('Connecting to VNC:', wsUrl);
-        
-        rfbRef.current = new RFB(canvasRef.current!, wsUrl, {
-          credentials: { password: '' },
-          repeaterID: '',
-          wsProtocols: ['binary'],
-          clipViewport: false,
-          scaleViewport: false,
-          resizeSession: true,
-          qualityLevel: 6,
-          compressionLevel: 2,
-        });
-
-        rfbRef.current.addEventListener('connect', () => {
-          console.log('VNC Connected!');
-          setIsConnected(true);
-          setError(null);
-        });
-
-        rfbRef.current.addEventListener('disconnect', () => {
-          console.log('VNC Disconnected');
-          setIsConnected(false);
-        });
-
-        rfbRef.current.addEventListener('error', (err: any) => {
-          console.error('VNC Error:', err);
-          setError('Failed to connect to VNC server');
-          setIsConnected(false);
-        });
-
-        rfbRef.current.addEventListener('clipboard', (event: any) => {
-          console.log('Clipboard:', event.detail.text);
-        });
-
-      } catch (err) {
-        console.error('Failed to load VNC:', err);
-        setError('Failed to load VNC viewer');
-      }
-    };
-
-    connectVNC();
-
-    return () => {
-      if (rfbRef.current) {
-        rfbRef.current.disconnect();
-        rfbRef.current = null;
-      }
-    };
-  }, [isOpen, ip, port]);
-
-  const handleFullscreen = () => {
-    if (!canvasRef.current) return;
-    
-    if (!isFullscreen) {
-      canvasRef.current.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
+  const handleVNCApp = () => {
+    // Try to open VNC in native app
+    const vncUrl = `vnc://${ip}:${port}`;
+    window.open(vncUrl, '_blank');
   };
 
-  const handleReconnect = () => {
-    if (rfbRef.current) {
-      rfbRef.current.disconnect();
-      setTimeout(() => {
-        rfbRef.current?.connect();
-      }, 1000);
-    }
+  const handleWebVNC = () => {
+    // Open in new window for web VNC (websockify proxy)
+    const webVncUrl = `http://${ip}:5901`;
+    window.open(webVncUrl, '_blank', 'width=1024,height=768');
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] p-0">
-        <DialogHeader className="p-4 pb-2">
+      <DialogContent className="max-w-md">
+        <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg">
-              VNC Viewer - {computerName || ip}
+              Remote Desktop - {computerName || ip}
             </DialogTitle>
-            <div className="flex items-center gap-2">
-              {isConnected && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReconnect}
-                    title="Reconnect"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleFullscreen}
-                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                  >
-                    {isFullscreen ? (
-                      <Minimize2 className="h-4 w-4" />
-                    ) : (
-                      <Maximize2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClose}
-                title="Close"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </DialogHeader>
         
-        <div className="relative bg-black rounded-b-lg overflow-hidden">
-          {error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-              <div className="text-center text-white">
-                <p className="text-lg font-semibold mb-2">Connection Failed</p>
-                <p className="text-sm text-gray-300 mb-4">{error}</p>
-                <Button onClick={handleReconnect} variant="outline">
-                  Try Again
-                </Button>
-              </div>
+        <div className="space-y-4">
+          <div className="text-center">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-2">Connection Details</h3>
+              <p className="text-sm text-muted-foreground">
+                <strong>IP:</strong> {ip}<br/>
+                <strong>Port:</strong> {port}<br/>
+                <strong>Computer:</strong> {computerName || 'Unknown'}
+              </p>
             </div>
-          )}
-          
-          {!isConnected && !error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-              <div className="text-center text-white">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
-                <p>Connecting to {ip}:{port}...</p>
-              </div>
-            </div>
-          )}
-          
-          <canvas
-            ref={canvasRef}
-            className="w-full h-[600px] cursor-crosshair"
-            style={{ imageRendering: 'pixelated' }}
-          />
-        </div>
-        
-        {isConnected && (
-          <div className="p-4 pt-2 text-xs text-muted-foreground">
-            <p>Connected to {ip}:{port}</p>
-            <p>Use mouse and keyboard to control the remote computer</p>
           </div>
-        )}
+
+          <div className="space-y-3">
+            <h4 className="font-medium">Choose Connection Method:</h4>
+            
+            <Button
+              onClick={handleVNCApp}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open with VNC App
+              <span className="text-xs text-muted-foreground ml-auto">
+                (TightVNC, RealVNC, etc.)
+              </span>
+            </Button>
+
+            <Button
+              onClick={handleWebVNC}
+              className="w-full justify-start"
+              variant="outline"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open Web VNC
+              <span className="text-xs text-muted-foreground ml-auto">
+                (Browser-based)
+              </span>
+            </Button>
+          </div>
+
+          <div className="text-xs text-muted-foreground text-center bg-muted/30 p-3 rounded">
+            <p><strong>Note:</strong> VNC Server and WebSocket proxy are running on {ip}:5900 and {ip}:5901</p>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

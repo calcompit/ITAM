@@ -38,20 +38,6 @@ export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardPr
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {onVNC && computer.ipAddresses[0] && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onVNC(computer.ipAddresses[0], computer.computerName);
-              }}
-              className="h-8 w-8 p-0"
-              title="Open VNC Viewer"
-            >
-              <Eye className="h-4 w-4 text-blue-500" />
-            </Button>
-          )}
           <Button
             variant="ghost"
             size="sm"
@@ -74,12 +60,28 @@ export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardPr
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Primary IP</span>
-            <ClickableText 
-              text={computer.ipAddresses[0] || "N/A"} 
-              title="Click to copy IP Address"
-              className="text-sm font-mono text-foreground"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div className="flex items-center gap-1">
+              <ClickableText 
+                text={computer.ipAddresses[0] || "N/A"} 
+                title="Click to copy IP Address"
+                className="text-sm font-mono text-foreground"
+                onClick={(e) => e.stopPropagation()}
+              />
+              {onVNC && computer.ipAddresses[0] && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onVNC(computer.ipAddresses[0], computer.computerName);
+                  }}
+                  className="h-6 w-6 p-0"
+                  title="VNC to this IP"
+                >
+                  <Eye className="h-3 w-3 text-blue-500" />
+                </Button>
+              )}
+            </div>
           </div>
           
           {computer.ipAddresses.length > 1 && (
