@@ -14,6 +14,9 @@ export const API_CONFIG = {
   // noVNC web interface
   NOVNC_URL: 'http://localhost:6081',
   
+  // Frontend URL
+  FRONTEND_URL: 'http://localhost:8080',
+  
   // Default VNC settings
   DEFAULT_VNC_PORT: 5900,
   DEFAULT_NOVNC_PORT: 6081,

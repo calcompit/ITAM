@@ -19,8 +19,8 @@ A comprehensive IT asset monitoring system with integrated VNC remote access cap
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React + TypeScript + Tailwind CSS
-- **Backend**: Node.js + Express
+- **Frontend**: React + TypeScript + Tailwind CSS (Port 8080)
+- **Backend**: Node.js + Express (Port 3002)
 - **Database**: SQL Server
 - **Real-time**: WebSocket
 - **VNC**: noVNC (WebSocket-based VNC)
@@ -43,21 +43,29 @@ pip install websockify
 
 ### 2. Setup noVNC
 ```bash
-setup-novnc-windows.bat
+git clone https://github.com/novnc/noVNC.git
 ```
 
 ### 3. Start Backend
 ```bash
 node server.js
+# Runs on port 3002
 ```
 
 ### 4. Start Frontend
 ```bash
 npm run dev
+# Runs on port 8080
 ```
 
-### 5. Access Application
-- **IT Asset Monitor**: http://localhost:3000
+### 5. Start noVNC (when needed)
+```bash
+python start-novnc-simple.py
+# Runs on port 6081
+```
+
+### 6. Access Application
+- **IT Asset Monitor**: http://localhost:8080
 - **VNC Viewer**: Available in the VNC tab
 
 ## 🔧 VNC Configuration
@@ -69,7 +77,7 @@ npm run dev
 
 ### Quick Start VNC
 ```bash
-start-novnc-windows.bat
+start-novnc.bat
 ```
 
 ### Custom VNC Server
@@ -85,22 +93,23 @@ IT-Asset-Monitor/
 │   ├── components/         # React components
 │   ├── pages/             # Page components
 │   ├── services/          # API services
+│   ├── config/            # Configuration files
 │   └── ...
-├── server.js              # Backend server
+├── server.js              # Backend server (port 3002)
 ├── start-novnc-simple.py  # VNC launcher
-├── setup-novnc-windows.bat # VNC setup
-└── start-novnc-windows.bat # VNC starter
+├── start-novnc.bat        # VNC starter
+└── noVNC/                 # noVNC web interface
 ```
 
 ## 🔌 API Endpoints
 
-### IT Asset Monitor
+### IT Asset Monitor (Port 3002)
 - `GET /api/computers` - Get all computers
 - `GET /api/ip-groups` - Get IP groups
 - `GET /api/analytics` - Get analytics data
 - `GET /api/alerts/:username` - Get user alerts
 
-### VNC Integration
+### VNC Integration (Port 3002)
 - `POST /api/vnc/start` - Start noVNC
 - `GET /api/vnc/status` - Check noVNC status
 - `POST /api/vnc/connect` - Connect to VNC server
@@ -124,11 +133,11 @@ IT-Asset-Monitor/
 # Check noVNC status
 python start-novnc-simple.py
 
-# Reinstall noVNC
-setup-novnc-windows.bat
-
 # Manual VNC connection
 http://localhost:6081/vnc.html?host=10.51.101.83&port=5900
+
+# Check if VNC server is accessible
+python start-novnc-simple.py --vnc-host 10.51.101.85 --vnc-port 5900
 ```
 
 ## 📝 License

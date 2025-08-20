@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple noVNC Launcher for Windows
+Simple noVNC Launcher
 Uses websockify from pip package
 """
 
@@ -9,6 +9,7 @@ import sys
 import subprocess
 import time
 import argparse
+import socket
 from pathlib import Path
 
 def check_prerequisites():
@@ -29,10 +30,28 @@ def find_novnc_directory():
     
     if not novnc_dir.exists():
         print("❌ noVNC directory not found!")
-        print("Please run setup-novnc-windows.bat first")
+        print("Please run: git clone https://github.com/novnc/noVNC.git")
         return None
     
     return novnc_dir
+
+def check_vnc_server(host, port):
+    """Check if VNC server is accessible"""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(3)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        
+        if result == 0:
+            print(f"✅ VNC server {host}:{port} is accessible")
+            return True
+        else:
+            print(f"❌ VNC server {host}:{port} is not accessible")
+            return False
+    except Exception as e:
+        print(f"❌ Error checking VNC server: {e}")
+        return False
 
 def start_websockify_simple(novnc_dir, vnc_host="10.51.101.83", vnc_port=5900, web_port=6081):
     """Start websockify using the pip package"""
@@ -40,13 +59,21 @@ def start_websockify_simple(novnc_dir, vnc_host="10.51.101.83", vnc_port=5900, w
         import websockify
         print("✅ Using websockify from pip package")
         
+        # Check VNC server first
+        if not check_vnc_server(vnc_host, vnc_port):
+            print(f"⚠️  Warning: VNC server {vnc_host}:{vnc_port} may not be accessible")
+            print("   Make sure the VNC server is running and accessible")
+            print("   You can still try to connect, but it may fail")
+            print()
+        
         # Build the command using websockify module
         cmd = [
             sys.executable, "-m", "websockify",
             str(web_port),
             f"{vnc_host}:{vnc_port}",
             "--web", str(novnc_dir),
-            "--verbose"
+            "--verbose",
+            "--log-file", "websockify.log"
         ]
         
         print(f"🚀 Starting websockify proxy...")
@@ -63,7 +90,7 @@ def start_websockify_simple(novnc_dir, vnc_host="10.51.101.83", vnc_port=5900, w
         print(f"❌ Failed to start websockify: {e}")
         return None
 
-def print_access_info(web_port):
+def print_access_info(web_port, vnc_host, vnc_port):
     """Print access information"""
     print("=" * 50)
     print("   noVNC Access Information")
@@ -76,6 +103,10 @@ def print_access_info(web_port):
     print("🔧 Connection Settings:")
     print(f"   Host: localhost")
     print(f"   Port: {web_port}")
+    print(f"   Password: 123")
+    print()
+    print("🔗 Direct VNC Connection:")
+    print(f"   Target: {vnc_host}:{vnc_port}")
     print(f"   Password: 123")
     print()
     print("⏹️  Press Ctrl+C to stop the proxy")
@@ -139,11 +170,12 @@ def main():
     # Check if process is still running
     if process.poll() is not None:
         print("❌ websockify failed to start")
+        print("Check the logs for more information")
         input("Press Enter to exit...")
         return
     
     # Print access information
-    print_access_info(web_port)
+    print_access_info(web_port, vnc_host, vnc_port)
     
     try:
         # Keep the script running
