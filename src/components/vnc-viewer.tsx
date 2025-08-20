@@ -13,14 +13,14 @@ interface VNCViewerProps {
 
 export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VNCViewerProps) {
   const handleVNCApp = () => {
-    // Try to open VNC in native app
-    const vncUrl = `vnc://${ip}:${port}`;
+    // Try to open VNC in native app with password
+    const vncUrl = `vnc://:123@${ip}:${port}`;
     window.open(vncUrl, '_blank');
   };
 
   const handleWebVNC = () => {
-    // Open in new window for web VNC (websockify proxy)
-    const webVncUrl = `http://${ip}:5901`;
+    // Open in new window for web VNC (websockify proxy) with password
+    const webVncUrl = `http://${ip}:5901?password=123`;
     window.open(webVncUrl, '_blank', 'width=1024,height=768');
   };
 
@@ -85,6 +85,7 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
 
           <div className="text-xs text-muted-foreground text-center bg-muted/30 p-3 rounded">
             <p><strong>Note:</strong> VNC Server and WebSocket proxy are running on {ip}:5900 and {ip}:5901</p>
+            <p><strong>Password:</strong> 123 (auto-filled)</p>
           </div>
         </div>
       </DialogContent>
