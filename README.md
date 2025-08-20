@@ -1,10 +1,10 @@
 # IT Asset Monitor
 
-A comprehensive IT Asset Management system with real-time monitoring, analytics, and alerting capabilities.
+A comprehensive IT Asset Management system with real-time monitoring, analytics, alerting capabilities, and VNC launcher functionality.
 
 ## 🚀 Features
 
-### Core Functionality
+### Core IT Asset Management
 - **Real-time Asset Monitoring**: Live tracking of computer assets with automatic status updates
 - **Dashboard Analytics**: Comprehensive overview with total, online, offline, and activated computer counts
 - **IP Group Management**: Organized view by network subnets with detailed statistics
@@ -12,19 +12,19 @@ A comprehensive IT Asset Management system with real-time monitoring, analytics,
 - **User Authentication**: Secure login system with user-specific access
 - **Alert System**: Personalized alerts for system changes with read/unread status tracking
 
+### VNC Launcher
+- 🚀 **TightVNC Launcher** - Automatically launch TightVNC viewer with connection parameters
+- 🌐 **Web Interface** - Beautiful web interface for launching VNC connections
+- 📋 **Manual Commands** - Copy-paste commands for manual VNC connections
+- 🔧 **Server-side Launch** - Launch VNC from server-side for better compatibility
+- 📱 **Responsive Design** - Works on desktop and mobile devices
+
 ### Technical Features
 - **Realtime Updates**: SQL Server Service Broker + WebSocket for instant data synchronization
 - **Connection Resilience**: Automatic retry logic and fallback data when database is unavailable
 - **Responsive UI**: Modern interface built with React, TypeScript, and Tailwind CSS
 - **Persistent State**: Remembers pinned computers and alert preferences across sessions
 - **Copy Functionality**: Easy copying of machine IDs, computer names, and IP addresses
-
-### Data Management
-- **Hardware Monitoring**: CPU, RAM, Storage, GPU, and Network adapter tracking
-- **OS Information**: Windows activation status, version, and installation details
-- **Change History**: Detailed changelog with old/new value comparisons
-- **Status Tracking**: Online/offline status based on last update time
-- **IP Management**: Automatic IP address parsing and subnet grouping
 
 ## 🛠️ Technology Stack
 
@@ -42,6 +42,11 @@ A comprehensive IT Asset Management system with real-time monitoring, analytics,
 - **WebSocket** for real-time communication
 - **SQL Server Service Broker** for push notifications
 
+### VNC Launcher
+- **Node.js** HTTP server
+- **WebSocket** for real-time communication
+- **Child Process** for launching external applications
+
 ### Database
 - **SQL Server** with custom tables:
   - `TBL_IT_MachinesCurrent`: Current asset data
@@ -50,9 +55,10 @@ A comprehensive IT Asset Management system with real-time monitoring, analytics,
 
 ## 📋 Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - SQL Server 2019+
 - Network access to SQL Server instance
+- TightVNC Viewer installed on Windows machines (for VNC functionality)
 
 ## 🔧 Installation
 
@@ -89,7 +95,9 @@ A comprehensive IT Asset Management system with real-time monitoring, analytics,
 
 ## 🚀 Usage
 
-### Starting the Application
+### IT Asset Monitor
+
+#### Starting the Application
 ```bash
 # Development mode (both frontend and backend)
 npm run dev
@@ -99,18 +107,54 @@ npm run build
 npm start
 ```
 
-### Accessing the Application
+#### Accessing the Application
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:3001
 - **Health Check**: http://localhost:3001/api/health
 
-### API Endpoints
+#### API Endpoints
 - `GET /api/computers` - Get all computer assets
 - `GET /api/ip-groups` - Get IP group statistics
 - `GET /api/analytics` - Get analytics data
 - `GET /api/alerts/:username` - Get user-specific alerts
 - `POST /api/login` - User authentication
 - `GET /api/health` - System health check
+
+### VNC Launcher
+
+#### Starting the VNC Launcher Server
+```bash
+node vnc-proxy-simple.js
+```
+
+#### Accessing the VNC Launcher
+```
+http://localhost:8081/vnc.html
+```
+
+#### URL Parameters
+You can specify connection parameters in the URL:
+```
+http://localhost:8081/vnc.html?ip=192.168.1.100&port=5900&password=mypassword
+```
+
+Parameters:
+- `ip` - Target machine IP address (default: 10.51.101.83)
+- `port` - VNC port (default: 5900)
+- `password` - VNC password (default: 123)
+
+#### Manual Commands
+If the automatic launch doesn't work, you can use manual commands:
+
+**Windows Command Prompt:**
+```cmd
+"C:\Program Files\TightVNC\tvnviewer.exe" -host=192.168.1.100 -port=5900 -password=mypassword
+```
+
+**PowerShell:**
+```powershell
+& "C:\Program Files\TightVNC\tvnviewer.exe" -host=192.168.1.100 -port=5900 -password=mypassword
+```
 
 ## 📊 Features Overview
 
@@ -144,6 +188,12 @@ npm start
 - RAM and storage statistics
 - Activation status overview
 
+### VNC Launcher
+- Web interface for launching VNC connections
+- Automatic TightVNC viewer launch
+- Manual command generation
+- Server-side VNC launching
+
 ## 🔒 Security Features
 
 - **User Authentication**: Database-based user management
@@ -170,7 +220,8 @@ IT-Asset-Monitor/
 │   ├── services/      # API services
 │   ├── hooks/         # Custom React hooks
 │   └── lib/           # Utility functions
-├── server.js          # Backend server
+├── server.js          # Backend server (IT Asset Monitor)
+├── vnc-proxy-simple.js # VNC launcher server
 ├── package.json       # Dependencies
 └── README.md         # This file
 ```
@@ -181,6 +232,13 @@ IT-Asset-Monitor/
 - `AlertsPage.tsx` - Alert management
 - `computer-card.tsx` - Individual computer display
 - `computer-details-modal.tsx` - Detailed computer information
+
+### VNC Launcher Endpoints
+- `GET /vnc.html` - Main VNC launcher page
+- `GET /vnc.html?ip=...&port=...&password=...` - VNC launcher with parameters
+- `GET /launch-vnc?ip=...&port=...&password=...` - Server-side VNC launch
+- `GET /favicon.ico` - Favicon
+- `GET /robots.txt` - Robots file
 
 ## 🤝 Contributing
 
@@ -211,4 +269,4 @@ The system automatically updates when:
 
 ---
 
-**IT Asset Monitor** - Comprehensive IT asset management with real-time monitoring and analytics.
+**IT Asset Monitor** - Comprehensive IT asset management with real-time monitoring, analytics, and VNC launcher functionality.
