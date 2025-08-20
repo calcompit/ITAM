@@ -7,6 +7,8 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 - **Asset Monitoring**: View computer assets with IP addresses
 - **VNC Remote Access**: Click any IP address to connect via noVNC
 - **Real-time Status**: Monitor online/offline status of computers
+- **Analytics Dashboard**: Hardware and software analysis
+- **Alert System**: System notifications and change tracking
 
 ## Quick Start
 
@@ -33,21 +35,28 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
    pip install websockify
    ```
 
-3. **Test noVNC:**
+3. **Test websockify:**
    ```bash
+   # Use the simple test (recommended)
+   python test-simple.py
+   
+   # Or use the full test
    python test-websockify.py
    ```
 
 4. **Start the application:**
    ```bash
-   # Windows
+   # Quick start (recommended)
+   quick-start.bat
+   
+   # Manual start
    start.bat
    
-   # Manual
-   # Terminal 1: Start backend
+   # Or start separately
+   # Terminal 1: Backend
    node server.js
    
-   # Terminal 2: Start frontend
+   # Terminal 2: Frontend
    npm run dev
    ```
 
@@ -75,14 +84,14 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 
 ### VNC Not Working?
 
-1. **Run setup script:**
+1. **Test websockify first:**
    ```bash
-   setup-novnc.bat
+   python test-simple.py
    ```
 
-2. **Test noVNC:**
+2. **If test fails, run setup:**
    ```bash
-   python test-websockify.py
+   setup-novnc.bat
    ```
 
 3. **Check backend logs** for VNC startup messages
@@ -92,6 +101,7 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 - **"noVNC directory not found"**: Run `setup-novnc.bat`
 - **"websockify not found"**: Run `pip install websockify`
 - **Port 6081 in use**: Kill existing noVNC processes
+- **Test fails**: Use `python test-simple.py` instead of `test-websockify.py`
 
 ## Development
 
@@ -105,7 +115,9 @@ A simple IT asset monitoring dashboard with integrated VNC remote access functio
 ├── server.js              # Backend server
 ├── noVNC/                 # noVNC installation
 ├── setup-novnc.bat        # noVNC setup script
-├── test-websockify.py     # noVNC test script
+├── test-simple.py         # Simple websockify test
+├── test-websockify.py     # Full websockify test
+├── quick-start.bat        # Quick start script
 └── start.bat              # Application startup script
 ```
 
