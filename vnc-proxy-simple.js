@@ -1279,7 +1279,7 @@ wss.on('connection', (ws, req) => {
           console.log(`Connected to VNC server ${ip}:${port}`);
           clearTimeout(connectionTimeout);
           
-          // Send VNC protocol version
+          // Send VNC protocol version (try different versions)
           const version = Buffer.from('RFB 003.008\n');
           vncSocket.write(version);
           
@@ -1369,34 +1369,48 @@ wss.on('connection', (ws, req) => {
                   message: 'VNC version negotiated, sending authentication...'
                 }));
               }
-            } else if (vncState === 'auth') {
-              // Handle authentication response
-              if (vncBuffer.length >= 4) {
-                const authResult = vncBuffer.readUInt32BE(0);
-                console.log('VNC auth result:', authResult);
-                
-                if (authResult === 0) {
-                  // Authentication successful
-                  vncState = 'init';
-                  vncBuffer = vncBuffer.slice(4);
-                  
-                  ws.send(JSON.stringify({
-                    type: 'status',
-                    message: 'VNC authentication successful, initializing...'
-                  }));
-                } else {
-                  // Authentication failed
-                  const errorLength = vncBuffer.readUInt32BE(4);
-                  const errorMessage = vncBuffer.toString('ascii', 8, 8 + errorLength);
-                  console.log('VNC auth failed:', errorMessage);
-                  
-                  ws.send(JSON.stringify({
-                    type: 'error',
-                    message: 'VNC authentication failed: ' + errorMessage
-                  }));
-                  vncSocket.destroy();
-                }
-              }
+                         } else if (vncState === 'auth') {
+               // Handle authentication response
+               if (vncBuffer.length >= 4) {
+                 const authResult = vncBuffer.readUInt32BE(0);
+                 console.log('VNC auth result:', authResult);
+                 
+                 if (authResult === 0) {
+                   // Authentication successful
+                   vncState = 'init';
+                   vncBuffer = vncBuffer.slice(4);
+                   
+                   ws.send(JSON.stringify({
+                     type: 'status',
+                     message: 'VNC authentication successful, initializing...'
+                   }));
+                 } else {
+                   // Authentication failed - try to read error message
+                   if (vncBuffer.length >= 8) {
+                     const errorLength = vncBuffer.readUInt32BE(4);
+                     if (vncBuffer.length >= 8 + errorLength) {
+                       const errorMessage = vncBuffer.toString('ascii', 8, 8 + errorLength);
+                       console.log('VNC auth failed:', errorMessage);
+                       
+                       ws.send(JSON.stringify({
+                         type: 'error',
+                         message: 'VNC authentication failed: ' + errorMessage
+                       }));
+                     } else {
+                       ws.send(JSON.stringify({
+                         type: 'error',
+                         message: 'VNC authentication failed (unknown error)'
+                       }));
+                     }
+                   } else {
+                     ws.send(JSON.stringify({
+                       type: 'error',
+                       message: 'VNC authentication failed (incomplete response)'
+                     }));
+                   }
+                   vncSocket.destroy();
+                 }
+               }
             } else if (vncState === 'init') {
               // Handle initialization
               if (vncBuffer.length >= 24) {
@@ -1491,20 +1505,141 @@ wss.on('connection', (ws, req) => {
         vncSocket.on('error', (err) => {
           console.error('VNC socket error:', err.message);
           clearTimeout(connectionTimeout);
-          ws.send(JSON.stringify({
-            type: 'error',
-            message: 'VNC connection failed: ' + err.message
-          }));
-          ws.close();
+          
+          if (err.message.includes('ECONNRESET')) {
+            console.log('VNC connection reset - this is normal during protocol negotiation');
+            ws.send(JSON.stringify({
+              type: 'status',
+              message: 'VNC connection reset during protocol negotiation'
+            }));
+          } else {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'VNC connection failed: ' + err.message
+            }));
+          }
+          
+          // Don't close WebSocket immediately, let it try to reconnect
+          setTimeout(() => {
+            if (ws.readyState === 1) { // WebSocket is still open
+              ws.send(JSON.stringify({
+                type: 'status',
+                message: 'Attempting to reconnect to VNC server...'
+              }));
+            }
+          }, 2000);
         });
         
         vncSocket.on('close', () => {
           console.log('VNC server connection closed');
           clearTimeout(connectionTimeout);
+          
+          // Send status but don't close WebSocket
           ws.send(JSON.stringify({
             type: 'status',
-            message: 'VNC server disconnected'
+            message: 'VNC server disconnected - connection will be re-established'
           }));
+          
+          // Try to reconnect after a delay
+          setTimeout(() => {
+            if (ws.readyState === 1) { // WebSocket is still open
+              console.log('Attempting to reconnect to VNC server...');
+              
+              // Create new VNC connection
+              vncSocket = new net.Socket();
+              
+              vncSocket.connect(port, ip, () => {
+                console.log(`Reconnected to VNC server ${ip}:${port}`);
+                
+                // Reset state
+                vncState = 'version';
+                vncBuffer = Buffer.alloc(0);
+                
+                // Send VNC protocol version
+                const version = Buffer.from('RFB 003.008\n');
+                vncSocket.write(version);
+                
+                ws.send(JSON.stringify({
+                  type: 'status',
+                  message: 'Reconnected to VNC server, re-authenticating...'
+                }));
+              });
+              
+              // Set up event handlers for new connection
+              vncSocket.on('error', (err) => {
+                console.error('VNC reconnection error:', err.message);
+              });
+              
+              vncSocket.on('close', () => {
+                console.log('VNC reconnection closed');
+              });
+              
+              // Copy the data handler from above
+              vncSocket.on('data', (vncData) => {
+                console.log('Received VNC data (reconnect):', vncData.length, 'bytes, state:', vncState);
+                
+                // Append to buffer
+                vncBuffer = Buffer.concat([vncBuffer, vncData]);
+                
+                // Process data (same logic as above)
+                try {
+                  if (vncState === 'version') {
+                    if (vncBuffer.length >= 12) {
+                      const versionResponse = vncBuffer.toString('ascii', 0, 12);
+                      console.log('VNC version response (reconnect):', versionResponse);
+                      
+                      const authMethod = Buffer.from([0x01, 0x01]);
+                      vncSocket.write(authMethod);
+                      
+                      vncState = 'auth';
+                      vncBuffer = vncBuffer.slice(12);
+                      
+                      ws.send(JSON.stringify({
+                        type: 'status',
+                        message: 'VNC version negotiated (reconnect), sending authentication...'
+                      }));
+                    }
+                  } else if (vncState === 'auth') {
+                    if (vncBuffer.length >= 4) {
+                      const authResult = vncBuffer.readUInt32BE(0);
+                      console.log('VNC auth result (reconnect):', authResult);
+                      
+                      if (authResult === 0) {
+                        vncState = 'init';
+                        vncBuffer = vncBuffer.slice(4);
+                        
+                        ws.send(JSON.stringify({
+                          type: 'status',
+                          message: 'VNC authentication successful (reconnect), initializing...'
+                        }));
+                      }
+                    }
+                  } else if (vncState === 'init') {
+                    if (vncBuffer.length >= 24) {
+                      const framebufferWidth = vncBuffer.readUInt16BE(0);
+                      const framebufferHeight = vncBuffer.readUInt16BE(2);
+                      
+                      console.log('VNC framebuffer (reconnect):', framebufferWidth, 'x', framebufferHeight);
+                      
+                      const clientInit = Buffer.from([0x01]);
+                      vncSocket.write(clientInit);
+                      
+                      vncState = 'normal';
+                      vncBuffer = vncBuffer.slice(24);
+                      
+                      ws.send(JSON.stringify({
+                        type: 'status',
+                        message: `Reconnected to VNC server (${framebufferWidth}x${framebufferHeight})`
+                      }));
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error processing VNC data (reconnect):', error);
+                  vncBuffer = Buffer.alloc(0);
+                }
+              });
+            }
+          }, 3000);
         });
         
       } else if (message.type === 'request_screen') {
