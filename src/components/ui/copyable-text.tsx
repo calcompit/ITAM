@@ -26,7 +26,7 @@ export function CopyableText({ text, className, title }: CopyableTextProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <div className="flex-1 min-w-0">
-        <div className="bg-muted/50 px-2 py-1 rounded text-xs font-mono overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-muted-foreground scrollbar-track-transparent">
+        <div className="bg-muted/50 px-2 py-1 rounded text-xs font-mono overflow-x-auto whitespace-nowrap scrollbar-none">
           {text}
         </div>
       </div>
