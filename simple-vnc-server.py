@@ -29,21 +29,29 @@ def create_vnc_html():
 <head>
     <title>VNC Viewer</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        input:focus, select:focus { border-color: #007bff; outline: none; }
+        button { background: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; }
         button:hover { background: #0056b3; }
-        .status { margin-top: 20px; padding: 10px; border-radius: 4px; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .status { margin-top: 20px; padding: 15px; border-radius: 6px; font-weight: bold; }
         .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .connection-info { background: #e2e3e5; padding: 15px; border-radius: 6px; margin-top: 20px; }
+        .connection-info h3 { margin-top: 0; color: #495057; }
+        .connection-info p { margin: 5px 0; color: #6c757d; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>VNC Viewer</h1>
+        <h1>🔗 VNC Viewer</h1>
+        <p>Connect to a VNC server using WebSocket proxy</p>
+        
         <form id="vncForm">
             <div class="form-group">
                 <label for="host">Host:</label>
@@ -57,42 +65,80 @@ def create_vnc_html():
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" value="123">
             </div>
-            <button type="submit">Connect to VNC</button>
+            <button type="submit" id="connectBtn">🔗 Connect to VNC</button>
         </form>
+        
         <div id="status" class="status" style="display: none;"></div>
+        
+        <div class="connection-info">
+            <h3>📋 Connection Information</h3>
+            <p><strong>WebSocket Proxy:</strong> ws://localhost:6081/websockify</p>
+            <p><strong>VNC Interface:</strong> http://localhost:8081</p>
+            <p><strong>Default Password:</strong> 123</p>
+        </div>
     </div>
     
     <script>
-        document.getElementById('vncForm').addEventListener('submit', function(e) {
+        const form = document.getElementById('vncForm');
+        const statusDiv = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        let ws = null;
+        
+        function showStatus(message, type) {
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status ' + type;
+            statusDiv.innerHTML = message;
+        }
+        
+        function setButtonState(disabled, text) {
+            connectBtn.disabled = disabled;
+            connectBtn.textContent = text;
+        }
+        
+        form.addEventListener('submit', function(e) {
             e.preventDefault();
             
             const host = document.getElementById('host').value;
             const port = document.getElementById('port').value;
             const password = document.getElementById('password').value;
             
-            const statusDiv = document.getElementById('status');
-            statusDiv.style.display = 'block';
-            statusDiv.className = 'status success';
-            statusDiv.innerHTML = 'Connecting to VNC server...<br>Host: ' + host + ':' + port;
+            // Close existing connection
+            if (ws) {
+                ws.close();
+            }
+            
+            setButtonState(true, '🔄 Connecting...');
+            showStatus('Connecting to VNC server...<br>Host: ' + host + ':' + port, 'info');
             
             // Try to connect using websockify
             const wsUrl = 'ws://localhost:6081/websockify';
-            const ws = new WebSocket(wsUrl);
             
-            ws.onopen = function() {
-                statusDiv.innerHTML = 'WebSocket connected! VNC connection established.';
-            };
-            
-            ws.onerror = function(error) {
-                statusDiv.className = 'status error';
-                statusDiv.innerHTML = 'Connection failed. Please check if the VNC server is running and websockify is started.';
-            };
-            
-            ws.onclose = function() {
-                statusDiv.className = 'status error';
-                statusDiv.innerHTML = 'Connection closed.';
-            };
+            try {
+                ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function() {
+                    showStatus('✅ WebSocket connected! VNC connection established.<br>You can now use a VNC client to connect to ' + host + ':' + port, 'success');
+                    setButtonState(false, '🔗 Connect to VNC');
+                };
+                
+                ws.onerror = function(error) {
+                    showStatus('❌ Connection failed. Please check:<br>1. VNC server is running on ' + host + ':' + port + '<br>2. websockify is started<br>3. Password is correct', 'error');
+                    setButtonState(false, '🔗 Connect to VNC');
+                };
+                
+                ws.onclose = function() {
+                    showStatus('🔌 Connection closed.', 'info');
+                    setButtonState(false, '🔗 Connect to VNC');
+                };
+                
+            } catch (error) {
+                showStatus('❌ Failed to create WebSocket connection: ' + error.message, 'error');
+                setButtonState(false, '🔗 Connect to VNC');
+            }
         });
+        
+        // Show initial status
+        showStatus('Ready to connect. Enter VNC server details and click Connect.', 'info');
     </script>
 </body>
 </html>
@@ -127,9 +173,32 @@ def start_http_server(port=8081):
     """Start HTTP server to serve VNC HTML"""
     class VNCHandler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
+            # Handle root path
             if self.path == '/':
                 self.path = '/vnc.html'
+            
+            # Handle vnc.html path
+            if self.path == '/vnc.html':
+                try:
+                    with open('vnc.html', 'rb') as f:
+                        content = f.read()
+                    
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/html')
+                    self.send_header('Content-Length', str(len(content)))
+                    self.end_headers()
+                    self.wfile.write(content)
+                    return
+                except FileNotFoundError:
+                    self.send_error(404, 'vnc.html not found')
+                    return
+            
+            # Handle other requests
             return http.server.SimpleHTTPRequestHandler.do_GET(self)
+        
+        def log_message(self, format, *args):
+            # Suppress logging for cleaner output
+            pass
     
     try:
         with socketserver.TCPServer(("", port), VNCHandler) as httpd:
