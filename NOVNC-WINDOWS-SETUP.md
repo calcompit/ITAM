@@ -28,6 +28,11 @@
    ```cmd
    start-novnc-windows.bat
    ```
+   
+   **Or use Python script directly:**
+   ```cmd
+   python start-novnc-windows.py
+   ```
 
 ### Method 2: Manual Setup
 
@@ -47,7 +52,7 @@ Make sure your VNC server is running on port 5900 (default)
 
 #### Step 4: Start noVNC Proxy
 ```cmd
-python utils/novnc_proxy --vnc localhost:5900 --listen localhost:6081
+python utils/websockify/websockify.py 6081 localhost:5900 --web .
 ```
 
 #### Step 5: Access Web Interface
@@ -60,23 +65,23 @@ http://localhost:6081/vnc.html
 
 ### Basic Usage
 ```cmd
-python utils/novnc_proxy --vnc localhost:5900
+python utils/websockify/websockify.py 6081 localhost:5900 --web .
 ```
 
 ### Custom Port
 ```cmd
-python utils/novnc_proxy --vnc localhost:5900 --listen localhost:8081
+python utils/websockify/websockify.py 8081 localhost:5900 --web .
 ```
 
 ### With SSL/HTTPS
 ```cmd
-python utils/novnc_proxy --vnc localhost:5900 --cert cert.pem --key key.pem
+python utils/websockify/websockify.py 6081 localhost:5900 --web . --cert cert.pem --key key.pem
 ```
 
 ### Multiple VNC Servers
 ```cmd
-python utils/novnc_proxy --vnc localhost:5900 --listen localhost:6081
-python utils/novnc_proxy --vnc localhost:5901 --listen localhost:6082
+python utils/websockify/websockify.py 6081 localhost:5900 --web .
+python utils/websockify/websockify.py 6082 localhost:5901 --web .
 ```
 
 ## 🌐 Access URLs
@@ -91,17 +96,17 @@ After starting noVNC, you can access:
 
 ### For Local Use Only
 ```cmd
-python utils/novnc_proxy --vnc localhost:5900 --listen localhost:6081
+python utils/websockify/websockify.py 6081 localhost:5900 --web .
 ```
 
 ### For Network Access
 ```cmd
-python utils/novnc_proxy --vnc localhost:5900 --listen 0.0.0.0:6081
+python utils/websockify/websockify.py 6081 localhost:5900 --web . --listen 0.0.0.0
 ```
 
 ### With SSL Certificate
 ```cmd
-python utils/novnc_proxy --vnc localhost:5900 --cert cert.pem --key key.pem --listen localhost:6081
+python utils/websockify/websockify.py 6081 localhost:5900 --web . --cert cert.pem --key key.pem
 ```
 
 ## 🛠️ Troubleshooting
@@ -120,21 +125,33 @@ ERROR: Failed to download noVNC!
 ```
 **Solution**: Install Git from https://git-scm.com/download/win
 
-#### 3. Port already in use
+#### 3. websockify not found
+```
+❌ websockify is not installed
+```
+**Solution**: Run `pip install websockify`
+
+#### 4. Port already in use
 ```
 Address already in use
 ```
 **Solution**: Change the port or stop the service using that port
 
-#### 4. VNC server not accessible
+#### 5. VNC server not accessible
 ```
 Connection refused
 ```
 **Solution**: Make sure your VNC server is running on the specified port
 
+#### 6. SyntaxError in novnc_proxy script
+```
+SyntaxError: unmatched ')'
+```
+**Solution**: Use the Python script (`start-novnc-windows.py`) instead of the bash script
+
 ### Debug Mode
 ```cmd
-python utils/novnc_proxy --vnc localhost:5900 --verbose
+python utils/websockify/websockify.py 6081 localhost:5900 --web . --verbose
 ```
 
 ## 📱 Mobile Access
@@ -171,3 +188,4 @@ If you encounter issues:
 3. Check firewall settings
 4. Ensure VNC server is running
 5. Try different ports if needed
+6. Use the Python script instead of bash scripts
