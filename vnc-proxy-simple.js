@@ -1340,81 +1340,153 @@ wss.on('connection', (ws, req) => {
           }, 1000);
         });
         
+        // Handle VNC protocol responses
+        let vncState = 'version'; // version, auth, init, normal
+        let vncBuffer = Buffer.alloc(0);
+        
         vncSocket.on('data', (vncData) => {
-          console.log('Received VNC data:', vncData.length, 'bytes');
+          console.log('Received VNC data:', vncData.length, 'bytes, state:', vncState);
+          
+          // Append to buffer
+          vncBuffer = Buffer.concat([vncBuffer, vncData]);
           
           try {
-            // Process VNC data and create visual representation
-            if (vncData.length > 0) {
-              // Calculate data characteristics for visual generation
-              const dataSum = vncData.reduce((sum, byte) => sum + byte, 0);
-              const hue = dataSum % 360;
-              const time = Date.now() / 1000;
-              
-              // Create a simple SVG-based visual representation
-              const svgWidth = 1920;
-              const svgHeight = 1080;
-              
-              // Generate SVG with animated elements
-              const svg = `
-                <svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" style="stop-color:hsl(${hue}, 70%, 20%);stop-opacity:1" />
-                      <stop offset="100%" style="stop-color:hsl(${hue + 60}, 70%, 40%);stop-opacity:1" />
-                    </linearGradient>
-                  </defs>
+            if (vncState === 'version') {
+              // Handle version response
+              if (vncBuffer.length >= 12) {
+                const versionResponse = vncBuffer.toString('ascii', 0, 12);
+                console.log('VNC version response:', versionResponse);
+                
+                // Send authentication method (None for now)
+                const authMethod = Buffer.from([0x01, 0x01]); // 1 authentication method: None
+                vncSocket.write(authMethod);
+                
+                vncState = 'auth';
+                vncBuffer = vncBuffer.slice(12);
+                
+                ws.send(JSON.stringify({
+                  type: 'status',
+                  message: 'VNC version negotiated, sending authentication...'
+                }));
+              }
+            } else if (vncState === 'auth') {
+              // Handle authentication response
+              if (vncBuffer.length >= 4) {
+                const authResult = vncBuffer.readUInt32BE(0);
+                console.log('VNC auth result:', authResult);
+                
+                if (authResult === 0) {
+                  // Authentication successful
+                  vncState = 'init';
+                  vncBuffer = vncBuffer.slice(4);
                   
-                  <!-- Background -->
-                  <rect width="100%" height="100%" fill="url(#bgGradient)" />
+                  ws.send(JSON.stringify({
+                    type: 'status',
+                    message: 'VNC authentication successful, initializing...'
+                  }));
+                } else {
+                  // Authentication failed
+                  const errorLength = vncBuffer.readUInt32BE(4);
+                  const errorMessage = vncBuffer.toString('ascii', 8, 8 + errorLength);
+                  console.log('VNC auth failed:', errorMessage);
                   
-                  <!-- Animated circles -->
-                  ${Array.from({length: 5}, (_, i) => {
-                    const angle = time + i * Math.PI / 2.5;
-                    const radius = 100 + Math.sin(time * 2 + i) * 50;
-                    const x = svgWidth / 2 + Math.cos(angle) * radius;
-                    const y = svgHeight / 2 + Math.sin(angle) * radius;
-                    const circleRadius = 20 + i * 10;
-                    return `<circle cx="${x}" cy="${y}" r="${circleRadius}" fill="hsl(${hue + i * 60}, 80%, 60%)" />`;
-                  }).join('')}
+                  ws.send(JSON.stringify({
+                    type: 'error',
+                    message: 'VNC authentication failed: ' + errorMessage
+                  }));
+                  vncSocket.destroy();
+                }
+              }
+            } else if (vncState === 'init') {
+              // Handle initialization
+              if (vncBuffer.length >= 24) {
+                const framebufferWidth = vncBuffer.readUInt16BE(0);
+                const framebufferHeight = vncBuffer.readUInt16BE(2);
+                const bitsPerPixel = vncBuffer.readUInt8(4);
+                const depth = vncBuffer.readUInt8(5);
+                const bigEndian = vncBuffer.readUInt8(6);
+                const trueColour = vncBuffer.readUInt8(7);
+                const redMax = vncBuffer.readUInt16BE(8);
+                const greenMax = vncBuffer.readUInt16BE(10);
+                const blueMax = vncBuffer.readUInt16BE(12);
+                const redShift = vncBuffer.readUInt8(14);
+                const greenShift = vncBuffer.readUInt8(15);
+                const blueShift = vncBuffer.readUInt8(16);
+                
+                console.log('VNC framebuffer:', framebufferWidth, 'x', framebufferHeight);
+                console.log('VNC pixel format:', bitsPerPixel, 'bpp, depth:', depth);
+                
+                // Send client init
+                const clientInit = Buffer.from([0x01]); // shared-flag = true
+                vncSocket.write(clientInit);
+                
+                vncState = 'normal';
+                vncBuffer = vncBuffer.slice(24);
+                
+                ws.send(JSON.stringify({
+                  type: 'status',
+                  message: `Connected to VNC server (${framebufferWidth}x${framebufferHeight})`
+                }));
+                
+                // Send framebuffer update request
+                setTimeout(() => {
+                  const updateRequest = Buffer.alloc(10);
+                  updateRequest.writeUInt8(3, 0); // message type: framebuffer update request
+                  updateRequest.writeUInt8(0, 1); // incremental = false
+                  updateRequest.writeUInt16BE(0, 2); // x-position
+                  updateRequest.writeUInt16BE(0, 4); // y-position
+                  updateRequest.writeUInt16BE(framebufferWidth, 6); // width
+                  updateRequest.writeUInt16BE(framebufferHeight, 8); // height
+                  vncSocket.write(updateRequest);
                   
-                  <!-- Status overlay -->
-                  <rect x="50" y="50" width="400" height="200" fill="rgba(0,0,0,0.8)" />
-                  <text x="70" y="80" fill="#00ff00" font-family="Arial" font-size="24" font-weight="bold">VNC Screen Active</text>
-                  <text x="70" y="110" fill="#ffffff" font-family="Arial" font-size="16">Data received: ${vncData.length} bytes</text>
-                  <text x="70" y="135" fill="#ffffff" font-family="Arial" font-size="16">Screen size: 1920x1080</text>
-                  <text x="70" y="160" fill="#ffffff" font-family="Arial" font-size="16">Connection: Active</text>
-                  <text x="70" y="185" fill="#ffffff" font-family="Arial" font-size="16">Last update: ${new Date().toLocaleTimeString()}</text>
-                </svg>
-              `;
-              
-              // Convert SVG to data URL
-              const dataUrl = 'data:image/svg+xml;base64,' + Buffer.from(svg).toString('base64');
-              
-              ws.send(JSON.stringify({
-                type: 'screen_data',
-                width: 1920,
-                height: 1080,
-                dataLength: vncData.length,
-                dataUrl: dataUrl,
-                message: 'VNC screen data decoded and displayed',
-                timestamp: Date.now()
-              }));
+                  console.log('Sent framebuffer update request');
+                }, 100);
+              }
+            } else if (vncState === 'normal') {
+              // Handle normal VNC messages
+              if (vncBuffer.length >= 4) {
+                const messageType = vncBuffer.readUInt8(0);
+                console.log('VNC message type:', messageType);
+                
+                if (messageType === 0) {
+                  // Framebuffer update
+                  const padding = vncBuffer.readUInt8(1);
+                  const numberOfRectangles = vncBuffer.readUInt16BE(2);
+                  console.log('Framebuffer update:', numberOfRectangles, 'rectangles');
+                  
+                  // For now, just acknowledge and request more updates
+                  vncBuffer = vncBuffer.slice(4);
+                  
+                  // Send another update request
+                  setTimeout(() => {
+                    const updateRequest = Buffer.alloc(10);
+                    updateRequest.writeUInt8(3, 0); // message type: framebuffer update request
+                    updateRequest.writeUInt8(1, 1); // incremental = true
+                    updateRequest.writeUInt16BE(0, 2); // x-position
+                    updateRequest.writeUInt16BE(0, 4); // y-position
+                    updateRequest.writeUInt16BE(1920, 6); // width
+                    updateRequest.writeUInt16BE(1080, 8); // height
+                    vncSocket.write(updateRequest);
+                  }, 100);
+                  
+                  // Send status update
+                  ws.send(JSON.stringify({
+                    type: 'status',
+                    message: `VNC screen update received (${numberOfRectangles} rectangles)`
+                  }));
+                } else {
+                  // Unknown message type, skip
+                  vncBuffer = vncBuffer.slice(1);
+                }
+              }
             }
           } catch (error) {
             console.error('Error processing VNC data:', error);
-            
-            // Fallback: send basic screen data
-            ws.send(JSON.stringify({
-              type: 'screen_data',
-              width: 1920,
-              height: 1080,
-              dataLength: vncData.length,
-              message: 'VNC screen data received (processing error)',
-              timestamp: Date.now()
-            }));
+            vncBuffer = Buffer.alloc(0);
           }
         });
+        
+        // Note: VNC data handling is now done in the protocol state machine above
         
         vncSocket.on('error', (err) => {
           console.error('VNC socket error:', err.message);
