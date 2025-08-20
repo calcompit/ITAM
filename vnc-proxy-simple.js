@@ -211,6 +211,10 @@ const server = http.createServer((req, res) => {
             📋 Copy Command
         </button>
         
+        <button class="manual-button" onclick="downloadTightVNC()">
+            📥 Download TightVNC
+        </button>
+        
         <div id="status" class="status" style="display: none;"></div>
         
         <div id="manual-command" style="display: none; margin-top: 20px;">
@@ -220,6 +224,17 @@ const server = http.createServer((req, res) => {
                 <code style="background: #f8f9fa; padding: 10px; border-radius: 5px; display: block; margin: 10px 0; font-family: monospace;">
                     "C:\\Program Files\\TightVNC\\tvnviewer.exe" -host=10.51.101.83 -port=5900 -password=123
                 </code>
+            </div>
+        </div>
+        
+        <div id="download-info" style="display: none; margin-top: 20px;">
+            <div class="vnc-info">
+                <h3>📥 TightVNC Installation</h3>
+                <p><strong>Step 1:</strong> Download TightVNC Viewer from the official website:</p>
+                <p><a href="https://www.tightvnc.com/download.php" target="_blank" style="color: #007bff; text-decoration: none;">https://www.tightvnc.com/download.php</a></p>
+                <p><strong>Step 2:</strong> Install TightVNC Viewer (Viewer only, not server)</p>
+                <p><strong>Step 3:</strong> After installation, try launching VNC again</p>
+                <p><strong>Note:</strong> Make sure to install the "Viewer" component, not the "Server" component</p>
             </div>
         </div>
         
@@ -251,39 +266,80 @@ const server = http.createServer((req, res) => {
         
         function launchTightVNC() {
             try {
-                // Try to launch TightVNC using protocol handler
-                const tightVncPath = 'C:\\\\Program Files\\\\TightVNC\\\\tvnviewer.exe';
-                const command = \`"\${tightVncPath}" -host=\${ip} -port=\${port} -password=\${password}\`;
+                // Multiple possible TightVNC paths
+                const possiblePaths = [
+                    'C:\\\\Program Files\\\\TightVNC\\\\tvnviewer.exe',
+                    'C:\\\\Program Files (x86)\\\\TightVNC\\\\tvnviewer.exe',
+                    'C:\\\\TightVNC\\\\tvnviewer.exe',
+                    'C:\\\\Program Files\\\\TightVNC\\\\tvnviewer64.exe'
+                ];
                 
-                // Try multiple methods to launch
+                const command = \`"\${possiblePaths[0]}" -host=\${ip} -port=\${port} -password=\${password}\`;
                 
-                // Method 1: Use ActiveX (Windows only)
+                // Method 1: Use ActiveX (Windows only) - Most reliable
                 try {
-                    const shell = new ActiveXObject('WScript.Shell');
-                    shell.Run(command, 1, false);
-                    showStatus('✅ TightVNC launched successfully!', 'success');
-                    return;
+                    if (typeof ActiveXObject !== 'undefined') {
+                        const shell = new ActiveXObject('WScript.Shell');
+                        shell.Run(command, 1, false);
+                        showStatus('✅ TightVNC launched successfully via ActiveX!', 'success');
+                        return;
+                    }
                 } catch (e) {
                     console.log('ActiveX method failed:', e);
                 }
                 
-                // Method 2: Use protocol handler
+                // Method 2: Try to open TightVNC directly via file protocol
+                try {
+                    for (let path of possiblePaths) {
+                        const fileUrl = \`file:///\${path.replace(/\\\\/g, '/')}\`;
+                        const newWindow = window.open(fileUrl, '_blank');
+                        if (newWindow && !newWindow.closed) {
+                            showStatus('📁 Opened TightVNC folder. Please run the viewer manually.', 'info');
+                            setTimeout(() => {
+                                showManualCommand();
+                            }, 2000);
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.log('File protocol method failed:', e);
+                }
+                
+                // Method 3: Use protocol handler (less reliable)
                 try {
                     window.location.href = \`tightvnc://\${ip}:\${port}?password=\${password}\`;
-                    showStatus('🔄 Attempting to launch TightVNC...', 'info');
+                    showStatus('🔄 Attempting to launch TightVNC via protocol...', 'info');
+                    
+                    // Fallback after 3 seconds if protocol doesn't work
+                    setTimeout(() => {
+                        showStatus('❌ Protocol launch failed. Please use manual command.', 'error');
+                        showManualCommand();
+                    }, 3000);
                     return;
                 } catch (e) {
                     console.log('Protocol handler method failed:', e);
                 }
                 
-                // Method 3: Use file protocol
+                // Method 4: Try server-side launch
                 try {
-                    const fileUrl = \`file:///\${tightVncPath.replace(/\\\\/g, '/')}\`;
-                    window.open(fileUrl);
-                    showStatus('📁 Opened TightVNC folder. Please run the viewer manually.', 'info');
+                    fetch(\`/launch-vnc?ip=\${ip}&port=\${port}&password=\${password}\`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showStatus('✅ TightVNC launched via server!', 'success');
+                            } else {
+                                showStatus('❌ Server launch failed: ' + data.error, 'error');
+                                showManualCommand();
+                            }
+                        })
+                        .catch(error => {
+                            console.log('Server launch failed:', error);
+                            showStatus('❌ Server launch failed. Please use manual command.', 'error');
+                            showManualCommand();
+                        });
                     return;
                 } catch (e) {
-                    console.log('File protocol method failed:', e);
+                    console.log('Server-side method failed:', e);
                 }
                 
                 // If all methods fail
@@ -327,6 +383,19 @@ const server = http.createServer((req, res) => {
             }
         }
         
+        function downloadTightVNC() {
+            const downloadDiv = document.getElementById('download-info');
+            downloadDiv.style.display = 'block';
+            
+            // Scroll to download info
+            downloadDiv.scrollIntoView({ behavior: 'smooth' });
+            
+            showStatus('📥 Opening TightVNC download page...', 'info');
+            
+            // Open download page in new tab
+            window.open('https://www.tightvnc.com/download.php', '_blank');
+        }
+        
         // Auto-launch on page load (optional)
         // Uncomment the line below if you want auto-launch
         // setTimeout(launchTightVNC, 1000);
@@ -352,29 +421,61 @@ const server = http.createServer((req, res) => {
     
     console.log(`Attempting to launch TightVNC for ${ip}:${port}`);
     
-    // Try to launch TightVNC on Windows
-    const tightVncPath = 'C:\\Program Files\\TightVNC\\tvnviewer.exe';
-    const command = `"${tightVncPath}" -host=${ip} -port=${port} -password=${password}`;
+    // Try multiple possible TightVNC paths
+    const possiblePaths = [
+      'C:\\Program Files\\TightVNC\\tvnviewer.exe',
+      'C:\\Program Files (x86)\\TightVNC\\tvnviewer.exe',
+      'C:\\TightVNC\\tvnviewer.exe',
+      'C:\\Program Files\\TightVNC\\tvnviewer64.exe'
+    ];
     
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        console.error('Error launching TightVNC:', error);
+    let launchAttempted = false;
+    let lastError = null;
+    
+    // Try each path
+    for (let path of possiblePaths) {
+      const command = `"${path}" -host=${ip} -port=${port} -password=${password}`;
+      
+      exec(command, (error, stdout, stderr) => {
+        launchAttempted = true;
+        
+        if (error) {
+          console.error(`Error launching TightVNC from ${path}:`, error.message);
+          lastError = error.message;
+          
+          // If this was the last attempt, send error response
+          if (path === possiblePaths[possiblePaths.length - 1]) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ 
+              success: false, 
+              error: `Failed to launch TightVNC. Tried paths: ${possiblePaths.join(', ')}. Last error: ${lastError}`,
+              command: command 
+            }));
+          }
+        } else {
+          console.log(`TightVNC launched successfully from ${path}`);
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ 
+            success: true, 
+            message: `TightVNC launched successfully from ${path}`,
+            command: command 
+          }));
+          return;
+        }
+      });
+    }
+    
+    // If no paths worked, send error after timeout
+    setTimeout(() => {
+      if (!launchAttempted) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ 
           success: false, 
-          error: error.message,
-          command: command 
-        }));
-      } else {
-        console.log('TightVNC launched successfully');
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ 
-          success: true, 
-          message: 'TightVNC launched successfully',
-          command: command 
+          error: 'No TightVNC installation found. Please install TightVNC first.',
+          paths: possiblePaths
         }));
       }
-    });
+    }, 5000);
   } else {
     console.log('404 Not Found:', req.url);
     res.writeHead(404, { 'Content-Type': 'text/plain' });
