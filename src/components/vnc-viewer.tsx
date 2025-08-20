@@ -12,6 +12,36 @@ interface VNCViewerProps {
 }
 
 export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VNCViewerProps) {
+  const [vncAppAvailable, setVncAppAvailable] = useState<boolean | null>(null);
+
+  // Check if VNC app is available when dialog opens
+  React.useEffect(() => {
+    if (isOpen) {
+      checkVNCApp();
+    }
+  }, [isOpen]);
+
+  const checkVNCApp = () => {
+    try {
+      // Try to open VNC app
+      const vncUrl = `vnc://:123@${ip}:${port}`;
+      const vncWindow = window.open(vncUrl, '_blank');
+      
+      // Check if VNC app opened successfully
+      setTimeout(() => {
+        if (vncWindow && !vncWindow.closed) {
+          setVncAppAvailable(true);
+          // Close the test window
+          vncWindow.close();
+        } else {
+          setVncAppAvailable(false);
+        }
+      }, 1000);
+    } catch (error) {
+      setVncAppAvailable(false);
+    }
+  };
+
   const handleVNCApp = () => {
     // Try to open VNC in native app with password
     const vncUrl = `vnc://:123@${ip}:${port}`;
@@ -59,17 +89,40 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
           <div className="space-y-3">
             <h4 className="font-medium">Choose Connection Method:</h4>
             
-            <Button
-              onClick={handleVNCApp}
-              className="w-full justify-start"
-              variant="outline"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open with VNC App
-              <span className="text-xs text-muted-foreground ml-auto">
-                (TightVNC, RealVNC, etc.)
-              </span>
-            </Button>
+            {vncAppAvailable === null && (
+              <div className="text-center py-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mx-auto"></div>
+                <p className="text-xs text-muted-foreground mt-1">Checking VNC app availability...</p>
+              </div>
+            )}
+            
+            {vncAppAvailable === true && (
+              <Button
+                onClick={handleVNCApp}
+                className="w-full justify-start"
+                variant="outline"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open with VNC App ✅
+                <span className="text-xs text-muted-foreground ml-auto">
+                  (TightVNC, RealVNC, etc.)
+                </span>
+              </Button>
+            )}
+            
+            {vncAppAvailable === false && (
+              <Button
+                onClick={handleVNCApp}
+                className="w-full justify-start"
+                variant="outline"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open with VNC App ⚠️
+                <span className="text-xs text-muted-foreground ml-auto">
+                  (Not detected - may not work)
+                </span>
+              </Button>
+            )}
 
             <Button
               onClick={handleWebVNC}
