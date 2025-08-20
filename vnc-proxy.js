@@ -3,12 +3,19 @@ import net from 'net';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 const VNC_PROXY_PORT = 8081;
 const VNC_PROXY_HOST = '0.0.0.0'; // Listen on all interfaces for Windows
 
+// Get current directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Create HTTP server for serving the VNC HTML page
 const server = http.createServer((req, res) => {
+  console.log('Request:', req.method, req.url);
+  
   if (req.url === '/vnc.html') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`
@@ -191,17 +198,49 @@ const server = http.createServer((req, res) => {
   } else if (req.url === '/novnc.js') {
     // Serve the local noVNC library
     try {
-      const novncPath = path.join(process.cwd(), 'public', 'novnc.js');
-      const content = fs.readFileSync(novncPath, 'utf8');
-      res.writeHead(200, { 'Content-Type': 'application/javascript' });
-      res.end(content);
+      // Try multiple possible paths
+      const possiblePaths = [
+        path.join(__dirname, 'public', 'novnc.js'),
+        path.join(__dirname, 'novnc.js'),
+        path.join(process.cwd(), 'public', 'novnc.js'),
+        path.join(process.cwd(), 'novnc.js')
+      ];
+      
+      let content = null;
+      let foundPath = null;
+      
+      for (const filePath of possiblePaths) {
+        try {
+          if (fs.existsSync(filePath)) {
+            content = fs.readFileSync(filePath, 'utf8');
+            foundPath = filePath;
+            console.log('Found novnc.js at:', foundPath);
+            break;
+          }
+        } catch (err) {
+          console.log('Tried path:', filePath, '- not found');
+        }
+      }
+      
+      if (content) {
+        res.writeHead(200, { 'Content-Type': 'application/javascript' });
+        res.end(content);
+      } else {
+        console.error('novnc.js not found in any of the expected locations');
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('novnc.js not found');
+      }
     } catch (error) {
       console.error('Error serving novnc.js:', error);
-      res.writeHead(404);
-      res.end('Not Found');
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('Internal server error');
     }
-  } else {
+  } else if (req.url === '/favicon.ico') {
+    // Serve a simple favicon or 404
     res.writeHead(404);
+    res.end();
+  } else {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
     res.end('Not Found');
   }
 });
@@ -313,4 +352,6 @@ wss.on('connection', (ws, req) => {
 server.listen(VNC_PROXY_PORT, VNC_PROXY_HOST, () => {
   console.log(`VNC proxy server running on http://${VNC_PROXY_HOST}:${VNC_PROXY_PORT}`);
   console.log('VNC HTML page available at: http://10.51.101.49:8081/vnc.html');
+  console.log('Current directory:', __dirname);
+  console.log('Working directory:', process.cwd());
 });
