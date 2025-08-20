@@ -996,28 +996,89 @@ app.post('/api/vnc/start', async (req, res) => {
   try {
     const { host = '10.51.101.83', port = 5900, webPort = 6081 } = req.body;
     
-    // This would typically start noVNC process
-    // For now, we'll just return success
+    // Check if noVNC is already running
+    const isRunning = await checkNovncStatus();
+    
+    if (isRunning) {
+      res.json({
+        success: true,
+        message: 'noVNC is already running',
+        url: `http://localhost:${webPort}/vnc.html?host=${host}&port=${port}`,
+        config: { host, port, webPort }
+      });
+      return;
+    }
+    
+    // Try to start noVNC process
+    const { spawn } = await import('child_process');
+    const path = await import('path');
+    
+    const novncDir = path.join(process.cwd(), 'noVNC');
+    const pythonScript = path.join(novncDir, 'utils', 'websockify', 'websockify.py');
+    
+    // Check if noVNC directory exists
+    const fs = await import('fs');
+    if (!fs.existsSync(novncDir)) {
+      res.status(500).json({
+        success: false,
+        message: 'noVNC directory not found. Please run: git clone https://github.com/novnc/noVNC.git',
+        error: 'noVNC not installed'
+      });
+      return;
+    }
+    
+    // Start websockify process
+    const websockifyProcess = spawn('python', [
+      '-m', 'websockify',
+      webPort.toString(),
+      `${host}:${port}`,
+      '--web', novncDir,
+      '--verbose'
+    ], {
+      cwd: novncDir,
+      detached: true,
+      stdio: 'ignore'
+    });
+    
+    // Wait a moment for the process to start
+    setTimeout(async () => {
+      const newStatus = await checkNovncStatus();
+      console.log('noVNC status after start:', newStatus);
+    }, 2000);
+    
     res.json({
       success: true,
       message: 'noVNC started successfully',
       url: `http://localhost:${webPort}/vnc.html?host=${host}&port=${port}`,
-      config: { host, port, webPort }
+      config: { host, port, webPort },
+      processId: websockifyProcess.pid
     });
+    
   } catch (error) {
     console.error('Error starting VNC:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to start VNC',
+      message: 'Failed to start noVNC',
       error: error.message
     });
   }
 });
 
+// Helper function to check noVNC status
+async function checkNovncStatus() {
+  try {
+    const { default: fetch } = await import('node-fetch');
+    const response = await fetch('http://localhost:6081', { timeout: 2000 });
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
+}
+
 app.get('/api/vnc/status', async (req, res) => {
   try {
     // Check if noVNC is running on port 6081
-    const isRunning = true; // This would check actual process status
+    const isRunning = await checkNovncStatus();
     
     res.json({
       success: true,

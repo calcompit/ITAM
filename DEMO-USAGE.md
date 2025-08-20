@@ -15,7 +15,7 @@
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   noVNC         │    │   WebSocket     │    │   VNC Protocol  │
 │   Port 6081     │◄──►│   Proxy         │◄──►│   Connection    │
-│   (Web VNC)     │    │   (WebSocket)   │    │   (TCP)         │
+│   (Auto Start)  │    │   (Auto Start)  │    │   (TCP)         │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -23,6 +23,10 @@
 
 #### **Step 1: เริ่มระบบ**
 ```bash
+# วิธีง่าย: ใช้ไฟล์เดียว
+start-simple.bat
+
+# หรือแยกกัน:
 # Terminal 1: เริ่ม Backend
 node server.js
 # รันที่ port 3002
@@ -30,10 +34,6 @@ node server.js
 # Terminal 2: เริ่ม Frontend  
 npm run dev
 # รันที่ port 8080
-
-# Terminal 3: เริ่ม noVNC (เมื่อต้องการ VNC)
-python start-novnc-simple.py
-# รันที่ port 6081
 ```
 
 #### **Step 2: เข้า Dashboard**
@@ -43,7 +43,8 @@ http://localhost:8080
 
 #### **Step 3: คลิก IP Address**
 - คลิกที่ IP address ใน computer card
-- ระบบจะเปิด: `http://localhost:6081/vnc.html?host=IP&port=5900`
+- **ระบบจะเริ่ม noVNC อัตโนมัติ**
+- เปิด: `http://localhost:6081/vnc.html?host=IP&port=5900`
 
 #### **Step 4: เชื่อมต่อ VNC**
 - ใส่ password: `123`
@@ -53,22 +54,34 @@ http://localhost:8080
 
 ### **Scenario: เชื่อมต่อ VNC ไปที่ 10.51.101.83**
 
-#### **1. เปิด Dashboard**
+#### **1. เริ่มระบบ**
+```bash
+start-simple.bat
+```
+
+#### **2. เปิด Dashboard**
 ```
 http://localhost:8080
 ```
 
-#### **2. คลิก IP Address**
+#### **3. คลิก IP Address**
 ```
 คลิกที่: 10.51.101.83 ใน computer card
 ```
 
-#### **3. ระบบจะเปิด URL**
+#### **4. ระบบทำงานอัตโนมัติ**
+```
+✅ เริ่ม noVNC process
+✅ เปิด WebSocket proxy
+✅ เปิด VNC interface
+```
+
+#### **5. เปิด URL**
 ```
 http://localhost:6081/vnc.html?host=10.51.101.83&port=5900
 ```
 
-#### **4. noVNC Interface**
+#### **6. noVNC Interface**
 ```
 ┌─────────────────────────────────────┐
 │  noVNC Web Interface                │
@@ -81,7 +94,7 @@ http://localhost:6081/vnc.html?host=10.51.101.83&port=5900
 └─────────────────────────────────────┘
 ```
 
-#### **5. การเชื่อมต่อ**
+#### **7. การเชื่อมต่อ**
 ```
 Browser (Port 6081) ←→ noVNC Proxy ←→ VNC Server (10.51.101.83:5900)
 ```
@@ -102,6 +115,7 @@ Browser (Port 6081) ←→ noVNC Proxy ←→ VNC Server (10.51.101.83:5900)
 - **หน้าที่**: VNC Web Interface
 - **ข้อมูล**: Web-based VNC viewer
 - **URL**: `http://localhost:6081/vnc.html`
+- **Auto Start**: เริ่มอัตโนมัติเมื่อคลิก IP
 
 ### **Port 5900 (VNC Server)**
 - **หน้าที่**: VNC Server (เครื่องปลายทาง)
@@ -133,22 +147,23 @@ telnet 10.51.101.83 5900
 ## 🎯 **สรุปการใช้งาน**
 
 ### **สำหรับ User:**
-1. **เปิด Dashboard**: `http://localhost:8080`
-2. **คลิก IP Address** ใน computer card
-3. **ใส่ Password**: `123`
-4. **ใช้งาน VNC** ผ่าน browser
+1. **รัน**: `start-simple.bat`
+2. **เปิด**: `http://localhost:8080`
+3. **คลิก IP Address** ใน computer card
+4. **ใส่ Password**: `123`
+5. **ใช้งาน VNC** ผ่าน browser
 
 ### **สำหรับ Admin:**
 1. **เริ่ม Backend**: `node server.js`
 2. **เริ่ม Frontend**: `npm run dev`
-3. **เริ่ม noVNC**: `python start-novnc-simple.py`
+3. **noVNC**: เริ่มอัตโนมัติเมื่อคลิก IP
 4. **ตรวจสอบ Status**: ดูที่ Dashboard header
 
 ## 🔍 **Troubleshooting**
 
 ### **ปัญหา: WebSocket connection failed**
 **สาเหตุ**: noVNC ไม่ทำงาน
-**แก้ไข**: รัน `python start-novnc-simple.py`
+**แก้ไข**: คลิก IP อีกครั้ง (ระบบจะเริ่มใหม่)
 
 ### **ปัญหา: Cannot connect to VNC server**
 **สาเหตุ**: VNC server ไม่ทำงาน
@@ -160,5 +175,6 @@ telnet 10.51.101.83 5900
 
 ## 📝 **Note**
 - **IP Addresses** ใน Dashboard มาจาก Database
-- **VNC Connection** ผ่าน noVNC proxy
+- **VNC Connection** ผ่าน noVNC proxy (เริ่มอัตโนมัติ)
 - **Password** ตั้งเป็น `123` สำหรับทุกเครื่อง
+- **ไม่ต้องเปิด noVNC แยก** - ระบบจะเริ่มให้อัตโนมัติ

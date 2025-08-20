@@ -175,34 +175,87 @@ export function Dashboard({ activeTab }: DashboardProps) {
   };
 
   const handleVNC = async (ip: string, computerName: string) => {
-    // Check if noVNC is running first
-    if (!novncStatus?.isRunning) {
-      toast({
-        title: "noVNC Not Running",
-        description: "Please start noVNC first. Go to VNC Viewer tab and click 'Start noVNC'",
-        variant: "destructive",
+    try {
+      // First, try to start noVNC automatically
+      console.log("Starting noVNC automatically...");
+      
+      const startResponse = await fetch(API_CONFIG.VNC_START, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: ip,
+          port: API_CONFIG.DEFAULT_VNC_PORT,
+          webPort: 6081
+        }),
       });
-      return;
-    }
 
-    // Open noVNC directly to the selected IP
-    const novncUrl = buildNovncUrl(ip, API_CONFIG.DEFAULT_VNC_PORT);
-    
-    // Try to open in new tab
-    const newWindow = window.open(novncUrl, '_blank');
-    
-    if (newWindow) {
-      toast({
-        title: "VNC Connection",
-        description: `Opening VNC to ${computerName} (${ip})`,
-      });
-    } else {
-      // Fallback: show alert if popup is blocked
-      toast({
-        title: "VNC Connection",
-        description: `Please copy and paste this URL: ${novncUrl}`,
-        variant: "destructive",
-      });
+      // Wait a moment for noVNC to start
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check if noVNC is running
+      const statusResponse = await fetch(API_CONFIG.VNC_STATUS);
+      const statusData = await statusResponse.json();
+
+      if (statusData.isRunning) {
+        // noVNC is running, open the connection
+        const novncUrl = buildNovncUrl(ip, API_CONFIG.DEFAULT_VNC_PORT);
+        const newWindow = window.open(novncUrl, '_blank');
+        
+        if (newWindow) {
+          toast({
+            title: "VNC Connection",
+            description: `Opening VNC to ${computerName} (${ip})`,
+          });
+        } else {
+          toast({
+            title: "VNC Connection",
+            description: `Please copy and paste this URL: ${novncUrl}`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        // Fallback: try to open noVNC directly
+        const novncUrl = buildNovncUrl(ip, API_CONFIG.DEFAULT_VNC_PORT);
+        const newWindow = window.open(novncUrl, '_blank');
+        
+        if (newWindow) {
+          toast({
+            title: "VNC Connection",
+            description: `Opening VNC to ${computerName} (${ip})`,
+          });
+        } else {
+          toast({
+            title: "VNC Connection",
+            description: `Please copy and paste this URL: ${novncUrl}`,
+            variant: "destructive",
+          });
+        }
+      }
+      
+      // Update status
+      await checkNovncStatus();
+      
+    } catch (error) {
+      console.error('VNC connection error:', error);
+      
+      // Fallback: open noVNC URL directly
+      const novncUrl = buildNovncUrl(ip, API_CONFIG.DEFAULT_VNC_PORT);
+      const newWindow = window.open(novncUrl, '_blank');
+      
+      if (newWindow) {
+        toast({
+          title: "VNC Connection",
+          description: `Opening VNC to ${computerName} (${ip})`,
+        });
+      } else {
+        toast({
+          title: "VNC Connection",
+          description: `Please copy and paste this URL: ${novncUrl}`,
+          variant: "destructive",
+        });
+      }
     }
     
     // Also set the state for the modal (if needed)
