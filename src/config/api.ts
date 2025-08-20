@@ -12,7 +12,7 @@ export const API_CONFIG = {
   VNC_CONNECT: 'http://10.51.101.49:3002/api/vnc/connect',
   
   // noVNC web interface
-  NOVNC_URL: 'http://localhost:6081',
+  NOVNC_URL: 'http://localhost:8081',
   
   // Frontend URL
   FRONTEND_URL: 'http://localhost:8080',

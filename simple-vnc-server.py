@@ -123,7 +123,7 @@ def start_websockify(host="10.51.101.83", port=5900, web_port=6081):
         print(f"❌ Failed to start websockify: {e}")
         return None
 
-def start_http_server(port=6081):
+def start_http_server(port=8081):
     """Start HTTP server to serve VNC HTML"""
     class VNCHandler(http.server.SimpleHTTPRequestHandler):
         def do_GET(self):
@@ -151,12 +151,16 @@ def main():
         print("Please run: pip install websockify")
         return
     
-    # Check port
+    # Check ports
     if not check_port(6081):
         print("❌ Port 6081 is in use")
         return
     
-    print("✅ Port 6081 is available")
+    if not check_port(8081):
+        print("❌ Port 8081 is in use")
+        return
+    
+    print("✅ Ports 6081 and 8081 are available")
     
     # Create VNC HTML
     create_vnc_html()
@@ -172,8 +176,9 @@ def main():
     # Start HTTP server
     print("\n🎉 VNC server is ready!")
     print("📋 Access URLs:")
-    print(f"  - VNC Interface: http://localhost:6081")
-    print(f"  - Direct VNC: http://localhost:6081/vnc.html")
+    print(f"  - VNC Interface: http://localhost:8081")
+    print(f"  - Direct VNC: http://localhost:8081/vnc.html")
+    print(f"  - WebSocket Proxy: ws://localhost:6081/websockify")
     print("\nPress Ctrl+C to stop the server")
     
     try:

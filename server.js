@@ -1079,7 +1079,7 @@ app.post('/api/vnc/start', async (req, res) => {
     res.json({
       success: true,
       message: 'noVNC started',
-      url: `http://localhost:${webPort}/vnc.html?host=${host}&port=${port}&password=123`
+      url: `http://localhost:8081/vnc.html?host=${host}&port=${port}&password=123`
     });
     
   } catch (error) {
