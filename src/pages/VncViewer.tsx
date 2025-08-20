@@ -161,6 +161,16 @@ const VncViewer = ({ activeTab }: VncViewerProps) => {
   };
 
   const handleQuickConnect = async (server: VncServer) => {
+    // Check if noVNC is running first
+    if (!novncStatus?.isRunning) {
+      toast({
+        title: "noVNC Not Running",
+        description: "Please start noVNC first using the 'Start noVNC' button",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const response = await fetch('/api/vnc/connect', {
         method: 'POST',

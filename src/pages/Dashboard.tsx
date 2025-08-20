@@ -10,7 +10,7 @@ import { AlertsPage } from "@/pages/AlertsPage";
 import VncViewer from "@/pages/VncViewer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, Monitor, AlertTriangle, CheckCircle } from "lucide-react";
+import { Search, Filter, Monitor, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [vncOpen, setVncOpen] = useState(false);
   const [vncIp, setVncIp] = useState("");
   const [vncComputerName, setVncComputerName] = useState("");
+  const [novncStatus, setNovncStatus] = useState<{ isRunning: boolean; port: number } | null>(null);
 
   // Load pinned computers from localStorage
   const loadPinnedComputers = (): string[] => {
@@ -138,6 +139,23 @@ export function Dashboard({ activeTab }: DashboardProps) {
     };
   }, []);
 
+  // Check noVNC status
+  const checkNovncStatus = async () => {
+    try {
+      const response = await fetch('/api/vnc/status');
+      const data = await response.json();
+      setNovncStatus(data);
+    } catch (error) {
+      console.error('Failed to check noVNC status:', error);
+      setNovncStatus({ isRunning: false, port: 6081 });
+    }
+  };
+
+  // Check noVNC status on component mount
+  useEffect(() => {
+    checkNovncStatus();
+  }, []);
+
   const handlePin = (machineID: string) => {
     setComputers(prevComputers => {
       const updatedComputers = prevComputers.map(computer => {
@@ -157,7 +175,17 @@ export function Dashboard({ activeTab }: DashboardProps) {
     });
   };
 
-  const handleVNC = (ip: string, computerName: string) => {
+  const handleVNC = async (ip: string, computerName: string) => {
+    // Check if noVNC is running first
+    if (!novncStatus?.isRunning) {
+      toast({
+        title: "noVNC Not Running",
+        description: "Please start noVNC first. Go to VNC Viewer tab and click 'Start noVNC'",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Open noVNC directly to the selected IP
     const novncUrl = `http://localhost:6081/vnc.html?host=${ip}&port=5900`;
     
@@ -351,6 +379,22 @@ export function Dashboard({ activeTab }: DashboardProps) {
           )}
         </div>
         <div className="flex items-center gap-4">
+          {/* noVNC Status */}
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${novncStatus?.isRunning ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-sm text-muted-foreground">
+              noVNC: {novncStatus?.isRunning ? 'Running' : 'Stopped'}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={checkNovncStatus}
+              className="h-6 px-2"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+          </div>
+          
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
