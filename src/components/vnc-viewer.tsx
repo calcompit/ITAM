@@ -16,7 +16,7 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
   React.useEffect(() => {
     if (isOpen) {
       // Open Web VNC using HTML page
-      const webVncUrl = `http://localhost:8081/vnc.html?ip=${ip}&port=5901&password=123`;
+      const webVncUrl = `http://10.51.101.49:8081/vnc.html?ip=${ip}&port=5901&password=123`;
       window.open(webVncUrl, '_blank', 'width=1024,height=768');
       
       // Close dialog after opening
@@ -68,7 +68,7 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
 
           <div className="text-xs text-muted-foreground text-center bg-muted/30 p-3 rounded">
             <p><strong>Note:</strong> Web VNC will open in browser. You can open multiple machines simultaneously.</p>
-            <p><strong>URL:</strong> http://localhost:8081/vnc.html?ip={ip}&port=5901&password=123</p>
+            <p><strong>URL:</strong> http://10.51.101.49:8081/vnc.html?ip={ip}&port=5901&password=123</p>
           </div>
         </div>
       </DialogContent>
