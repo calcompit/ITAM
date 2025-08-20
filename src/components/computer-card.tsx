@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { Button } from "@/components/ui/button";
-import { Monitor, Pin, PinOff } from "lucide-react";
+import { Monitor, Pin, PinOff, Eye } from "lucide-react";
 import { cn, formatThailandTime, formatRelativeTime } from "@/lib/utils";
 import { MachineIdDisplay } from "@/components/ui/machine-id-display";
 import { ClickableText } from "@/components/ui/clickable-text";
@@ -12,9 +12,10 @@ interface ComputerCardProps {
   computer: Computer;
   onPin: (id: string) => void;
   onClick: (computer: Computer) => void;
+  onVNC?: (ip: string, computerName: string) => void;
 }
 
-export function ComputerCard({ computer, onPin, onClick }: ComputerCardProps) {
+export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardProps) {
   return (
     <Card 
       className={cn(
@@ -36,21 +37,37 @@ export function ComputerCard({ computer, onPin, onClick }: ComputerCardProps) {
             />
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            onPin(computer.machineID);
-          }}
-          className="h-8 w-8 p-0"
-        >
-          {computer.isPinned ? (
-            <Pin className="h-4 w-4 text-primary" />
-          ) : (
-            <PinOff className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-1">
+          {onVNC && computer.ipAddresses[0] && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onVNC(computer.ipAddresses[0], computer.computerName);
+              }}
+              className="h-8 w-8 p-0"
+              title="Open VNC Viewer"
+            >
+              <Eye className="h-4 w-4 text-blue-500" />
+            </Button>
           )}
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPin(computer.machineID);
+            }}
+            className="h-8 w-8 p-0"
+          >
+            {computer.isPinned ? (
+              <Pin className="h-4 w-4 text-primary" />
+            ) : (
+              <PinOff className="h-4 w-4 text-muted-foreground" />
+            )}
+          </Button>
+        </div>
       </CardHeader>
       
       <CardContent>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComputerCard } from "@/components/computer-card";
 import { ComputerDetailsModal } from "@/components/computer-details-modal";
+import { VNCViewer } from "@/components/vnc-viewer";
 import { IPGroupCard } from "@/components/ip-group-card";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { Analytics } from "@/pages/Analytics";
@@ -25,6 +26,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
+  // VNC state
+  const [vncOpen, setVncOpen] = useState(false);
+  const [vncIp, setVncIp] = useState("");
+  const [vncComputerName, setVncComputerName] = useState("");
 
   // Load pinned computers from localStorage
   const loadPinnedComputers = (): string[] => {
@@ -130,22 +136,28 @@ export function Dashboard({ activeTab }: DashboardProps) {
   }, []);
 
   const handlePin = (machineID: string) => {
-    setComputers(prev => {
-      const updatedComputers = prev.map(comp => 
-        comp.machineID === machineID 
-          ? { ...comp, isPinned: !comp.isPinned }
-          : comp
-      );
+    setComputers(prevComputers => {
+      const updatedComputers = prevComputers.map(computer => {
+        if (computer.machineID === machineID) {
+          return { ...computer, isPinned: !computer.isPinned };
+        }
+        return computer;
+      });
       
-      // Save pinned computers to localStorage
+      // Save to localStorage
       const pinnedMachineIDs = updatedComputers
-        .filter(comp => comp.isPinned)
-        .map(comp => comp.machineID);
-      
+        .filter(computer => computer.isPinned)
+        .map(computer => computer.machineID);
       savePinnedComputers(pinnedMachineIDs);
       
       return updatedComputers;
     });
+  };
+
+  const handleVNC = (ip: string, computerName: string) => {
+    setVncIp(ip);
+    setVncComputerName(computerName);
+    setVncOpen(true);
   };
 
   const filteredComputers = computers.filter(computer => 
@@ -425,6 +437,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
             computer={computer}
             onPin={handlePin}
             onClick={(computer) => setSelectedComputer(computer)}
+            onVNC={handleVNC}
           />
         ))}
       </div>
@@ -434,6 +447,14 @@ export function Dashboard({ activeTab }: DashboardProps) {
         computer={selectedComputer}
         open={!!selectedComputer}
         onClose={() => setSelectedComputer(null)}
+      />
+
+      {/* VNC Viewer Modal */}
+      <VNCViewer
+        ip={vncIp}
+        computerName={vncComputerName}
+        isOpen={vncOpen}
+        onClose={() => setVncOpen(false)}
       />
     </div>
   );
