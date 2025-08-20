@@ -1049,7 +1049,6 @@ app.post('/api/vnc/start', async (req, res) => {
       '-m', 'websockify',
       webPort.toString(),
       `${host}:${port}`,
-      '--web', path.join(novncDir, 'core'),
       '--verbose',
       '--log-file', 'websockify.log'
     ], {

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple websockify test script
+Simple websockify test without web directory
 """
 import subprocess
 import sys
@@ -17,9 +17,9 @@ def check_port(port):
     except OSError:
         return False
 
-def test_websockify():
-    """Test websockify installation and functionality"""
-    print("=== Websockify Test ===")
+def test_websockify_simple():
+    """Test websockify without web directory"""
+    print("=== Simple Websockify Test ===")
     
     # Check Python
     print(f"Python version: {sys.version}")
@@ -49,14 +49,13 @@ def test_websockify():
         print("❌ Port 6081 is in use")
         return False
     
-    # Test websockify command
-    print("\nTesting websockify command...")
+    # Test websockify command without --web
+    print("\nTesting websockify command (simple mode)...")
     try:
         cmd = [
             sys.executable, "-m", "websockify",
             "6081",
             "10.51.101.83:5900",
-            "--web", novnc_dir,
             "--verbose"
         ]
         
@@ -65,7 +64,6 @@ def test_websockify():
         # Start websockify in background
         process = subprocess.Popen(
             cmd,
-            cwd=novnc_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
@@ -82,7 +80,7 @@ def test_websockify():
             # Kill the process
             process.terminate()
             process.wait()
-            print("✅ Websockify test completed successfully")
+            print("✅ Simple websockify test completed successfully")
             return True
         else:
             stdout, stderr = process.communicate()
@@ -96,9 +94,12 @@ def test_websockify():
         return False
 
 if __name__ == "__main__":
-    success = test_websockify()
+    success = test_websockify_simple()
     if success:
-        print("\n🎉 All tests passed!")
+        print("\n🎉 Simple test passed!")
+        print("\nNote: This test runs websockify without web interface.")
+        print("For full noVNC functionality, you need to access it via:")
+        print("http://localhost:6081/vnc.html?host=10.51.101.83&port=5900")
     else:
-        print("\n❌ Tests failed!")
+        print("\n❌ Simple test failed!")
         sys.exit(1)
