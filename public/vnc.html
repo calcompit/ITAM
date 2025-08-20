@@ -110,23 +110,39 @@
 
         // Auto-connect when page loads
         window.addEventListener('load', () => {
-            // Load noVNC library from unpkg
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/@novnc/novnc@1.4.0/lib/rfb.min.js';
-            script.onload = () => {
-                setTimeout(connectVNC, 1000);
-            };
-            script.onerror = () => {
-                // Fallback to alternative CDN
-                const script2 = document.createElement('script');
-                script2.src = 'https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/lib/rfb.min.js';
-                script2.onload = () => {
+            // Load noVNC library from multiple sources
+            loadNoVNC();
+        });
+
+        function loadNoVNC() {
+            // Try multiple CDN sources
+            const sources = [
+                'https://unpkg.com/@novnc/novnc@1.4.0/lib/rfb.min.js',
+                'https://cdn.jsdelivr.net/npm/@novnc/novnc@1.4.0/lib/rfb.min.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/novnc/1.4.0/lib/rfb.min.js'
+            ];
+
+            function tryLoad(index) {
+                if (index >= sources.length) {
+                    document.getElementById('status').textContent = 'Failed to load noVNC library';
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = sources[index];
+                script.onload = () => {
+                    console.log('noVNC loaded from:', sources[index]);
                     setTimeout(connectVNC, 1000);
                 };
-                document.head.appendChild(script2);
-            };
-            document.head.appendChild(script);
-        });
+                script.onerror = () => {
+                    console.log('Failed to load from:', sources[index]);
+                    tryLoad(index + 1);
+                };
+                document.head.appendChild(script);
+            }
+
+            tryLoad(0);
+        }
     </script>
 </body>
 </html>

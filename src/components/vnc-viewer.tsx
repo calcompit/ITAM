@@ -27,6 +27,17 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
     window.open(webVncUrl, '_blank', 'width=1024,height=768');
   };
 
+  // Auto-open Web VNC when dialog opens
+  React.useEffect(() => {
+    if (isOpen) {
+      // Auto-open Web VNC using noVNC
+      setTimeout(() => {
+        handleWebVNC();
+        onClose();
+      }, 1000);
+    }
+  }, [isOpen]);
+
   // Show VNC URL when dialog opens
   React.useEffect(() => {
     if (isOpen) {
@@ -68,21 +79,18 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
           </div>
 
           <div className="text-center">
-            <div className="flex items-center justify-center gap-2 text-sm text-green-600">
-              <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-              VNC URL ready to copy
-            </div>
-            <div className="mt-3 p-2 bg-muted rounded text-xs font-mono">
-              vnc://:123@{ip}:{port}
+            <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+              Opening Web VNC (noVNC)...
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Copy this URL and paste in TightVNC
+              Dialog will close automatically...
             </p>
           </div>
 
           <div className="text-xs text-muted-foreground text-center bg-muted/30 p-3 rounded">
-            <p><strong>Note:</strong> TightVNC will open automatically. Password: 123 (auto-filled)</p>
-            <p><strong>URL:</strong> vnc://:123@{ip}:{port}</p>
+            <p><strong>Note:</strong> Web VNC using noVNC will open in browser. Password: 123 (auto-filled)</p>
+            <p><strong>URL:</strong> http://localhost:8080/vnc.html?ip=10.51.101.49&port=5901&password=123</p>
           </div>
         </div>
       </DialogContent>
