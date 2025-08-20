@@ -193,14 +193,16 @@ const server = http.createServer((req, res) => {
                                 ctx.fillStyle = '#00ff00';
                                 ctx.fillText('VNC Connected - Waiting for screen data...', canvas.width / 2, canvas.height / 2);
                                 
-                                // Request screen update
-                                ws.send(JSON.stringify({
-                                    type: 'request_screen'
-                                }));
+                                // Request screen update only if WebSocket is ready
+                                if (ws && ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({
+                                        type: 'request_screen'
+                                    }));
+                                }
                                 
                                 // Start continuous screen updates
                                 setInterval(() => {
-                                    if (isConnected && ws) {
+                                    if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                                         ws.send(JSON.stringify({
                                             type: 'request_screen'
                                         }));
@@ -321,7 +323,7 @@ const server = http.createServer((req, res) => {
         
         // Handle mouse events
         canvas.addEventListener('mousedown', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
@@ -338,7 +340,7 @@ const server = http.createServer((req, res) => {
         });
         
         canvas.addEventListener('mouseup', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
@@ -355,7 +357,7 @@ const server = http.createServer((req, res) => {
         });
         
         canvas.addEventListener('mousemove', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
@@ -372,7 +374,7 @@ const server = http.createServer((req, res) => {
         
         // Handle keyboard events
         document.addEventListener('keydown', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 // Send keyboard event via WebSocket (not directly to VNC)
                 ws.send(JSON.stringify({
                     type: 'key',
@@ -384,7 +386,7 @@ const server = http.createServer((req, res) => {
         });
         
         document.addEventListener('keyup', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 // Send keyboard event via WebSocket (not directly to VNC)
                 ws.send(JSON.stringify({
                     type: 'key',
@@ -599,14 +601,16 @@ const server = http.createServer((req, res) => {
                                 ctx.fillStyle = '#00ff00';
                                 ctx.fillText('VNC Connected - Waiting for screen data...', canvas.width / 2, canvas.height / 2);
                                 
-                                // Request screen update
-                                ws.send(JSON.stringify({
-                                    type: 'request_screen'
-                                }));
+                                // Request screen update only if WebSocket is ready
+                                if (ws && ws.readyState === WebSocket.OPEN) {
+                                    ws.send(JSON.stringify({
+                                        type: 'request_screen'
+                                    }));
+                                }
                                 
                                 // Start continuous screen updates
                                 setInterval(() => {
-                                    if (isConnected && ws) {
+                                    if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                                         ws.send(JSON.stringify({
                                             type: 'request_screen'
                                         }));
@@ -727,7 +731,7 @@ const server = http.createServer((req, res) => {
         
         // Handle mouse events
         canvas.addEventListener('mousedown', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
@@ -744,7 +748,7 @@ const server = http.createServer((req, res) => {
         });
         
         canvas.addEventListener('mouseup', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
@@ -761,7 +765,7 @@ const server = http.createServer((req, res) => {
         });
         
         canvas.addEventListener('mousemove', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 const rect = canvas.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
@@ -778,7 +782,7 @@ const server = http.createServer((req, res) => {
         
         // Handle keyboard events
         document.addEventListener('keydown', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 // Send keyboard event via WebSocket (not directly to VNC)
                 ws.send(JSON.stringify({
                     type: 'key',
@@ -790,7 +794,7 @@ const server = http.createServer((req, res) => {
         });
         
         document.addEventListener('keyup', function(e) {
-            if (isConnected && ws) {
+            if (isConnected && ws && ws.readyState === WebSocket.OPEN) {
                 // Send keyboard event via WebSocket (not directly to VNC)
                 ws.send(JSON.stringify({
                     type: 'key',
