@@ -11,10 +11,28 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow all 10.51.x.x IP addresses
+    if (origin.match(/^https?:\/\/10\.51\.\d+\.\d+/)) {
+      return callback(null, true);
+    }
+    
+    // Allow localhost for development
+    if (origin.match(/^https?:\/\/localhost/)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // SQL Server configuration

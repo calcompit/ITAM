@@ -1,6 +1,6 @@
 import { Computer } from '../data/mock-data';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = 'http://10.51.101.49:3002/api';
 
 export interface APIComputer extends Computer {
   changelog?: Array<{
