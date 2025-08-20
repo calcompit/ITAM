@@ -14,6 +14,7 @@ import { Search, Filter, Monitor, AlertTriangle, CheckCircle, RefreshCw } from "
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
 import { useToast } from "@/hooks/use-toast";
+import { API_CONFIG, buildNovncUrl } from "@/config/api";
 
 interface DashboardProps {
   activeTab: string;
@@ -142,7 +143,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
   // Check noVNC status
   const checkNovncStatus = async () => {
     try {
-      const response = await fetch('/api/vnc/status');
+      const response = await fetch(API_CONFIG.VNC_STATUS);
       const data = await response.json();
       setNovncStatus(data);
     } catch (error) {
@@ -157,22 +158,20 @@ export function Dashboard({ activeTab }: DashboardProps) {
   }, []);
 
   const handlePin = (machineID: string) => {
-    setComputers(prevComputers => {
-      const updatedComputers = prevComputers.map(computer => {
-        if (computer.machineID === machineID) {
-          return { ...computer, isPinned: !computer.isPinned };
-        }
-        return computer;
-      });
-      
-      // Save to localStorage
-      const pinnedMachineIDs = updatedComputers
-        .filter(computer => computer.isPinned)
-        .map(computer => computer.machineID);
-      savePinnedComputers(pinnedMachineIDs);
-      
-      return updatedComputers;
+    const updatedComputers = computers.map(computer => {
+      if (computer.machineID === machineID) {
+        return { ...computer, isPinned: !computer.isPinned };
+      }
+      return computer;
     });
+    
+    setComputers(updatedComputers);
+    
+    // Save to localStorage
+    const pinnedMachineIDs = updatedComputers
+      .filter(computer => computer.isPinned)
+      .map(computer => computer.machineID);
+    savePinnedComputers(pinnedMachineIDs);
   };
 
   const handleVNC = async (ip: string, computerName: string) => {
@@ -187,7 +186,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
     }
 
     // Open noVNC directly to the selected IP
-    const novncUrl = `http://localhost:6081/vnc.html?host=${ip}&port=5900`;
+    const novncUrl = buildNovncUrl(ip, API_CONFIG.DEFAULT_VNC_PORT);
     
     // Try to open in new tab
     const newWindow = window.open(novncUrl, '_blank');

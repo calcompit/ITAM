@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { MonitorPlay, Play, Square, Settings, ExternalLink, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiService } from "@/services/api";
+import { API_CONFIG, buildNovncUrl } from "@/config/api";
 
 interface VncViewerProps {
   activeTab: string;
@@ -45,7 +46,7 @@ const VncViewer = ({ activeTab }: VncViewerProps) => {
 
   const checkNovncStatus = async () => {
     try {
-      const response = await fetch('/api/vnc/status');
+      const response = await fetch(API_CONFIG.VNC_STATUS);
       const data = await response.json();
       setNovncStatus(data);
     } catch (error) {
@@ -57,14 +58,14 @@ const VncViewer = ({ activeTab }: VncViewerProps) => {
   const handleStartNovnc = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/vnc/start', {
+      const response = await fetch(API_CONFIG.VNC_START, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           host: '10.51.101.83',
-          port: 5900,
+          port: API_CONFIG.DEFAULT_VNC_PORT,
           webPort: parseInt(novncPort)
         }),
       });
@@ -110,7 +111,7 @@ const VncViewer = ({ activeTab }: VncViewerProps) => {
     }
 
     try {
-      const response = await fetch('/api/vnc/connect', {
+      const response = await fetch(API_CONFIG.VNC_CONNECT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -172,7 +173,7 @@ const VncViewer = ({ activeTab }: VncViewerProps) => {
     }
 
     try {
-      const response = await fetch('/api/vnc/connect', {
+      const response = await fetch(API_CONFIG.VNC_CONNECT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -195,7 +196,7 @@ const VncViewer = ({ activeTab }: VncViewerProps) => {
         });
       } else {
         // Fallback to direct URL
-        const novncUrl = `http://localhost:${novncPort}/vnc.html?host=${server.host}&port=${server.port}`;
+        const novncUrl = buildNovncUrl(server.host, server.port);
         window.open(novncUrl, '_blank');
         setIsConnected(true);
         toast({
@@ -205,7 +206,7 @@ const VncViewer = ({ activeTab }: VncViewerProps) => {
       }
     } catch (error) {
       // Fallback to direct URL
-      const novncUrl = `http://localhost:${novncPort}/vnc.html?host=${server.host}&port=${server.port}`;
+      const novncUrl = buildNovncUrl(server.host, server.port);
       window.open(novncUrl, '_blank');
       setIsConnected(true);
       toast({
