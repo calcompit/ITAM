@@ -489,16 +489,22 @@ app.get('/api/computers', async (req, res) => {
         },
         lastBoot: row.LastBoot,
         ipAddresses: row.IPv4 ? row.IPv4.split(/[,;]/).map(ip => ip.trim()).filter(ip => ip) : [],
-        updatedAt: row.UpdatedAt,
+        updatedAt: (() => {
+          // Convert UTC time to Thailand time (UTC+7)
+          const utcDate = new Date(row.UpdatedAt);
+          const thaiDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+          return thaiDate.toISOString();
+        })(),
         hudMode: row.HUD_Mode,
         hudColorARGB: row.HUD_ColorARGB,
                      winActivated: row.Win_Activated === 1 || row.Win_Activated === true,
         status: (() => {
           // Check if the computer is online based on UpdatedAt
-          // Don't adjust timezone - treat as is
+          // Convert to Thai time for comparison
           const now = new Date();
-          const updatedAt = new Date(row.UpdatedAt);
-          const diffMinutes = (now - updatedAt) / (1000 * 60);
+          const utcDate = new Date(row.UpdatedAt);
+          const thaiDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
+          const diffMinutes = (now - thaiDate) / (1000 * 60);
           return diffMinutes <= 10 ? 'online' : 'offline';
         })(),
         isPinned: false
@@ -658,8 +664,8 @@ app.get('/api/ip-groups', async (req, res) => {
         SELECT 
           SUBSTRING(IPv4, 1, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4) + 1) + 1) - 1) + '.x' as subnet,
           COUNT(*) as totalComputers,
-                  SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, GETUTCDATE()) <= 10 THEN 1 ELSE 0 END) as onlineCount,
-        SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, GETUTCDATE()) > 10 THEN 1 ELSE 0 END) as offlineCount,
+          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) <= 10 THEN 1 ELSE 0 END) as onlineCount,
+          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) > 10 THEN 1 ELSE 0 END) as offlineCount,
           0 as alertCount
         FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
         WHERE IPv4 IS NOT NULL AND IPv4 != ''
@@ -774,10 +780,11 @@ app.get('/api/analytics', async (req, res) => {
       }
 
       // Online/Offline status based on UpdatedAt
-      // Don't adjust timezone - treat as is
-      const updatedAt = new Date(row.UpdatedAt);
+      // Convert to Thai time for comparison
+      const utcDate = new Date(row.UpdatedAt);
+      const thaiDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
       const now = new Date();
-      const diffInMinutes = (now - updatedAt) / (1000 * 60);
+      const diffInMinutes = (now - thaiDate) / (1000 * 60);
       // Use 10 minutes threshold
       if (diffInMinutes <= 10) {
         analytics.onlineCount++;
