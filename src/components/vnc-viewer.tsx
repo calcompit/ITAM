@@ -16,6 +16,7 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
   const handleVNCApp = () => {
     // Try to open VNC in native app with password
     const vncUrl = `vnc://:123@${ip}:${port}`;
+    console.log('Opening VNC URL:', vncUrl);
     window.open(vncUrl, '_blank');
   };
 
@@ -26,16 +27,13 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
     window.open(webVncUrl, '_blank', 'width=1024,height=768');
   };
 
-  // Auto-open VNC app when dialog opens (since clients have TightVNC)
+  // Show VNC URL when dialog opens
   React.useEffect(() => {
     if (isOpen) {
-      // Auto-open VNC app since clients have TightVNC installed
-      setTimeout(() => {
-        handleVNCApp();
-        onClose();
-      }, 500);
+      // Just show the URL, don't auto-open
+      console.log('VNC URL:', `vnc://:123@${ip}:${port}`);
     }
-  }, [isOpen]);
+  }, [isOpen, ip, port]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -71,11 +69,14 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
 
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 text-sm text-green-600">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-500"></div>
-              Opening TightVNC application...
+              <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+              VNC URL ready to copy
+            </div>
+            <div className="mt-3 p-2 bg-muted rounded text-xs font-mono">
+              vnc://:123@{ip}:{port}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Dialog will close automatically...
+              Copy this URL and paste in TightVNC
             </p>
           </div>
 
