@@ -49,10 +49,9 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
   };
 
   const handleWebVNC = () => {
-    // Open in new window for web VNC (websockify proxy) with password
-    // Use backend IP instead of computer IP
+    // Open in new window for web VNC using HTML page
     const backendIP = '10.51.101.49';
-    const webVncUrl = `http://${backendIP}:5901?password=123`;
+    const webVncUrl = `http://localhost:8080/vnc.html?ip=${backendIP}&port=5901&password=123`;
     window.open(webVncUrl, '_blank', 'width=1024,height=768');
   };
 
