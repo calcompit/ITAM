@@ -21,16 +21,15 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
   };
 
   const handleWebVNC = () => {
-    // Open in new window for web VNC using HTML page
-    const backendIP = '10.51.101.49';
-    const webVncUrl = `http://localhost:8080/vnc.html?ip=${backendIP}&port=5901&password=123`;
+    // Open in new window for web VNC using the Windows proxy server
+    const webVncUrl = `http://10.51.101.49:8081/vnc.html?ip=${ip}&port=${port}&password=123`;
     window.open(webVncUrl, '_blank', 'width=1024,height=768');
   };
 
   // Auto-open Web VNC when dialog opens
   React.useEffect(() => {
     if (isOpen) {
-      // Auto-open Web VNC using noVNC
+      // Auto-open Web VNC using the Windows proxy server
       setTimeout(() => {
         handleWebVNC();
         onClose();
@@ -81,7 +80,7 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-              Opening Web VNC (noVNC)...
+              Opening Web VNC (Windows Proxy Server)...
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Dialog will close automatically...
@@ -89,8 +88,8 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
           </div>
 
           <div className="text-xs text-muted-foreground text-center bg-muted/30 p-3 rounded">
-            <p><strong>Note:</strong> Web VNC using noVNC will open in browser. Password: 123 (auto-filled)</p>
-            <p><strong>URL:</strong> http://localhost:8080/vnc.html?ip=10.51.101.49&port=5901&password=123</p>
+            <p><strong>Note:</strong> Web VNC using Windows proxy server will open in browser. Password: 123 (auto-filled)</p>
+            <p><strong>URL:</strong> http://10.51.101.49:8081/vnc.html?ip={ip}&port={port}&password=123</p>
           </div>
         </div>
       </DialogContent>
