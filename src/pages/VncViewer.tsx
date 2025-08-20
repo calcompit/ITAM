@@ -24,7 +24,7 @@ const VncViewer = ({ activeTab }: VncViewerProps) => {
   const [selectedServer, setSelectedServer] = useState<string>("");
   const [customHost, setCustomHost] = useState("");
   const [customPort, setCustomPort] = useState("5900");
-  const [customPassword, setCustomPassword] = useState("");
+  const [customPassword, setCustomPassword] = useState("123");
   const [isConnected, setIsConnected] = useState(false);
   const [novncPort, setNovncPort] = useState("6081");
   const [novncStatus, setNovncStatus] = useState<{ isRunning: boolean; port: number } | null>(null);
@@ -35,7 +35,7 @@ const VncViewer = ({ activeTab }: VncViewerProps) => {
   const vncServers: VncServer[] = [
     { name: "Server 1 (10.51.101.83)", host: "10.51.101.83", port: 5900, password: "123" },
     { name: "Server 2 (10.51.101.94)", host: "10.51.101.94", port: 5900, password: "123" },
-    { name: "Local Server", host: "localhost", port: 5900 },
+    { name: "Local Server", host: "localhost", port: 5900, password: "123" },
   ];
 
   // Check noVNC status on component mount

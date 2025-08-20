@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo    noVNC Setup for Windows
+echo    noVNC Setup
 echo ========================================
 echo.
 
@@ -46,26 +46,9 @@ echo.
 REM Check if noVNC directory already exists
 if exist "noVNC" (
     echo noVNC directory already exists
-    echo.
-    echo Options:
-    echo 1. Use existing installation
-    echo 2. Remove and reinstall
-    echo 3. Exit
-    echo.
-    set /p choice="Enter your choice (1-3): "
-    
-    if "%choice%"=="2" (
-        echo Removing existing noVNC directory...
-        rmdir /s /q noVNC
-        echo ✅ Removed existing directory
-    ) else if "%choice%"=="3" (
-        echo Setup cancelled
-        pause
-        exit /b 0
-    ) else (
-        echo Using existing installation
-        goto :verify_installation
-    )
+    echo Removing and reinstalling...
+    rmdir /s /q noVNC
+    echo ✅ Removed existing directory
 )
 
 REM Download noVNC
@@ -81,7 +64,6 @@ if errorlevel 1 (
 echo ✅ noVNC downloaded successfully
 echo.
 
-:verify_installation
 REM Verify installation
 echo Verifying noVNC installation...
 if not exist "noVNC" (
@@ -114,11 +96,8 @@ echo    Setup Complete!
 echo ========================================
 echo.
 echo Next steps:
-echo 1. Start your VNC server (port 5900)
+echo 1. Start your VNC server (port 5900, password: 123)
 echo 2. Run: start-novnc-windows.bat
 echo 3. Open: http://localhost:6081/vnc.html
-echo.
-echo For troubleshooting, run:
-echo python start-novnc-windows.py
 echo.
 pause

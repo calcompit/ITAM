@@ -8,21 +8,8 @@ import os
 import sys
 import subprocess
 import time
-import signal
-import threading
 import argparse
 from pathlib import Path
-
-def parse_arguments():
-    """Parse command line arguments"""
-    parser = argparse.ArgumentParser(description='Simple noVNC Launcher for Windows')
-    parser.add_argument('--vnc-host', default='10.51.101.83', 
-                       help='VNC server host (default: 10.51.101.83)')
-    parser.add_argument('--vnc-port', type=int, default=5900,
-                       help='VNC server port (default: 5900)')
-    parser.add_argument('--web-port', type=int, default=6081,
-                       help='Web interface port (default: 6081)')
-    return parser.parse_args()
 
 def check_prerequisites():
     """Check if required dependencies are installed"""
@@ -47,7 +34,7 @@ def find_novnc_directory():
     
     return novnc_dir
 
-def start_websockify_simple(novnc_dir, vnc_host="localhost", vnc_port=5900, web_port=6081):
+def start_websockify_simple(novnc_dir, vnc_host="10.51.101.83", vnc_port=5900, web_port=6081):
     """Start websockify using the pip package"""
     try:
         import websockify
@@ -85,23 +72,30 @@ def print_access_info(web_port):
     print(f"🌐 Web Interface URLs:")
     print(f"   Main:     http://localhost:{web_port}/vnc.html")
     print(f"   Lite:     http://localhost:{web_port}/vnc_lite.html")
-    print(f"   App:      http://localhost:{web_port}/app/")
-    print()
-    print("📱 Mobile Access:")
-    print(f"   iOS/Android: http://your-ip:{web_port}/vnc.html")
     print()
     print("🔧 Connection Settings:")
     print(f"   Host: localhost")
     print(f"   Port: {web_port}")
-    print(f"   Password: (enter your VNC password)")
+    print(f"   Password: 123")
     print()
     print("⏹️  Press Ctrl+C to stop the proxy")
     print("=" * 50)
 
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='Simple noVNC Launcher')
+    parser.add_argument('--vnc-host', default='10.51.101.83', 
+                       help='VNC server host (default: 10.51.101.83)')
+    parser.add_argument('--vnc-port', type=int, default=5900,
+                       help='VNC server port (default: 5900)')
+    parser.add_argument('--web-port', type=int, default=6081,
+                       help='Web interface port (default: 6081)')
+    return parser.parse_args()
+
 def main():
     """Main function"""
     print("=" * 50)
-    print("   Simple noVNC Launcher for Windows")
+    print("   Simple noVNC Launcher")
     print("=" * 50)
     print()
     
@@ -130,6 +124,7 @@ def main():
     print(f"🔧 Configuration:")
     print(f"   VNC Server: {vnc_host}:{vnc_port}")
     print(f"   Web Port: {web_port}")
+    print(f"   Password: 123")
     print()
     
     # Start websockify
