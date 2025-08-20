@@ -5,6 +5,7 @@ import { Monitor, Pin, PinOff, Eye } from "lucide-react";
 import { cn, formatThailandTime, formatRelativeTime } from "@/lib/utils";
 import { MachineIdDisplay } from "@/components/ui/machine-id-display";
 import { ClickableText } from "@/components/ui/clickable-text";
+import { Badge } from "@/components/ui/badge";
 
 import { Computer } from "@/data/mock-data";
 
@@ -85,34 +86,11 @@ export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardPr
           </div>
           
           {computer.ipAddresses.length > 1 && (
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground font-medium">All IP Addresses:</div>
-              {computer.ipAddresses.slice(1).map((ip, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">IP {index + 2}</span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onVNC) {
-                          onVNC(ip, computer.computerName);
-                        }
-                      }}
-                      className="h-auto p-1 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                      title={`VNC to ${ip}`}
-                    >
-                      <span className="text-xs font-mono text-foreground hover:text-blue-600 dark:hover:text-blue-400">
-                        {ip}
-                      </span>
-                      {onVNC && (
-                        <Eye className="h-3 w-3 text-blue-500 ml-1" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Additional IPs</span>
+              <Badge variant="secondary" className="text-xs">
+                +{computer.ipAddresses.length - 1} IP{computer.ipAddresses.length > 2 ? 's' : ''}
+              </Badge>
             </div>
           )}
           
