@@ -49,7 +49,7 @@ def create_vnc_html():
 </head>
 <body>
     <div class="container">
-        <h1>🔗 VNC Viewer</h1>
+        <h1>VNC Viewer</h1>
         <p>Connect to a VNC server using WebSocket proxy</p>
         
         <form id="vncForm">
@@ -65,13 +65,13 @@ def create_vnc_html():
                 <label for="password">Password:</label>
                 <input type="password" id="password" name="password" value="123">
             </div>
-            <button type="submit" id="connectBtn">🔗 Connect to VNC</button>
+            <button type="submit" id="connectBtn">Connect to VNC</button>
         </form>
         
         <div id="status" class="status" style="display: none;"></div>
         
         <div class="connection-info">
-            <h3>📋 Connection Information</h3>
+            <h3>Connection Information</h3>
             <p><strong>WebSocket Proxy:</strong> ws://localhost:6081/websockify</p>
             <p><strong>VNC Interface:</strong> http://localhost:8081</p>
             <p><strong>Default Password:</strong> 123</p>
@@ -107,7 +107,7 @@ def create_vnc_html():
                 ws.close();
             }
             
-            setButtonState(true, '🔄 Connecting...');
+            setButtonState(true, 'Connecting...');
             showStatus('Connecting to VNC server...<br>Host: ' + host + ':' + port, 'info');
             
             // Try to connect using websockify
@@ -117,23 +117,23 @@ def create_vnc_html():
                 ws = new WebSocket(wsUrl);
                 
                 ws.onopen = function() {
-                    showStatus('✅ WebSocket connected! VNC connection established.<br>You can now use a VNC client to connect to ' + host + ':' + port, 'success');
-                    setButtonState(false, '🔗 Connect to VNC');
+                    showStatus('SUCCESS: WebSocket connected! VNC connection established.<br>You can now use a VNC client to connect to ' + host + ':' + port, 'success');
+                    setButtonState(false, 'Connect to VNC');
                 };
                 
                 ws.onerror = function(error) {
-                    showStatus('❌ Connection failed. Please check:<br>1. VNC server is running on ' + host + ':' + port + '<br>2. websockify is started<br>3. Password is correct', 'error');
-                    setButtonState(false, '🔗 Connect to VNC');
+                    showStatus('ERROR: Connection failed. Please check:<br>1. VNC server is running on ' + host + ':' + port + '<br>2. websockify is started<br>3. Password is correct', 'error');
+                    setButtonState(false, 'Connect to VNC');
                 };
                 
                 ws.onclose = function() {
-                    showStatus('🔌 Connection closed.', 'info');
-                    setButtonState(false, '🔗 Connect to VNC');
+                    showStatus('Connection closed.', 'info');
+                    setButtonState(false, 'Connect to VNC');
                 };
                 
             } catch (error) {
-                showStatus('❌ Failed to create WebSocket connection: ' + error.message, 'error');
-                setButtonState(false, '🔗 Connect to VNC');
+                showStatus('ERROR: Failed to create WebSocket connection: ' + error.message, 'error');
+                setButtonState(false, 'Connect to VNC');
             }
         });
         
@@ -144,8 +144,8 @@ def create_vnc_html():
 </html>
 """
     
-    # Write HTML file
-    with open('vnc.html', 'w') as f:
+    # Write HTML file with UTF-8 encoding
+    with open('vnc.html', 'w', encoding='utf-8') as f:
         f.write(html_content)
     
     print("✅ Created vnc.html")
