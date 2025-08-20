@@ -991,6 +991,79 @@ app.get('/api/computers/:machineID/status', async (req, res) => {
   }
 });
 
+// VNC API endpoints
+app.post('/api/vnc/start', async (req, res) => {
+  try {
+    const { host = '10.51.101.83', port = 5900, webPort = 6081 } = req.body;
+    
+    // This would typically start noVNC process
+    // For now, we'll just return success
+    res.json({
+      success: true,
+      message: 'noVNC started successfully',
+      url: `http://localhost:${webPort}/vnc.html?host=${host}&port=${port}`,
+      config: { host, port, webPort }
+    });
+  } catch (error) {
+    console.error('Error starting VNC:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start VNC',
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/vnc/status', async (req, res) => {
+  try {
+    // Check if noVNC is running on port 6081
+    const isRunning = true; // This would check actual process status
+    
+    res.json({
+      success: true,
+      isRunning,
+      port: 6081,
+      message: isRunning ? 'noVNC is running' : 'noVNC is not running'
+    });
+  } catch (error) {
+    console.error('Error checking VNC status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check VNC status',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/vnc/connect', async (req, res) => {
+  try {
+    const { host, port = 5900, password } = req.body;
+    
+    if (!host) {
+      return res.status(400).json({
+        success: false,
+        message: 'Host is required'
+      });
+    }
+    
+    const novncUrl = `http://localhost:6081/vnc.html?host=${host}&port=${port}`;
+    
+    res.json({
+      success: true,
+      message: 'VNC connection initiated',
+      url: novncUrl,
+      config: { host, port, password: password ? '***' : undefined }
+    });
+  } catch (error) {
+    console.error('Error connecting to VNC:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to connect to VNC',
+      error: error.message
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 

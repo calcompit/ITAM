@@ -6,7 +6,8 @@ import {
   Pin, 
   BarChart3,
   Bell,
-  LogOut
+  LogOut,
+  MonitorPlay
 } from "lucide-react";
 
 interface SidebarNavProps {
@@ -21,6 +22,7 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user }: SidebarNa
     { id: "dashboard", label: "Dashboard", icon: Monitor },
     { id: "pinned", label: "Pinned", icon: Pin },
     { id: "groups", label: "IP Groups", icon: Network },
+    { id: "vnc", label: "VNC Viewer", icon: MonitorPlay },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "alerts", label: "Alerts", icon: Bell },
   ];

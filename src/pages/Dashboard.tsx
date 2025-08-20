@@ -7,6 +7,7 @@ import { IPGroupCard } from "@/components/ip-group-card";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { Analytics } from "@/pages/Analytics";
 import { AlertsPage } from "@/pages/AlertsPage";
+import VncViewer from "@/pages/VncViewer";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Filter, Monitor, AlertTriangle, CheckCircle } from "lucide-react";
@@ -249,6 +250,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
   // Show Alerts page
   if (activeTab === "alerts") {
     return <AlertsPage />;
+  }
+
+  // Show VNC Viewer page
+  if (activeTab === "vnc") {
+    return <VncViewer activeTab={activeTab} />;
   }
 
   if (activeTab === "groups" && !selectedSubnet) {
