@@ -1,145 +1,100 @@
 # IT Asset Monitor with VNC Integration
 
-A comprehensive IT asset monitoring system with integrated VNC remote access capabilities.
+A simple IT asset monitoring dashboard with integrated VNC remote access functionality.
 
-## 🚀 Features
+## Features
 
-### IT Asset Monitor
-- **Real-time Computer Monitoring** - Track computer status, hardware, and software
-- **IP Group Management** - Organize computers by network segments
-- **Analytics Dashboard** - Visualize system health and trends
-- **Alert System** - Get notified of system issues
-- **Pinned Computers** - Quick access to important systems
+- **Asset Monitoring**: View computer assets with IP addresses
+- **VNC Remote Access**: Click any IP address to connect via noVNC
+- **Real-time Status**: Monitor online/offline status of computers
 
-### VNC Integration
-- **Web-based VNC Viewer** - Access remote computers through browser
-- **Quick Connect** - Predefined server connections
-- **Custom Connections** - Connect to any VNC server
-- **Integrated UI** - VNC management within the main application
+## Quick Start
 
-## 🛠️ Technology Stack
+### Prerequisites
 
-- **Frontend**: React + TypeScript + Tailwind CSS (Port 8080)
-- **Backend**: Node.js + Express (Port 3002)
-- **Database**: SQL Server
-- **Real-time**: WebSocket
-- **VNC**: noVNC (WebSocket-based VNC)
+1. **Node.js** (v16 or higher)
+2. **Python** (for noVNC)
+3. **noVNC** (already cloned)
+4. **websockify** (already installed)
 
-## 📋 Prerequisites
+### Installation
 
-- Node.js 18+
-- Python 3.8+
-- Git
-- SQL Server (for IT Asset Monitor)
-- VNC Server (for remote access)
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-## 🚀 Quick Start
+2. **Start the application:**
+   ```bash
+   # Terminal 1: Start backend
+   node server.js
+   
+   # Terminal 2: Start frontend
+   npm run dev
+   ```
 
-### 1. Install Dependencies
-```bash
-npm install
-pip install websockify
-```
+3. **Access the application:**
+   - Frontend: http://localhost:8080
+   - Backend: http://localhost:3002
 
-### 2. Setup noVNC
-```bash
-git clone https://github.com/novnc/noVNC.git
-```
+## Usage
 
-### 3. Start Backend
-```bash
-node server.js
-# Runs on port 3002
-```
+### VNC Connection
 
-### 4. Start Frontend
-```bash
-npm run dev
-# Runs on port 8080
-```
+1. **Open the dashboard** at http://localhost:8080
+2. **Click any IP address** on a computer card
+3. **noVNC will automatically start** and open in a new tab
+4. **Enter password: `123`** when prompted
 
-### 5. Start noVNC (when needed)
-```bash
-python start-novnc-simple.py
-# Runs on port 6081
-```
+### Ports Used
 
-### 6. Access Application
-- **IT Asset Monitor**: http://localhost:8080
-- **VNC Viewer**: Available in the VNC tab
+- **Frontend**: 8080
+- **Backend**: 3002  
+- **noVNC**: 6081
+- **VNC Server**: 5900
 
-## 🔧 VNC Configuration
+## Troubleshooting
 
-### Default Settings
-- **VNC Server**: 10.51.101.83:5900
-- **Password**: 123
-- **Web Interface**: http://localhost:6081/vnc.html
+### VNC Not Working?
 
-### Quick Start VNC
-```bash
-start-novnc.bat
-```
+1. **Check noVNC installation:**
+   ```bash
+   ls noVNC/
+   ```
 
-### Custom VNC Server
-```bash
-python start-novnc-simple.py --vnc-host YOUR_IP --vnc-port 5900
-```
+2. **Check websockify:**
+   ```bash
+   python -c "import websockify"
+   ```
 
-## 📁 Project Structure
+3. **Check backend logs** for VNC startup messages
+
+### Common Issues
+
+- **"noVNC directory not found"**: Run `git clone https://github.com/novnc/noVNC.git`
+- **"websockify not found"**: Run `pip install websockify`
+- **Port 6081 in use**: Kill existing noVNC processes
+
+## Development
+
+### Project Structure
 
 ```
-IT-Asset-Monitor/
-├── src/                    # Frontend source code
-│   ├── components/         # React components
+├── src/                    # Frontend React app
 │   ├── pages/             # Page components
-│   ├── services/          # API services
-│   ├── config/            # Configuration files
-│   └── ...
-├── server.js              # Backend server (port 3002)
-├── start-novnc-simple.py  # VNC launcher
-├── start-novnc.bat        # VNC starter
-└── noVNC/                 # noVNC web interface
+│   ├── components/        # UI components
+│   └── config/           # API configuration
+├── server.js              # Backend server
+├── noVNC/                 # noVNC installation
+└── package.json           # Dependencies
 ```
 
-## 🔌 API Endpoints
+### API Endpoints
 
-### IT Asset Monitor (Port 3002)
-- `GET /api/computers` - Get all computers
-- `GET /api/ip-groups` - Get IP groups
-- `GET /api/analytics` - Get analytics data
-- `GET /api/alerts/:username` - Get user alerts
-
-### VNC Integration (Port 3002)
-- `POST /api/vnc/start` - Start noVNC
+- `POST /api/vnc/start` - Start noVNC for an IP
 - `GET /api/vnc/status` - Check noVNC status
-- `POST /api/vnc/connect` - Connect to VNC server
+- `GET /api/computers` - Get computer assets
 
-## 🔒 Security
+## License
 
-- **CORS Protection** - Configured for specific IP ranges
-- **SQL Injection Protection** - Parameterized queries
-- **VNC Password** - Default password: 123 (change in production)
-
-## 🆘 Troubleshooting
-
-### VNC Issues
-1. **Check noVNC Status**: Look for "noVNC: Running" badge
-2. **Verify VNC Server**: Ensure VNC server is running on target machine
-3. **Check Ports**: Verify ports 5900 (VNC) and 6081 (noVNC) are available
-4. **Password**: Use password "123" for default VNC servers
-
-### Common Commands
-```bash
-# Check noVNC status
-python start-novnc-simple.py
-
-# Manual VNC connection
-http://localhost:6081/vnc.html?host=10.51.101.83&port=5900
-
-# Check if VNC server is accessible
-python start-novnc-simple.py --vnc-host 10.51.101.85 --vnc-port 5900
-```
-
-## 📝 License
-
-This project is for internal use only.
+MIT

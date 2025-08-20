@@ -7,7 +7,8 @@ import {
   BarChart3,
   Bell,
   LogOut,
-  MonitorPlay
+  MonitorPlay,
+  Home
 } from "lucide-react";
 
 interface SidebarNavProps {
@@ -17,12 +18,32 @@ interface SidebarNavProps {
   user: { username: string };
 }
 
+export const sidebarNavItems = [
+  {
+    title: "Dashboard",
+    href: "/",
+    icon: Home,
+    variant: "default",
+  },
+  {
+    title: "Analytics",
+    href: "/analytics",
+    icon: BarChart3,
+    variant: "ghost",
+  },
+  {
+    title: "Alerts",
+    href: "/alerts",
+    icon: Bell,
+    variant: "ghost",
+  },
+] as const
+
 export function SidebarNav({ activeTab, onTabChange, onLogout, user }: SidebarNavProps) {
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: Monitor },
     { id: "pinned", label: "Pinned", icon: Pin },
     { id: "groups", label: "IP Groups", icon: Network },
-    { id: "vnc", label: "VNC Viewer", icon: MonitorPlay },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "alerts", label: "Alerts", icon: Bell },
   ];

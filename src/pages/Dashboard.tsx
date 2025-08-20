@@ -1,20 +1,26 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ComputerCard } from "@/components/computer-card";
-import { ComputerDetailsModal } from "@/components/computer-details-modal";
-import { VNCViewer } from "@/components/vnc-viewer";
-import { IPGroupCard } from "@/components/ip-group-card";
-import { StatusIndicator } from "@/components/ui/status-indicator";
-import { Analytics } from "@/pages/Analytics";
-import { AlertsPage } from "@/pages/AlertsPage";
-import VncViewer from "@/pages/VncViewer";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, Monitor, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { ComputerCard } from "@/components/computer-card";
+import { IPGroupCard } from "@/components/ip-group-card";
+import { API_CONFIG, buildNovncUrl } from "@/config/api";
+import { mockComputers } from "@/data/mock-data";
+import { 
+  Monitor, 
+  Network, 
+  Pin, 
+  BarChart3, 
+  Bell, 
+  RefreshCw,
+  Circle
+} from "lucide-react";
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
-import { useToast } from "@/hooks/use-toast";
-import { API_CONFIG, buildNovncUrl } from "@/config/api";
+import { Input } from "@/components/ui/input";
+import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
 
 interface DashboardProps {
   activeTab: string;
@@ -23,20 +29,14 @@ interface DashboardProps {
 export function Dashboard({ activeTab }: DashboardProps) {
   const [computers, setComputers] = useState<APIComputer[]>([]);
   const [ipGroups, setIpGroups] = useState<IPGroup[]>([]);
-  const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSubnet, setSelectedSubnet] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [pinnedComputers, setPinnedComputers] = useState<string[]>([]);
+  const [selectedSubnet, setSelectedSubnet] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [novncStatus, setNovncStatus] = useState<{ isRunning: boolean } | null>(null);
   const { toast } = useToast();
   
-  // VNC state
-  const [vncOpen, setVncOpen] = useState(false);
-  const [vncIp, setVncIp] = useState("");
-  const [vncComputerName, setVncComputerName] = useState("");
-  const [novncStatus, setNovncStatus] = useState<{ isRunning: boolean; port: number } | null>(null);
-
   // Load pinned computers from localStorage
   const loadPinnedComputers = (): string[] => {
     try {
@@ -87,7 +87,6 @@ export function Dashboard({ activeTab }: DashboardProps) {
         if (showLoading) {
           setLoading(false);
         }
-        setIsInitialLoad(false);
       }
     };
 
@@ -148,7 +147,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
       setNovncStatus(data);
     } catch (error) {
       console.error('Failed to check noVNC status:', error);
-      setNovncStatus({ isRunning: false, port: 6081 });
+      setNovncStatus({ isRunning: false });
     }
   };
 
@@ -174,94 +173,55 @@ export function Dashboard({ activeTab }: DashboardProps) {
     savePinnedComputers(pinnedMachineIDs);
   };
 
-  const handleVNC = async (ip: string, computerName: string) => {
+  const handleVNC = async (ip: string) => {
     try {
-      // First, try to start noVNC automatically
-      console.log("Starting noVNC automatically...");
+      console.log(`Starting VNC for IP: ${ip}`);
       
-      const startResponse = await fetch(API_CONFIG.VNC_START, {
+      // Start noVNC
+      const response = await fetch(API_CONFIG.VNC_START, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           host: ip,
-          port: API_CONFIG.DEFAULT_VNC_PORT,
+          port: 5900,
           webPort: 6081
-        }),
+        })
       });
 
-      // Wait a moment for noVNC to start
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Check if noVNC is running
-      const statusResponse = await fetch(API_CONFIG.VNC_STATUS);
-      const statusData = await statusResponse.json();
-
-      if (statusData.isRunning) {
-        // noVNC is running, open the connection
-        const novncUrl = buildNovncUrl(ip, API_CONFIG.DEFAULT_VNC_PORT);
-        const newWindow = window.open(novncUrl, '_blank');
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('noVNC started successfully');
         
-        if (newWindow) {
-          toast({
-            title: "VNC Connection",
-            description: `Opening VNC to ${computerName} (${ip})`,
-          });
-        } else {
-          toast({
-            title: "VNC Connection",
-            description: `Please copy and paste this URL: ${novncUrl}`,
-            variant: "destructive",
-          });
-        }
-      } else {
-        // Fallback: try to open noVNC directly
-        const novncUrl = buildNovncUrl(ip, API_CONFIG.DEFAULT_VNC_PORT);
-        const newWindow = window.open(novncUrl, '_blank');
+        // Wait a moment for noVNC to start
+        setTimeout(() => {
+          const url = buildNovncUrl(ip, 5900);
+          console.log(`Opening VNC URL: ${url}`);
+          window.open(url, '_blank');
+        }, 2000);
         
-        if (newWindow) {
-          toast({
-            title: "VNC Connection",
-            description: `Opening VNC to ${computerName} (${ip})`,
-          });
-        } else {
-          toast({
-            title: "VNC Connection",
-            description: `Please copy and paste this URL: ${novncUrl}`,
-            variant: "destructive",
-          });
-        }
-      }
-      
-      // Update status
-      await checkNovncStatus();
-      
-    } catch (error) {
-      console.error('VNC connection error:', error);
-      
-      // Fallback: open noVNC URL directly
-      const novncUrl = buildNovncUrl(ip, API_CONFIG.DEFAULT_VNC_PORT);
-      const newWindow = window.open(novncUrl, '_blank');
-      
-      if (newWindow) {
         toast({
-          title: "VNC Connection",
-          description: `Opening VNC to ${computerName} (${ip})`,
+          title: "VNC Started",
+          description: `Connecting to ${ip}...`,
         });
       } else {
+        console.error('Failed to start noVNC:', data.message);
         toast({
-          title: "VNC Connection",
-          description: `Please copy and paste this URL: ${novncUrl}`,
+          title: "VNC Error",
+          description: data.message,
           variant: "destructive",
         });
       }
+    } catch (error) {
+      console.error('Error starting VNC:', error);
+      toast({
+        title: "VNC Error",
+        description: "Failed to start VNC connection",
+        variant: "destructive",
+      });
     }
-    
-    // Also set the state for the modal (if needed)
-    setVncIp(ip);
-    setVncComputerName(computerName);
-    setVncOpen(true);
   };
 
   const filteredComputers = computers.filter(computer => 
@@ -277,7 +237,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const alertComputers = computers.filter(c => c.status === "alert").length;
   const activatedComputers = computers.filter(c => c.winActivated).length;
   const notActivatedComputers = computers.filter(c => !c.winActivated).length;
-  const pinnedComputers = computers.filter(c => c.isPinned);
+  const pinnedComputersList = computers.filter(c => c.isPinned);
   
   // Calculate stats for selected subnet
   const subnetComputers = selectedSubnet ? computers.filter(computer => {
@@ -297,7 +257,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
     let computersToDisplay = [];
     
     if (activeTab === "pinned") {
-      computersToDisplay = pinnedComputers;
+      computersToDisplay = pinnedComputersList;
     } else if (selectedSubnet) {
       computersToDisplay = computers.filter(computer => {
         const primaryIP = computer.ipAddresses[0] || "";
@@ -347,17 +307,12 @@ export function Dashboard({ activeTab }: DashboardProps) {
 
   // Show Analytics page
   if (activeTab === "analytics") {
-    return <Analytics />;
+    return <div>Analytics Page - Coming Soon</div>;
   }
 
   // Show Alerts page
   if (activeTab === "alerts") {
-    return <AlertsPage />;
-  }
-
-  // Show VNC Viewer page
-  if (activeTab === "vnc") {
-    return <VncViewer activeTab={activeTab} />;
+    return <div>Alerts Page - Coming Soon</div>;
   }
 
   if (activeTab === "groups" && !selectedSubnet) {
@@ -471,11 +426,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">
-                {activeTab === "pinned" ? pinnedComputers.length : selectedSubnet ? subnetTotal : totalComputers}
+                {activeTab === "pinned" ? pinnedComputersList.length : selectedSubnet ? subnetTotal : totalComputers}
               </div>
               <p className="text-xs text-muted-foreground">
                 {activeTab === "pinned"
-                  ? `${pinnedComputers.filter(c => c.winActivated).length} activated`
+                  ? `${pinnedComputersList.filter(c => c.winActivated).length} activated`
                   : selectedSubnet
                   ? `${subnetActivated} activated`
                   : `${activatedComputers} activated`}
@@ -493,14 +448,14 @@ export function Dashboard({ activeTab }: DashboardProps) {
             <CardContent>
               <div className="text-2xl font-bold text-status-online">
                 {activeTab === "pinned" 
-                  ? pinnedComputers.filter(c => c.status === "online").length 
+                  ? pinnedComputersList.filter(c => c.status === "online").length 
                   : selectedSubnet
                   ? subnetOnline
                   : onlineComputers}
               </div>
               <p className="text-xs text-muted-foreground">
                 {activeTab === "pinned"
-                  ? `${((pinnedComputers.filter(c => c.status === "online").length / Math.max(pinnedComputers.length, 1)) * 100).toFixed(1)}% online`
+                  ? `${((pinnedComputersList.filter(c => c.status === "online").length / Math.max(pinnedComputersList.length, 1)) * 100).toFixed(1)}% online`
                   : selectedSubnet
                   ? `${((subnetOnline / Math.max(subnetTotal, 1)) * 100).toFixed(1)}% online`
                   : `${((onlineComputers / totalComputers) * 100).toFixed(1)}% uptime`}
@@ -518,7 +473,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
             <CardContent>
               <div className="text-2xl font-bold text-status-offline">
                 {activeTab === "pinned" 
-                  ? pinnedComputers.filter(c => c.status === "offline").length 
+                  ? pinnedComputersList.filter(c => c.status === "offline").length 
                   : selectedSubnet
                   ? subnetOffline
                   : offlineComputers}
@@ -539,7 +494,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
             <CardContent>
               <div className="text-2xl font-bold text-status-warning">
                 {activeTab === "pinned" 
-                  ? pinnedComputers.filter(c => c.status === "alert").length 
+                  ? pinnedComputersList.filter(c => c.status === "alert").length 
                   : selectedSubnet
                   ? subnetAlert
                   : alertComputers}
@@ -561,26 +516,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
             key={computer.machineID}
             computer={computer}
             onPin={handlePin}
-            onClick={(computer) => setSelectedComputer(computer)}
+            onClick={(computer) => {}}
             onVNC={handleVNC}
           />
         ))}
       </div>
-
-      {/* Computer Details Modal */}
-      <ComputerDetailsModal
-        computer={selectedComputer}
-        open={!!selectedComputer}
-        onClose={() => setSelectedComputer(null)}
-      />
-
-      {/* VNC Viewer Modal */}
-      <VNCViewer
-        ip={vncIp}
-        computerName={vncComputerName}
-        isOpen={vncOpen}
-        onClose={() => setVncOpen(false)}
-      />
     </div>
   );
 }
