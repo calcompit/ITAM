@@ -10,7 +10,19 @@ import subprocess
 import time
 import signal
 import threading
+import argparse
 from pathlib import Path
+
+def parse_arguments():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(description='Simple noVNC Launcher for Windows')
+    parser.add_argument('--vnc-host', default='10.51.101.83', 
+                       help='VNC server host (default: 10.51.101.83)')
+    parser.add_argument('--vnc-port', type=int, default=5900,
+                       help='VNC server port (default: 5900)')
+    parser.add_argument('--web-port', type=int, default=6081,
+                       help='Web interface port (default: 6081)')
+    return parser.parse_args()
 
 def check_prerequisites():
     """Check if required dependencies are installed"""
@@ -93,6 +105,9 @@ def main():
     print("=" * 50)
     print()
     
+    # Parse command line arguments
+    args = parse_arguments()
+    
     # Check prerequisites
     if not check_prerequisites():
         input("Press Enter to exit...")
@@ -107,10 +122,15 @@ def main():
     print(f"✅ Found noVNC directory: {novnc_dir}")
     print()
     
-    # Configuration
-    vnc_host = "localhost"
-    vnc_port = 5900
-    web_port = 6081
+    # Configuration from command line arguments
+    vnc_host = args.vnc_host
+    vnc_port = args.vnc_port
+    web_port = args.web_port
+    
+    print(f"🔧 Configuration:")
+    print(f"   VNC Server: {vnc_host}:{vnc_port}")
+    print(f"   Web Port: {web_port}")
+    print()
     
     # Start websockify
     process = start_websockify_simple(novnc_dir, vnc_host, vnc_port, web_port)
