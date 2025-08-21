@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { Button } from "@/components/ui/button";
-import { Monitor, Pin, PinOff, Play } from "lucide-react";
+import { Monitor, Pin, PinOff, MonitorCheck } from "lucide-react";
 import { cn, formatThailandTime, formatRelativeTime } from "@/lib/utils";
 import { MachineIdDisplay } from "@/components/ui/machine-id-display";
 import { ClickableText } from "@/components/ui/clickable-text";
@@ -79,10 +79,7 @@ export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardPr
                   className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
                   title={`VNC to ${computer.ipAddresses[0]}`}
                 >
-                  <div className="relative">
-                    <Monitor className="h-4 w-4 text-blue-500" />
-                    <Play className="h-2 w-2 text-white absolute -bottom-0.5 -right-0.5 bg-blue-500 rounded-full" />
-                  </div>
+                  <MonitorCheck className="h-4 w-4 text-blue-500" />
                 </Button>
               )}
             </div>
