@@ -191,7 +191,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
             host: result.existingSession.host,
             targetPort: result.existingSession.targetPort,
             sessionId: result.existingSession.sessionId,
-            vncUrl: `http://10.51.101.49:${result.existingSession.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+            vncUrl: `http://localhost:${result.existingSession.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
           };
         }
       }
@@ -221,15 +221,14 @@ export function Dashboard({ activeTab }: DashboardProps) {
         let vncWindow = null;
         
         try {
-          // Method 1: Direct window.open with specific features
-          const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=yes,toolbar=yes,location=yes,status=yes';
-          vncWindow = window.open(session.vncUrl, '_blank', windowFeatures);
+          // Method 1: Simple window.open
+          vncWindow = window.open(session.vncUrl, '_blank');
           console.log('Window open result:', vncWindow);
           
           if (!vncWindow || vncWindow.closed) {
-            // Method 2: Try without features
-            vncWindow = window.open(session.vncUrl, '_blank');
-            console.log('Window open without features result:', vncWindow);
+            // Method 2: Try with basic features
+            vncWindow = window.open(session.vncUrl, '_blank', 'width=1200,height=800');
+            console.log('Window open with features result:', vncWindow);
           }
           
           if (!vncWindow || vncWindow.closed) {

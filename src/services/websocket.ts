@@ -5,7 +5,7 @@ export class WebSocketService {
   private reconnectDelay = 1000;
   private listeners: Map<string, Function[]> = new Map();
 
-  constructor(private url: string = 'ws://10.51.101.49:3002') {}
+  constructor(private url: string = 'ws://localhost:3002') {}
 
   connect() {
     try {
