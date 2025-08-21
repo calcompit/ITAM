@@ -10,7 +10,9 @@ export default defineConfig(({ mode }) => ({
     port: mode === 'production' ? 8081 : 8080,
   },
   plugins: [
-    react(),
+    react({
+      jsxRuntime: 'automatic'
+    }),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
