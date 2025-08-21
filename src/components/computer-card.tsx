@@ -60,7 +60,7 @@ export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardPr
       <CardContent>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">IP</span>
+            <span className="text-sm text-muted-foreground">Primary IP</span>
             <div className="flex items-center gap-2">
               <ClickableText 
                 text={computer.ipAddresses[0] || "N/A"}
