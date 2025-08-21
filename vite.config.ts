@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => ({
     },
   },
   define: {
-    'process.env.NODE_ENV': JSON.stringify(mode)
+    'process.env.NODE_ENV': JSON.stringify(mode),
+    'process.env.BACKEND_URL': JSON.stringify(process.env.BACKEND_URL),
+    'process.env.FRONTEND_URL': JSON.stringify(process.env.FRONTEND_URL),
+    'process.env.NOVNC_URL': JSON.stringify(process.env.NOVNC_URL),
+    'process.env.HOST': JSON.stringify(process.env.HOST)
   }
 }));
