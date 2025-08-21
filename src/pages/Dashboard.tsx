@@ -262,30 +262,60 @@ export function Dashboard({ activeTab }: DashboardProps) {
       if (session) {
         console.log('VNC session started/retrieved successfully');
         
-        // Open VNC in a new window with specific size
-        const windowFeatures = 'width=1200,height=800,scrollbars=no,resizable=yes,status=no,location=no,toolbar=no,menubar=no';
-        
+        // Open VNC in a new window with specific size - Force new window, not tab
         console.log(`Opening VNC URL in new window: ${session.vncUrl}`);
         
         // Try to open window with different approaches
         let vncWindow = null;
         
         try {
-          // Method 1: Force new window with specific features
-          const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no';
-          vncWindow = window.open(session.vncUrl, 'vnc_window', windowFeatures);
+          // Method 1: Force new window with specific features to prevent tab opening
+          const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no,left=100,top=100';
+          vncWindow = window.open(session.vncUrl, '_blank', windowFeatures);
           console.log('Window open result:', vncWindow);
           
           if (!vncWindow || vncWindow.closed) {
-            // Method 2: Try with minimal features
-            vncWindow = window.open(session.vncUrl, 'vnc_window', 'width=1200,height=800');
-            console.log('Window open with minimal features result:', vncWindow);
+            // Method 2: Try with different window name to force new window
+            vncWindow = window.open(session.vncUrl, `vnc_${Date.now()}`, windowFeatures);
+            console.log('Window open with timestamp result:', vncWindow);
           }
           
           if (!vncWindow || vncWindow.closed) {
-            // Method 3: Try with location.href
-            console.log('Trying location.href fallback');
-            window.location.href = session.vncUrl;
+            // Method 3: Try with minimal features but force window
+            vncWindow = window.open(session.vncUrl, `vnc_window_${Math.random()}`, 'width=1200,height=800,left=100,top=100');
+            console.log('Window open with random name result:', vncWindow);
+          }
+          
+          if (!vncWindow || vncWindow.closed) {
+            // Method 4: Show manual link if all else fails
+            console.log('All window.open methods failed, showing manual link');
+            toast({
+              title: "Popup Blocked",
+              description: "Please click the manual link below to open VNC",
+              duration: 10000,
+            });
+            
+            // Show manual link container
+            const container = document.getElementById('vnc-container');
+            if (container) {
+              container.classList.remove('hidden');
+              
+              // Create manual link
+              const link = document.createElement('a');
+              link.href = session.vncUrl;
+              link.target = '_blank';
+              link.textContent = `Open VNC Viewer for ${computerName} (${ip})`;
+              link.style.display = 'block';
+              link.style.marginTop = '10px';
+              link.style.padding = '10px';
+              link.style.backgroundColor = '#007bff';
+              link.style.color = 'white';
+              link.style.textDecoration = 'none';
+              link.style.borderRadius = '5px';
+              link.style.textAlign = 'center';
+              
+              container.appendChild(link);
+            }
             return;
           }
         } catch (error) {
