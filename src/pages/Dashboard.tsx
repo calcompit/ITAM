@@ -179,7 +179,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
     try {
       console.log(`Starting VNC for IP: ${ip} (${computerName})`);
       
-      // Change websockify target using proxy manager
+      // Change websockify target using API
       const response = await fetch(`/api/vnc/change-target`, {
         method: 'POST',
         headers: {
@@ -191,14 +191,16 @@ export function Dashboard({ activeTab }: DashboardProps) {
         })
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         console.log('Websockify target changed successfully');
         
         // Wait a moment for websockify to restart
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
         // Open VNC in a new window with specific size
-        const vncUrl = `http://localhost:6081/vnc.html?host=${ip}&port=5900&password=123`;
+        const vncUrl = data.url || `http://localhost:6081/vnc.html?host=${ip}&port=5900&password=123`;
         const windowFeatures = 'width=1200,height=800,scrollbars=no,resizable=yes,status=no,location=no,toolbar=no,menubar=no';
         
         console.log(`Opening VNC URL in new window: ${vncUrl}`);
@@ -217,10 +219,10 @@ export function Dashboard({ activeTab }: DashboardProps) {
           description: `Connecting to ${computerName} (${ip})...`,
         });
       } else {
-        console.error('Failed to change websockify target');
+        console.error('Failed to change websockify target:', data.message);
         toast({
           title: "VNC Error",
-          description: "Failed to change VNC target",
+          description: data.message || "Failed to change VNC target",
           variant: "destructive",
         });
       }

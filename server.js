@@ -1143,25 +1143,32 @@ app.post('/api/vnc/change-target', async (req, res) => {
       });
     }
     
+    console.log(`🔄 Changing VNC target to ${host}:${port}`);
+    
     // Kill existing websockify and start new one for the target
     try {
       const { exec } = require('child_process');
+      
+      // Kill existing websockify
       exec('pkill -f "websockify.*6081"', (error) => {
         if (error) {
           console.log('No existing websockify process to kill');
         } else {
-          console.log('Killed existing websockify process');
+          console.log('✅ Killed existing websockify process');
         }
         
-        // Start new websockify process
-        const websockifyCmd = `websockify 6081 ${host}:${port} --web noVNC --verbose`;
-        exec(websockifyCmd, (error, stdout, stderr) => {
-          if (error) {
-            console.error('Error starting websockify:', error);
-          } else {
-            console.log(`Websockify started for ${host}:${port}`);
-          }
-        });
+        // Wait a moment
+        setTimeout(() => {
+          // Start new websockify process
+          const websockifyCmd = `websockify 6081 ${host}:${port} --web noVNC --verbose`;
+          exec(websockifyCmd, (error, stdout, stderr) => {
+            if (error) {
+              console.error('❌ Error starting websockify:', error);
+            } else {
+              console.log(`✅ Websockify started for ${host}:${port}`);
+            }
+          });
+        }, 1000);
       });
     } catch (error) {
       console.error('Error managing websockify:', error);
@@ -1169,7 +1176,8 @@ app.post('/api/vnc/change-target', async (req, res) => {
     
     res.json({
       success: true,
-      message: `Websockify target changed to ${host}:${port}`
+      message: `Websockify target changed to ${host}:${port}`,
+      url: `http://localhost:6081/vnc.html?host=${host}&port=${port}&password=123`
     });
   } catch (error) {
     console.error('Error changing VNC target:', error);
