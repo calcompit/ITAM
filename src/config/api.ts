@@ -15,7 +15,7 @@ export const API_CONFIG = {
   NOVNC_URL: 'http://10.51.101.49:6081',
   
   // Frontend URL (MacBook)
-  FRONTEND_URL: 'http://localhost:8080',
+  FRONTEND_URL: 'http://localhost:8081',
   
   // Default VNC settings
   DEFAULT_VNC_PORT: 5900,
