@@ -78,14 +78,21 @@
             keyboard: true,
             clipboard: true,
             audio: false,
-            bell: false
+            bell: false,
+            // Add more options to suppress TLS warnings
+            allowTLSWarnings: true,
+            suppressTLSWarnings: true
         });
 
         // Connection events
         rfb.addEventListener('connect', function() {
             console.log('VNC Connected successfully');
+            console.log('RFB Object:', rfb);
+            console.log('RFB Properties:', Object.getOwnPropertyNames(rfb));
             console.log('RFB State:', rfb.state);
             console.log('RFB Viewport:', rfb.viewport);
+            console.log('RFB Display:', rfb.display);
+            console.log('RFB Target:', rfb.target);
             document.getElementById('status').textContent = 'Connected to VNC';
             document.getElementById('status').className = 'status-connected';
         });
