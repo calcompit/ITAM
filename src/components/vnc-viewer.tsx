@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { X, ExternalLink } from 'lucide-react';
+import { API_CONFIG } from '../config/api';
 
 interface VNCViewerProps {
   isOpen: boolean;
@@ -22,7 +23,7 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
 
   const handleWebVNC = () => {
     // Open in new window for web VNC using the Windows proxy server - Force new window, not tab
-    const webVncUrl = `http://10.51.101.49:6081/vnc.html?ip=${ip}&port=${port}&password=123`;
+    const webVncUrl = `${API_CONFIG.NOVNC_URL}/vnc.html?ip=${ip}&port=${port}&password=123`;
     const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no,left=100,top=100';
     window.open(webVncUrl, `vnc_${Date.now()}`, windowFeatures);
   };
@@ -90,7 +91,7 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
 
           <div className="text-xs text-muted-foreground text-center bg-muted/30 p-3 rounded">
             <p><strong>Note:</strong> Web VNC using Windows proxy server will open in browser. Password: 123 (auto-filled)</p>
-            <p><strong>URL:</strong> http://10.51.101.49:8081/vnc.html?ip={ip}&port={port}&password=123</p>
+            <p><strong>URL:</strong> {API_CONFIG.NOVNC_URL}/vnc.html?ip={ip}&port={port}&password=123</p>
           </div>
         </div>
       </DialogContent>

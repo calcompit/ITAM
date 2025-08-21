@@ -1214,7 +1214,7 @@ app.post('/api/vnc/start', async (req, res) => {
       res.json({
         success: true,
         message: 'noVNC is already running',
-        url: `http://10.51.101.49:${webPort}/vnc.html?host=${host}&port=${port}&password=123`
+        url: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?host=${host}&port=${port}&password=123`
       });
       return;
     }
@@ -1290,7 +1290,7 @@ app.post('/api/vnc/start', async (req, res) => {
     res.json({
       success: true,
       message: 'noVNC started',
-      url: `http://10.51.101.49:6081/vnc.html?host=${host}&port=${port}&password=123`,
+      url: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?host=${host}&port=${port}&password=123`,
       target: `${host}:${port}`
     });
     
