@@ -22,12 +22,13 @@
             width: 100vw !important;
             height: 100vh !important;
             display: block;
-            cursor: none;
+            cursor: crosshair;
             object-fit: contain;
             max-width: 100%;
             max-height: 100%;
             border-radius: 8px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            pointer-events: auto;
         }
 
         /* Modern Status Bar */
@@ -443,6 +444,19 @@
                 <input type="checkbox" id="cursor-toggle" checked onchange="toggleCursor(this.checked)">
                 <label for="cursor-toggle">Show Cursor</label>
             </div>
+            <div class="toolbar-toggle">
+                <input type="checkbox" id="mouse-sync" checked onchange="toggleMouseSync(this.checked)">
+                <label for="mouse-sync">Mouse Sync</label>
+            </div>
+        </div>
+
+        <!-- Multi-Monitor Controls -->
+        <div class="toolbar-section">
+            <div class="toolbar-title">🖥️ Multi-Monitor</div>
+            <button class="toolbar-button" onclick="switchToMonitor(1)">📺 Monitor 1</button>
+            <button class="toolbar-button" onclick="switchToMonitor(2)">📺 Monitor 2</button>
+            <button class="toolbar-button" onclick="detectMonitors()">🔍 Detect Monitors</button>
+            <button class="toolbar-button" onclick="spanMonitors()">🔗 Span Monitors</button>
         </div>
     </div>
 
@@ -486,6 +500,7 @@
         let isKeyboardEnabled = true;
         let isMouseEnabled = true;
         let isCursorVisible = true;
+        let isMouseSyncEnabled = true;
         let monitorCount = 0;
         let isGridMode = false;
         
@@ -544,7 +559,11 @@
             document.getElementById('status-info').textContent = 'Connected';
             
             // Check and replace with RFB canvas after connection
-            setTimeout(checkRFBCanvas, 1000);
+            setTimeout(() => {
+                checkRFBCanvas();
+                // Auto fit to screen when connected
+                setTimeout(fitToScreen, 500);
+            }, 1000);
         });
 
         rfb.addEventListener('disconnect', function(e) {
@@ -625,12 +644,17 @@
                 rfbCanvas.style.display = 'block';
                 rfbCanvas.style.margin = '0 auto';
                 rfbCanvas.style.background = '#000';
-                rfbCanvas.style.cursor = 'none';
+                rfbCanvas.style.cursor = 'crosshair';
                 rfbCanvas.style.objectFit = 'contain';
                 rfbCanvas.style.maxWidth = '100%';
                 rfbCanvas.style.maxHeight = '100%';
                 rfbCanvas.style.borderRadius = '8px';
                 rfbCanvas.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)';
+                rfbCanvas.style.pointerEvents = 'auto';
+                
+                // Fix mouse position sync
+                rfbCanvas.addEventListener('mousemove', handleMouseMove);
+                rfbCanvas.addEventListener('click', handleMouseClick);
                 
                 console.log('Replaced canvas with RFB canvas');
                 updateResolutionInfo();
@@ -805,8 +829,181 @@
         window.toggleCursor = function(visible) {
             if (rfb && rfb._canvas) {
                 isCursorVisible = visible;
-                rfb._canvas.style.cursor = visible ? 'default' : 'none';
+                rfb._canvas.style.cursor = visible ? 'crosshair' : 'none';
                 console.log('Cursor visible:', visible);
+            }
+        };
+
+        // Mouse position handling
+        function handleMouseMove(event) {
+            if (!isMouseSyncEnabled) return;
+            
+            const canvas = event.target;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const x = (event.clientX - rect.left) * scaleX;
+            const y = (event.clientY - rect.top) * scaleY;
+            
+            // Update mouse position for better sync
+            if (rfb && rfb._mouse) {
+                rfb._mouse._pos = { x: x, y: y };
+            }
+        }
+
+        function handleMouseClick(event) {
+            if (!isMouseSyncEnabled) return;
+            
+            const canvas = event.target;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const x = (event.clientX - rect.left) * scaleX;
+            const y = (event.clientY - rect.top) * scaleY;
+            
+            console.log('Mouse click at:', x, y);
+        }
+
+        window.toggleMouseSync = function(enabled) {
+            isMouseSyncEnabled = enabled;
+            console.log('Mouse sync enabled:', enabled);
+        };
+
+        // Multi-Monitor Functions
+        window.switchToMonitor = function(monitorNum) {
+            console.log('Switching to monitor:', monitorNum);
+            
+            // Send key combination to switch monitor (Windows + P)
+            if (rfb) {
+                // Simulate Windows key + P
+                const winKeyEvent = new KeyboardEvent('keydown', {
+                    key: 'Meta',
+                    code: 'MetaLeft',
+                    keyCode: 91,
+                    which: 91,
+                    metaKey: true,
+                    bubbles: true
+                });
+                
+                const pKeyEvent = new KeyboardEvent('keydown', {
+                    key: 'p',
+                    code: 'KeyP',
+                    keyCode: 80,
+                    which: 80,
+                    bubbles: true
+                });
+                
+                // Send the key combination
+                if (rfb._keyboard) {
+                    rfb._keyboard.handleKeyDown(winKeyEvent);
+                    setTimeout(() => {
+                        rfb._keyboard.handleKeyDown(pKeyEvent);
+                        setTimeout(() => {
+                            // Send arrow key to select monitor
+                            for (let i = 1; i < monitorNum; i++) {
+                                const arrowEvent = new KeyboardEvent('keydown', {
+                                    key: 'ArrowRight',
+                                    code: 'ArrowRight',
+                                    keyCode: 39,
+                                    which: 39,
+                                    bubbles: true
+                                });
+                                rfb._keyboard.handleKeyDown(arrowEvent);
+                            }
+                            // Press Enter to confirm
+                            const enterEvent = new KeyboardEvent('keydown', {
+                                key: 'Enter',
+                                code: 'Enter',
+                                keyCode: 13,
+                                which: 13,
+                                bubbles: true
+                            });
+                            rfb._keyboard.handleKeyDown(enterEvent);
+                        }, 100);
+                    }, 100);
+                }
+            }
+        };
+
+        window.detectMonitors = function() {
+            console.log('Detecting monitors...');
+            
+            // Send Windows + P to show display options
+            if (rfb && rfb._keyboard) {
+                const winKeyEvent = new KeyboardEvent('keydown', {
+                    key: 'Meta',
+                    code: 'MetaLeft',
+                    keyCode: 91,
+                    which: 91,
+                    metaKey: true,
+                    bubbles: true
+                });
+                
+                const pKeyEvent = new KeyboardEvent('keydown', {
+                    key: 'p',
+                    code: 'KeyP',
+                    keyCode: 80,
+                    which: 80,
+                    bubbles: true
+                });
+                
+                rfb._keyboard.handleKeyDown(winKeyEvent);
+                setTimeout(() => {
+                    rfb._keyboard.handleKeyDown(pKeyEvent);
+                }, 100);
+            }
+        };
+
+        window.spanMonitors = function() {
+            console.log('Spanning across monitors...');
+            
+            // Send Windows + P and select extend mode
+            if (rfb && rfb._keyboard) {
+                const winKeyEvent = new KeyboardEvent('keydown', {
+                    key: 'Meta',
+                    code: 'MetaLeft',
+                    keyCode: 91,
+                    which: 91,
+                    metaKey: true,
+                    bubbles: true
+                });
+                
+                const pKeyEvent = new KeyboardEvent('keydown', {
+                    key: 'p',
+                    code: 'KeyP',
+                    keyCode: 80,
+                    which: 80,
+                    bubbles: true
+                });
+                
+                rfb._keyboard.handleKeyDown(winKeyEvent);
+                setTimeout(() => {
+                    rfb._keyboard.handleKeyDown(pKeyEvent);
+                    setTimeout(() => {
+                        // Select "Extend" mode (usually the 3rd option)
+                        const arrowEvent = new KeyboardEvent('keydown', {
+                            key: 'ArrowRight',
+                            code: 'ArrowRight',
+                            keyCode: 39,
+                            which: 39,
+                            bubbles: true
+                        });
+                        rfb._keyboard.handleKeyDown(arrowEvent);
+                        rfb._keyboard.handleKeyDown(arrowEvent);
+                        
+                        // Press Enter to confirm
+                        const enterEvent = new KeyboardEvent('keydown', {
+                            key: 'Enter',
+                            code: 'Enter',
+                            keyCode: 13,
+                            which: 13,
+                            bubbles: true
+                        });
+                        rfb._keyboard.handleKeyDown(enterEvent);
+                    }, 100);
+                }, 100);
             }
         };
 
