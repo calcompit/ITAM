@@ -128,8 +128,16 @@
 
                 ws.onmessage = function(event) {
                     // Handle VNC data
-                    console.log('Received VNC data:', event.data.length, 'bytes');
-                    // Here you would process VNC protocol data
+                    const data = event.data;
+                    if (data instanceof ArrayBuffer) {
+                        console.log('Received VNC data:', data.byteLength, 'bytes');
+                        // Process VNC protocol data
+                        processVNCData(data);
+                    } else if (typeof data === 'string') {
+                        console.log('Received VNC message:', data);
+                    } else {
+                        console.log('Received VNC data:', data.length || 'unknown size');
+                    }
                 };
 
                 ws.onclose = function() {
@@ -148,6 +156,22 @@
                 updateStatus('Failed to connect: ' + error.message, true);
                 console.error('Connection error:', error);
             }
+        }
+
+        function processVNCData(data) {
+            // Basic VNC data processing
+            const view = new Uint8Array(data);
+            
+            // Log first few bytes for debugging
+            if (view.length > 0) {
+                const firstBytes = Array.from(view.slice(0, Math.min(8, view.length)))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join(' ');
+                console.log('VNC data starts with:', firstBytes);
+            }
+            
+            // Update status with data info
+            updateStatus(`Connected - Received ${view.length} bytes`);
         }
 
         function disconnectVNC() {
