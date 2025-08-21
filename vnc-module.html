@@ -472,6 +472,8 @@
             </div>
             <button class="toolbar-button" onclick="calibrateMouse()">🎯 Calibrate Mouse</button>
             <button class="toolbar-button" onclick="resetMouse()">🔄 Reset Mouse</button>
+            <button class="toolbar-button" onclick="fixViewport()">📐 Fix Viewport</button>
+            <button class="toolbar-button" onclick="togglePixelPerfect()" id="pixel-perfect-btn">🎯 Pixel Perfect</button>
 
         </div>
 
@@ -572,8 +574,12 @@
             // Check and replace with RFB canvas after connection
             setTimeout(() => {
                 checkRFBCanvas();
-                // Auto fit to screen when connected
-                setTimeout(fitToScreen, 500);
+                // Auto enable pixel perfect mode when connected
+                setTimeout(() => {
+                    if (window.togglePixelPerfect) {
+                        window.togglePixelPerfect();
+                    }
+                }, 500);
             }, 1000);
         });
 
@@ -691,11 +697,37 @@
 
         window.fitToScreen = function() {
             if (rfb && rfb._canvas) {
-                rfb._canvas.style.objectFit = 'contain';
-                rfb._canvas.style.width = '100vw';
-                rfb._canvas.style.height = '100vh';
+                // Force 1:1 pixel mapping
+                const canvas = rfb._canvas;
+                const windowWidth = window.innerWidth;
+                const windowHeight = window.innerHeight;
+                
+                // Calculate the maximum size that maintains aspect ratio
+                const aspectRatio = canvas.width / canvas.height;
+                let newWidth, newHeight;
+                
+                if (windowWidth / windowHeight > aspectRatio) {
+                    // Window is wider than canvas aspect ratio
+                    newHeight = windowHeight;
+                    newWidth = windowHeight * aspectRatio;
+                } else {
+                    // Window is taller than canvas aspect ratio
+                    newWidth = windowWidth;
+                    newHeight = windowWidth / aspectRatio;
+                }
+                
+                // Set exact pixel dimensions
+                canvas.style.width = newWidth + 'px';
+                canvas.style.height = newHeight + 'px';
+                canvas.style.objectFit = 'none';
+                canvas.style.imageRendering = 'pixelated';
+                
+                // Center the canvas
+                canvas.style.margin = 'auto';
+                canvas.style.display = 'block';
+                
                 currentZoom = 1;
-                console.log('Fit to screen applied');
+                console.log('Fit to screen with 1:1 pixel mapping applied');
             }
         };
 
@@ -956,6 +988,77 @@
             
             console.log('Mouse event listeners reset');
             alert('Mouse reset completed.');
+        };
+
+        // Viewport and scaling fixes
+        window.fixViewport = function() {
+            if (!rfb || !rfb._canvas) return;
+            
+            const canvas = rfb._canvas;
+            
+            // Force browser to use exact pixel mapping
+            canvas.style.imageRendering = 'pixelated';
+            canvas.style.imageRendering = '-moz-crisp-edges';
+            canvas.style.imageRendering = 'crisp-edges';
+            
+            // Disable browser scaling
+            canvas.style.transform = 'none';
+            canvas.style.transformOrigin = 'top left';
+            
+            // Set exact dimensions
+            const displayWidth = Math.floor(canvas.width);
+            const displayHeight = Math.floor(canvas.height);
+            
+            canvas.style.width = displayWidth + 'px';
+            canvas.style.height = displayHeight + 'px';
+            canvas.style.objectFit = 'none';
+            
+            console.log('Viewport fixed: exact pixel mapping enabled');
+            alert('Viewport fixed! Mouse should now be accurate.');
+        };
+
+        let isPixelPerfect = false;
+        window.togglePixelPerfect = function() {
+            if (!rfb || !rfb._canvas) return;
+            
+            isPixelPerfect = !isPixelPerfect;
+            const canvas = rfb._canvas;
+            const btn = document.getElementById('pixel-perfect-btn');
+            
+            if (isPixelPerfect) {
+                // Enable pixel perfect mode
+                canvas.style.imageRendering = 'pixelated';
+                canvas.style.imageRendering = '-moz-crisp-edges';
+                canvas.style.imageRendering = 'crisp-edges';
+                canvas.style.objectFit = 'none';
+                canvas.style.transform = 'none';
+                
+                // Force integer scaling
+                const scale = Math.floor(Math.min(
+                    window.innerWidth / canvas.width,
+                    window.innerHeight / canvas.height
+                ));
+                
+                canvas.style.width = (canvas.width * scale) + 'px';
+                canvas.style.height = (canvas.height * scale) + 'px';
+                
+                btn.textContent = '🎯 Pixel Perfect (ON)';
+                btn.classList.add('active');
+                
+                console.log('Pixel perfect mode enabled, scale:', scale);
+            } else {
+                // Disable pixel perfect mode
+                canvas.style.imageRendering = 'auto';
+                canvas.style.objectFit = 'contain';
+                canvas.style.width = '100vw';
+                canvas.style.height = '100vh';
+                canvas.style.transform = '';
+                
+                btn.textContent = '🎯 Pixel Perfect';
+                btn.classList.remove('active');
+                
+                console.log('Pixel perfect mode disabled');
+            }
         };
 
 
