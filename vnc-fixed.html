@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>noVNC - Fixed VNC Client</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        #vnc-canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+        #status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Connecting to VNC...</div>
+    <canvas id="vnc-canvas"></canvas>
+
+    <script src="core/rfb.js"></script>
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const host = urlParams.get('host') || '10.51.101.83';
+        const port = urlParams.get('port') || '5900';
+        const password = urlParams.get('password') || '123';
+
+        // Use the correct WebSocket URL (pointing to our websockify proxy)
+        const wsUrl = `ws://10.51.101.49:6081/websockify`;
+        
+        console.log('Connecting to:', wsUrl);
+        console.log('Target VNC:', `${host}:${port}`);
+        
+        // Create RFB connection
+        const rfb = new RFB(document.getElementById('vnc-canvas'), wsUrl, {
+            credentials: { password: password }
+        });
+
+        // Connection events
+        rfb.addEventListener('connect', function() {
+            document.getElementById('status').textContent = 'Connected to VNC';
+            document.getElementById('status').style.background = 'rgba(0,255,0,0.7)';
+        });
+
+        rfb.addEventListener('disconnect', function(e) {
+            document.getElementById('status').textContent = 'Disconnected: ' + e.detail.clean ? 'Clean' : 'Error';
+            document.getElementById('status').style.background = 'rgba(255,0,0,0.7)';
+        });
+
+        rfb.addEventListener('credentialsrequired', function() {
+            document.getElementById('status').textContent = 'Credentials required';
+        });
+
+        rfb.addEventListener('securityfailure', function(e) {
+            document.getElementById('status').textContent = 'Security failure: ' + e.detail.reason;
+            document.getElementById('status').style.background = 'rgba(255,0,0,0.7)';
+        });
+
+        rfb.addEventListener('clipboard', function(e) {
+            console.log('Clipboard event:', e.detail.text);
+        });
+
+        rfb.addEventListener('bell', function() {
+            console.log('Bell event');
+        });
+
+        rfb.addEventListener('desktopname', function(e) {
+            document.title = 'noVNC - ' + e.detail.name;
+        });
+
+        rfb.addEventListener('capabilities', function(e) {
+            console.log('Capabilities:', e.detail.capabilities);
+        });
+
+        // Error handling
+        rfb.addEventListener('error', function(e) {
+            console.error('VNC Error:', e);
+            document.getElementById('status').textContent = 'Error: ' + e.detail.message;
+            document.getElementById('status').style.background = 'rgba(255,0,0,0.7)';
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'c') {
+                // Ctrl+C - Copy
+                rfb.clipboardPasteFrom = window.getSelection().toString();
+            }
+        });
+
+        // Focus management
+        document.getElementById('vnc-canvas').addEventListener('click', function() {
+            rfb.focus();
+        });
+
+        // Resize handling
+        window.addEventListener('resize', function() {
+            rfb.scaleViewport = true;
+            rfb.resizeSession = true;
+        });
+    </script>
+</body>
+</html>
