@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple VNC Client</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            background: #333;
+            padding: 10px;
+            text-align: center;
+        }
+        .status {
+            background: #444;
+            padding: 10px;
+            text-align: center;
+        }
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+        }
+        #vnc-canvas {
+            border: 1px solid #666;
+            cursor: crosshair;
+        }
+        .controls {
+            background: #333;
+            padding: 10px;
+            text-align: center;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .success {
+            color: #51cf66;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Simple VNC Client</h2>
+            <p>Connecting to: <span id="target-info">172.17.124.179:5900</span></p>
+        </div>
+        
+        <div class="status" id="status">
+            Initializing...
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="vnc-canvas" width="800" height="600"></canvas>
+        </div>
+        
+        <div class="controls">
+            <button onclick="connectVNC()">Connect</button>
+            <button onclick="disconnectVNC()">Disconnect</button>
+            <button onclick="fullscreen()">Fullscreen</button>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const host = urlParams.get('host') || '172.17.124.179';
+        const port = urlParams.get('port') || '5900';
+        const password = urlParams.get('password') || '123';
+
+        const canvas = document.getElementById('vnc-canvas');
+        const ctx = canvas.getContext('2d');
+        const statusDiv = document.getElementById('status');
+        const targetInfo = document.getElementById('target-info');
+
+        let ws = null;
+        let connected = false;
+
+        // Update target info
+        targetInfo.textContent = `${host}:${port}`;
+
+        function updateStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = isError ? 'error' : 'success';
+        }
+
+        function connectVNC() {
+            if (connected) {
+                updateStatus('Already connected', true);
+                return;
+            }
+
+            updateStatus('Connecting...');
+            
+            try {
+                // Create WebSocket connection to websockify
+                const wsUrl = `ws://localhost:6081/websockify`;
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function() {
+                    updateStatus('WebSocket connected, establishing VNC connection...');
+                    console.log('WebSocket connected');
+                };
+
+                ws.onmessage = function(event) {
+                    // Handle VNC data
+                    console.log('Received VNC data:', event.data.length, 'bytes');
+                    // Here you would process VNC protocol data
+                };
+
+                ws.onclose = function() {
+                    connected = false;
+                    updateStatus('Connection closed', true);
+                    console.log('WebSocket closed');
+                };
+
+                ws.onerror = function(error) {
+                    connected = false;
+                    updateStatus('Connection error: ' + error.message, true);
+                    console.error('WebSocket error:', error);
+                };
+
+            } catch (error) {
+                updateStatus('Failed to connect: ' + error.message, true);
+                console.error('Connection error:', error);
+            }
+        }
+
+        function disconnectVNC() {
+            if (ws) {
+                ws.close();
+                connected = false;
+                updateStatus('Disconnected');
+            }
+        }
+
+        function fullscreen() {
+            if (canvas.requestFullscreen) {
+                canvas.requestFullscreen();
+            } else if (canvas.webkitRequestFullscreen) {
+                canvas.webkitRequestFullscreen();
+            } else if (canvas.msRequestFullscreen) {
+                canvas.msRequestFullscreen();
+            }
+        }
+
+        // Auto-connect when page loads
+        window.onload = function() {
+            updateStatus('Ready to connect');
+            // Auto-connect after a short delay
+            setTimeout(connectVNC, 1000);
+        };
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            // Adjust canvas size if needed
+            console.log('Window resized');
+        });
+
+        // Handle keyboard events
+        document.addEventListener('keydown', function(event) {
+            if (connected && ws) {
+                // Send keyboard events to VNC
+                console.log('Key pressed:', event.key);
+            }
+        });
+
+        // Handle mouse events
+        canvas.addEventListener('mousedown', function(event) {
+            if (connected && ws) {
+                // Send mouse events to VNC
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                console.log('Mouse down:', x, y);
+            }
+        });
+
+        canvas.addEventListener('mousemove', function(event) {
+            if (connected && ws) {
+                // Send mouse events to VNC
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                console.log('Mouse move:', x, y);
+            }
+        });
+    </script>
+</body>
+</html>
