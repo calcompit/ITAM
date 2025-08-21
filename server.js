@@ -1143,6 +1143,30 @@ app.post('/api/vnc/connect', async (req, res) => {
       });
     }
     
+    // Kill existing websockify and start new one for the target
+    try {
+      const { exec } = require('child_process');
+      exec('pkill -f "websockify.*6081"', (error) => {
+        if (error) {
+          console.log('No existing websockify process to kill');
+        } else {
+          console.log('Killed existing websockify process');
+        }
+        
+        // Start new websockify process
+        const websockifyCmd = `websockify 6081 ${host}:${port} --web noVNC --verbose`;
+        exec(websockifyCmd, (error, stdout, stderr) => {
+          if (error) {
+            console.error('Error starting websockify:', error);
+          } else {
+            console.log(`Websockify started for ${host}:${port}`);
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error managing websockify:', error);
+    }
+    
     const novncUrl = `http://localhost:6081/vnc.html?host=${host}&port=${port}&password=123`;
     
     // Create window.open JavaScript code
