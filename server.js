@@ -1573,7 +1573,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
         host,
         targetPort: port,
         sessionId: sessionInfo.sessionId,
-                    vncUrl: `http://localhost:${websockifyPort}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+                    vncUrl: `http://10.51.101.49:${websockifyPort}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
       }
     });
 
@@ -1606,7 +1606,7 @@ app.get('/api/vnc/sessions', (req, res) => {
         targetPort: session.targetPort,
         sessionId: session.sessionId,
         createdAt: session.createdAt,
-        vncUrl: `http://localhost:${session.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+        vncUrl: `http://10.51.101.49:${session.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
       }));
 
     res.json({
