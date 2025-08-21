@@ -232,10 +232,12 @@ export function Dashboard({ activeTab }: DashboardProps) {
       if (sessionResponse.ok) {
         const result = await sessionResponse.json();
         session = result.session;
+        console.log('New session created:', session);
       } else if (sessionResponse.status === 409) {
         // User already has an active session for this target
         const result = await sessionResponse.json();
         if (result.existingSession) {
+          console.log('Existing session found:', result.existingSession);
           session = {
             port: result.existingSession.port,
             host: result.existingSession.host,
@@ -243,12 +245,14 @@ export function Dashboard({ activeTab }: DashboardProps) {
             sessionId: result.existingSession.sessionId,
             vncUrl: `${API_CONFIG.NOVNC_URL.replace(':6081', `:${result.existingSession.port}`)}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
           };
+          console.log('Session with custom VNC URL:', session);
         }
       }
 
       // Wait for websockify to be ready (simplified approach)
       if (session) {
         console.log('Starting VNC Connection...');
+        console.log('Session details:', session);
         toast({
           title: "Starting VNC Connection",
           description: `Connecting to ${computerName} (${ip})...`,
@@ -262,8 +266,12 @@ export function Dashboard({ activeTab }: DashboardProps) {
       if (session) {
         console.log('VNC session started/retrieved successfully');
         
+        // Ensure we use the correct VNC URL with dynamic port
+        const finalVncUrl = session.vncUrl || `${API_CONFIG.NOVNC_URL.replace(':6081', `:${session.port}`)}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`;
+        console.log('Final VNC URL:', finalVncUrl);
+        
         // Open VNC in a new window with specific size - Force new window, not tab
-        console.log(`Opening VNC URL in new window: ${session.vncUrl}`);
+        console.log(`Opening VNC URL in new window: ${finalVncUrl}`);
         
         // Try to open window with different approaches
         let vncWindow = null;
@@ -271,18 +279,18 @@ export function Dashboard({ activeTab }: DashboardProps) {
         try {
           // Method 1: Force new window with specific features to prevent tab opening
           const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no,left=100,top=100';
-          vncWindow = window.open(session.vncUrl, '_blank', windowFeatures);
+          vncWindow = window.open(finalVncUrl, '_blank', windowFeatures);
           console.log('Window open result:', vncWindow);
           
           if (!vncWindow || vncWindow.closed) {
             // Method 2: Try with different window name to force new window
-            vncWindow = window.open(session.vncUrl, `vnc_${Date.now()}`, windowFeatures);
+            vncWindow = window.open(finalVncUrl, `vnc_${Date.now()}`, windowFeatures);
             console.log('Window open with timestamp result:', vncWindow);
           }
           
           if (!vncWindow || vncWindow.closed) {
             // Method 3: Try with minimal features but force window
-            vncWindow = window.open(session.vncUrl, `vnc_window_${Math.random()}`, 'width=1200,height=800,left=100,top=100');
+            vncWindow = window.open(finalVncUrl, `vnc_window_${Math.random()}`, 'width=1200,height=800,left=100,top=100');
             console.log('Window open with random name result:', vncWindow);
           }
           
@@ -302,7 +310,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
               
               // Create manual link
               const link = document.createElement('a');
-              link.href = session.vncUrl;
+              link.href = finalVncUrl;
               link.target = '_blank';
               link.textContent = `Open VNC Viewer for ${computerName} (${ip})`;
               link.style.display = 'block';
@@ -337,7 +345,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
             
             // Create manual link
             const link = document.createElement('a');
-            link.href = session.vncUrl;
+            link.href = finalVncUrl;
             link.target = '_blank';
             link.textContent = `Open VNC Viewer for ${computerName} (${ip})`;
             link.style.display = 'block';
