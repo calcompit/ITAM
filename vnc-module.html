@@ -9,7 +9,7 @@
             padding: 0;
             background: #000;
             color: #fff;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
         }
         #vnc-canvas {
@@ -25,30 +25,265 @@
             position: fixed;
             top: 10px;
             left: 10px;
-            background: rgba(0,0,0,0.8);
-            padding: 10px;
-            border-radius: 5px;
+            background: rgba(0,0,0,0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
             z-index: 1000;
             font-size: 14px;
+            border: 1px solid #333;
+            backdrop-filter: blur(10px);
         }
         .status-connected { color: #00ff00; }
         .status-connecting { color: #ffff00; }
         .status-error { color: #ff0000; }
+
+        /* VNC Tool Menu */
+        #vnc-toolbar {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.9);
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 1001;
+            border: 1px solid #333;
+            backdrop-filter: blur(10px);
+            min-width: 200px;
+        }
+        .toolbar-section {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        .toolbar-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .toolbar-title {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .toolbar-button {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            margin: 2px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        .toolbar-button:hover {
+            background: #555;
+            transform: translateY(-1px);
+        }
+        .toolbar-button.active {
+            background: #007acc;
+        }
+        .toolbar-button.danger {
+            background: #d32f2f;
+        }
+        .toolbar-button.danger:hover {
+            background: #f44336;
+        }
+        .toolbar-slider {
+            width: 100%;
+            margin: 5px 0;
+        }
+        .toolbar-label {
+            font-size: 11px;
+            color: #ccc;
+            margin: 5px 0;
+        }
+        .toolbar-value {
+            font-size: 10px;
+            color: #888;
+            text-align: center;
+        }
+        .toolbar-toggle {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+        .toolbar-toggle input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .toolbar-toggle label {
+            font-size: 11px;
+            color: #ccc;
+        }
+
+        /* Minimize/Maximize Toolbar */
+        #toolbar-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.9);
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            z-index: 1002;
+            font-size: 12px;
+        }
+        #toolbar-toggle:hover {
+            background: rgba(0,0,0,0.95);
+        }
+        .toolbar-hidden #vnc-toolbar {
+            display: none;
+        }
+
+        /* Connection Info */
+        #connection-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.9);
+            padding: 10px 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            font-size: 12px;
+            border: 1px solid #333;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 2px 0;
+        }
+        .info-label {
+            color: #888;
+        }
+        .info-value {
+            color: #fff;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #333;
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <div id="status" class="status-connecting">Connecting to VNC...</div>
+    <div id="status" class="status-connecting">
+        <span class="loading"></span> Connecting to VNC...
+    </div>
+    
+    <div id="toolbar-toggle" onclick="toggleToolbar()">⚙️ Tools</div>
+    
+    <div id="vnc-toolbar">
+        <!-- Display Controls -->
+        <div class="toolbar-section">
+            <div class="toolbar-title">Display</div>
+            <button class="toolbar-button" onclick="fitToScreen()">📐 Fit Screen</button>
+            <button class="toolbar-button" onclick="actualSize()">🔍 100%</button>
+            <button class="toolbar-button" onclick="fullscreen()">⛶ Fullscreen</button>
+            <button class="toolbar-button" onclick="zoomIn()">🔍+ Zoom In</button>
+            <button class="toolbar-button" onclick="zoomOut()">🔍- Zoom Out</button>
+        </div>
+
+        <!-- Quality Controls -->
+        <div class="toolbar-section">
+            <div class="toolbar-title">Quality</div>
+            <div class="toolbar-label">Quality Level</div>
+            <input type="range" class="toolbar-slider" id="quality-slider" min="1" max="9" value="6" onchange="setQuality(this.value)">
+            <div class="toolbar-value" id="quality-value">6</div>
+            
+            <div class="toolbar-label">Compression</div>
+            <input type="range" class="toolbar-slider" id="compression-slider" min="0" max="9" value="2" onchange="setCompression(this.value)">
+            <div class="toolbar-value" id="compression-value">2</div>
+        </div>
+
+        <!-- Connection Controls -->
+        <div class="toolbar-section">
+            <div class="toolbar-title">Connection</div>
+            <button class="toolbar-button" onclick="reconnect()">🔄 Reconnect</button>
+            <button class="toolbar-button danger" onclick="disconnect()">❌ Disconnect</button>
+            <button class="toolbar-button" onclick="toggleViewOnly()" id="viewonly-btn">👁️ View Only</button>
+        </div>
+
+        <!-- Keyboard Controls -->
+        <div class="toolbar-section">
+            <div class="toolbar-title">Keyboard</div>
+            <button class="toolbar-button" onclick="sendCtrlAltDel()">⌨️ Ctrl+Alt+Del</button>
+            <button class="toolbar-button" onclick="sendPrintScreen()">📸 Print Screen</button>
+            <button class="toolbar-button" onclick="toggleKeyboard()" id="keyboard-btn">⌨️ Keyboard</button>
+        </div>
+
+        <!-- Clipboard Controls -->
+        <div class="toolbar-section">
+            <div class="toolbar-title">Clipboard</div>
+            <button class="toolbar-button" onclick="copyFromRemote()">📋 Copy From</button>
+            <button class="toolbar-button" onclick="pasteToRemote()">📋 Paste To</button>
+            <button class="toolbar-button" onclick="clearClipboard()">🗑️ Clear</button>
+        </div>
+
+        <!-- Mouse Controls -->
+        <div class="toolbar-section">
+            <div class="toolbar-title">Mouse</div>
+            <div class="toolbar-toggle">
+                <input type="checkbox" id="mouse-toggle" checked onchange="toggleMouse(this.checked)">
+                <label for="mouse-toggle">Enable Mouse</label>
+            </div>
+            <div class="toolbar-toggle">
+                <input type="checkbox" id="cursor-toggle" checked onchange="toggleCursor(this.checked)">
+                <label for="cursor-toggle">Show Cursor</label>
+            </div>
+        </div>
+    </div>
+
+    <div id="connection-info">
+        <div class="info-row">
+            <span class="info-label">Target:</span>
+            <span class="info-value" id="target-info">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Status:</span>
+            <span class="info-value" id="status-info">Connecting...</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Desktop:</span>
+            <span class="info-value" id="desktop-info">-</span>
+        </div>
+    </div>
+
     <canvas id="vnc-canvas"></canvas>
 
     <script type="module">
         // Import RFB from the ES6 module (default export)
         import RFB from './core/rfb.js';
         
+        // Global RFB instance
+        let rfb = null;
+        let currentZoom = 1;
+        let isViewOnly = false;
+        let isKeyboardEnabled = true;
+        let isMouseEnabled = true;
+        let isCursorVisible = true;
+        
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const host = urlParams.get('host') || '10.51.101.83';
         const port = urlParams.get('port') || '5900';
         const password = urlParams.get('password') || '123';
+
+        // Update connection info
+        document.getElementById('target-info').textContent = `${host}:${port}`;
 
         // Connect to websockify proxy
         const wsUrl = `ws://10.51.101.49:6081/websockify`;
@@ -58,7 +293,7 @@
         console.log('Password:', password);
         
         // Create RFB connection
-        const rfb = new RFB(document.getElementById('vnc-canvas'), wsUrl, {
+        rfb = new RFB(document.getElementById('vnc-canvas'), wsUrl, {
             credentials: { password: password },
             ignoreTLSWarnings: true,
             wsProtocols: ['binary'],
@@ -82,10 +317,8 @@
             clipboard: true,
             audio: false,
             bell: false,
-            // Add more options to suppress TLS warnings
             allowTLSWarnings: true,
             suppressTLSWarnings: true,
-            // Force proper sizing
             width: window.innerWidth,
             height: window.innerHeight
         });
@@ -93,31 +326,9 @@
         // Connection events
         rfb.addEventListener('connect', function() {
             console.log('VNC Connected successfully');
-            console.log('RFB Object:', rfb);
-            console.log('RFB Properties:', Object.getOwnPropertyNames(rfb));
-            
-            // Log all properties to see what's available
-            const properties = Object.getOwnPropertyNames(rfb);
-            properties.forEach(prop => {
-                try {
-                    console.log(`RFB.${prop}:`, rfb[prop]);
-                } catch (e) {
-                    console.log(`RFB.${prop}: [Error accessing property]`);
-                }
-            });
-            
-            // Check specific properties that might exist
-            console.log('RFB State:', rfb.state);
-            console.log('RFB Viewport:', rfb.viewport);
-            console.log('RFB Display:', rfb.display);
-            console.log('RFB Target:', rfb.target);
-            console.log('RFB Canvas:', rfb.canvas);
-            console.log('RFB _canvas:', rfb._canvas);
-            console.log('RFB _display:', rfb._display);
-            console.log('RFB _viewport:', rfb._viewport);
-            
-            document.getElementById('status').textContent = 'Connected to VNC';
+            document.getElementById('status').innerHTML = '✅ Connected to VNC';
             document.getElementById('status').className = 'status-connected';
+            document.getElementById('status-info').textContent = 'Connected';
             
             // Check and replace with RFB canvas after connection
             setTimeout(checkRFBCanvas, 1000);
@@ -125,45 +336,40 @@
 
         rfb.addEventListener('disconnect', function(e) {
             console.log('VNC Disconnected:', e.detail);
-            document.getElementById('status').textContent = 'Disconnected: ' + (e.detail.clean ? 'Clean' : 'Error');
+            document.getElementById('status').innerHTML = '❌ Disconnected: ' + (e.detail.clean ? 'Clean' : 'Error');
             document.getElementById('status').className = 'status-error';
+            document.getElementById('status-info').textContent = 'Disconnected';
         });
 
         rfb.addEventListener('credentialsrequired', function() {
             console.log('Credentials required');
-            document.getElementById('status').textContent = 'Credentials required';
+            document.getElementById('status').innerHTML = '🔐 Credentials required';
             document.getElementById('status').className = 'status-error';
+            document.getElementById('status-info').textContent = 'Auth Required';
         });
 
         rfb.addEventListener('securityfailure', function(e) {
             console.log('Security failure:', e.detail);
-            document.getElementById('status').textContent = 'Security failure: ' + e.detail.reason;
+            document.getElementById('status').innerHTML = '🚫 Security failure: ' + e.detail.reason;
             document.getElementById('status').className = 'status-error';
+            document.getElementById('status-info').textContent = 'Security Error';
         });
 
         rfb.addEventListener('error', function(e) {
             console.error('VNC Error:', e);
-            console.error('Error Detail:', e.detail);
-            document.getElementById('status').textContent = 'Error: ' + e.detail.message;
+            document.getElementById('status').innerHTML = '💥 Error: ' + e.detail.message;
             document.getElementById('status').className = 'status-error';
+            document.getElementById('status-info').textContent = 'Error';
         });
 
-        // Add more event listeners for debugging
         rfb.addEventListener('desktopname', function(e) {
             console.log('Desktop name:', e.detail.name);
             document.title = 'noVNC - ' + e.detail.name;
-        });
-
-        rfb.addEventListener('capabilities', function(e) {
-            console.log('Capabilities:', e.detail.capabilities);
+            document.getElementById('desktop-info').textContent = e.detail.name;
         });
 
         rfb.addEventListener('clipboard', function(e) {
             console.log('Clipboard event:', e.detail.text);
-        });
-
-        rfb.addEventListener('bell', function() {
-            console.log('Bell event');
         });
 
         // Focus management
@@ -174,11 +380,6 @@
         // Debug canvas element
         const canvas = document.getElementById('vnc-canvas');
         console.log('Canvas element:', canvas);
-        console.log('Canvas width:', canvas.width);
-        console.log('Canvas height:', canvas.height);
-        console.log('Canvas style width:', canvas.style.width);
-        console.log('Canvas style height:', canvas.style.height);
-        console.log('Window size:', window.innerWidth, 'x', window.innerHeight);
         
         // Force canvas size
         canvas.width = window.innerWidth;
@@ -218,22 +419,175 @@
                 console.log('Replaced canvas with RFB canvas');
             }
         }
-        
-        // Check if canvas is being updated
-        setInterval(() => {
-            const ctx = canvas.getContext('2d');
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const hasData = imageData.data.some(pixel => pixel !== 0);
-            if (hasData) {
-                console.log('Canvas has image data!');
+
+        // Toolbar Functions
+        window.toggleToolbar = function() {
+            document.body.classList.toggle('toolbar-hidden');
+            const toggle = document.getElementById('toolbar-toggle');
+            toggle.textContent = document.body.classList.contains('toolbar-hidden') ? '⚙️ Tools' : '⚙️ Tools';
+        };
+
+        window.fitToScreen = function() {
+            if (rfb && rfb._canvas) {
+                rfb._canvas.style.objectFit = 'contain';
+                rfb._canvas.style.width = '100vw';
+                rfb._canvas.style.height = '100vh';
+                currentZoom = 1;
+                console.log('Fit to screen applied');
             }
-            
-            // Also check RFB display
-            if (rfb && rfb._display) {
-                console.log('RFB Display object:', rfb._display);
-                console.log('RFB Display properties:', Object.getOwnPropertyNames(rfb._display));
+        };
+
+        window.actualSize = function() {
+            if (rfb && rfb._canvas) {
+                rfb._canvas.style.objectFit = 'none';
+                rfb._canvas.style.width = rfb._canvas.naturalWidth + 'px';
+                rfb._canvas.style.height = rfb._canvas.naturalHeight + 'px';
+                currentZoom = 1;
+                console.log('Actual size applied');
             }
-        }, 5000);
+        };
+
+        window.fullscreen = function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        };
+
+        window.zoomIn = function() {
+            if (rfb && rfb._canvas) {
+                currentZoom *= 1.2;
+                rfb._canvas.style.transform = `scale(${currentZoom})`;
+                console.log('Zoom in:', currentZoom);
+            }
+        };
+
+        window.zoomOut = function() {
+            if (rfb && rfb._canvas) {
+                currentZoom /= 1.2;
+                rfb._canvas.style.transform = `scale(${currentZoom})`;
+                console.log('Zoom out:', currentZoom);
+            }
+        };
+
+        window.setQuality = function(level) {
+            if (rfb) {
+                rfb.qualityLevel = parseInt(level);
+                document.getElementById('quality-value').textContent = level;
+                console.log('Quality set to:', level);
+            }
+        };
+
+        window.setCompression = function(level) {
+            if (rfb) {
+                rfb.compressionLevel = parseInt(level);
+                document.getElementById('compression-value').textContent = level;
+                console.log('Compression set to:', level);
+            }
+        };
+
+        window.reconnect = function() {
+            if (rfb) {
+                rfb.disconnect();
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            }
+        };
+
+        window.disconnect = function() {
+            if (rfb) {
+                rfb.disconnect();
+            }
+        };
+
+        window.toggleViewOnly = function() {
+            if (rfb) {
+                isViewOnly = !isViewOnly;
+                rfb.viewOnly = isViewOnly;
+                const btn = document.getElementById('viewonly-btn');
+                btn.textContent = isViewOnly ? '👁️ View Only' : '🖱️ Interactive';
+                btn.classList.toggle('active', isViewOnly);
+                console.log('View only:', isViewOnly);
+            }
+        };
+
+        window.sendCtrlAltDel = function() {
+            if (rfb) {
+                rfb.sendCtrlAltDel();
+                console.log('Sent Ctrl+Alt+Del');
+            }
+        };
+
+        window.sendPrintScreen = function() {
+            if (rfb) {
+                // Simulate Print Screen key
+                const event = new KeyboardEvent('keydown', {
+                    key: 'PrintScreen',
+                    code: 'PrintScreen',
+                    keyCode: 44,
+                    which: 44,
+                    bubbles: true
+                });
+                rfb._keyboard.handleKeyDown(event);
+                console.log('Sent Print Screen');
+            }
+        };
+
+        window.toggleKeyboard = function() {
+            if (rfb) {
+                isKeyboardEnabled = !isKeyboardEnabled;
+                rfb.keyboard = isKeyboardEnabled;
+                const btn = document.getElementById('keyboard-btn');
+                btn.textContent = isKeyboardEnabled ? '⌨️ Keyboard' : '⌨️ Keyboard (Off)';
+                btn.classList.toggle('active', !isKeyboardEnabled);
+                console.log('Keyboard enabled:', isKeyboardEnabled);
+            }
+        };
+
+        window.copyFromRemote = function() {
+            if (rfb && rfb.clipboardText) {
+                navigator.clipboard.writeText(rfb.clipboardText);
+                console.log('Copied from remote:', rfb.clipboardText);
+            }
+        };
+
+        window.pasteToRemote = function() {
+            navigator.clipboard.readText().then(text => {
+                if (rfb) {
+                    rfb.clipboardText = text;
+                    console.log('Pasted to remote:', text);
+                }
+            });
+        };
+
+        window.clearClipboard = function() {
+            if (rfb) {
+                rfb.clipboardText = '';
+                console.log('Clipboard cleared');
+            }
+        };
+
+        window.toggleMouse = function(enabled) {
+            if (rfb) {
+                isMouseEnabled = enabled;
+                rfb.mouse = enabled;
+                console.log('Mouse enabled:', enabled);
+            }
+        };
+
+        window.toggleCursor = function(visible) {
+            if (rfb && rfb._canvas) {
+                isCursorVisible = visible;
+                rfb._canvas.style.cursor = visible ? 'default' : 'none';
+                console.log('Cursor visible:', visible);
+            }
+        };
+
+        // Initialize toolbar state
+        document.getElementById('quality-value').textContent = '6';
+        document.getElementById('compression-value').textContent = '2';
     </script>
 </body>
 </html>
