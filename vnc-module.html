@@ -62,27 +62,40 @@
 
         // Force window size and position
         function setupWindow() {
-            // Set window size
-            window.resizeTo(1200, 800);
-            
-            // Center window on screen
-            const screenWidth = window.screen.availWidth;
-            const screenHeight = window.screen.availHeight;
-            const windowWidth = 1200;
-            const windowHeight = 800;
-            const left = (screenWidth - windowWidth) / 2;
-            const top = (screenHeight - windowHeight) / 2;
-            
-            window.moveTo(left, top);
-            
-            // Prevent resizing
-            window.addEventListener('resize', function() {
-                if (window.innerWidth !== 1200 || window.innerHeight !== 800) {
-                    window.resizeTo(1200, 800);
+            // Only setup window if this is not already in a popup
+            if (window.opener) {
+                // This is a popup window, setup properly
+                window.resizeTo(1200, 800);
+                
+                // Center window on screen
+                const screenWidth = window.screen.availWidth;
+                const screenHeight = window.screen.availHeight;
+                const windowWidth = 1200;
+                const windowHeight = 800;
+                const left = (screenWidth - windowWidth) / 2;
+                const top = (screenHeight - windowHeight) / 2;
+                
+                window.moveTo(left, top);
+                
+                // Prevent resizing
+                window.addEventListener('resize', function() {
+                    if (window.innerWidth !== 1200 || window.innerHeight !== 800) {
+                        window.resizeTo(1200, 800);
+                    }
+                });
+                
+                console.log('Popup window setup complete:', window.innerWidth, 'x', window.innerHeight);
+            } else {
+                // This is opened directly, redirect to open as popup
+                const currentUrl = window.location.href;
+                const windowFeatures = 'width=1200,height=800,scrollbars=no,resizable=yes,status=no,location=no,toolbar=no,menubar=no';
+                
+                const popup = window.open(currentUrl, 'vnc_window', windowFeatures);
+                if (popup) {
+                    popup.focus();
+                    window.close(); // Close the original window
                 }
-            });
-            
-            console.log('Window setup complete:', window.innerWidth, 'x', window.innerHeight);
+            }
         }
 
         // Setup window immediately

@@ -1143,7 +1143,7 @@ app.post('/api/vnc/connect', async (req, res) => {
       });
     }
     
-    const novncUrl = `http://10.51.101.49:6081/vnc-launcher.html?host=${host}&port=${port}`;
+    const novncUrl = `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}&password=123`;
     
     // Create window.open JavaScript code
     const windowOpenScript = `
