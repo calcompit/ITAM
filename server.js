@@ -221,11 +221,14 @@ wss.on('connection', (ws) => {
 
 // VNC Helper Functions
 function findAvailablePort() {
+  // Start from 6081 and find the next available port
   for (let port = PORT_RANGE.start; port <= PORT_RANGE.end; port++) {
     if (!activeSessions.has(port)) {
+      console.log(`[VNC] Found available port: ${port}`);
       return port;
     }
   }
+  console.log(`[VNC] No available ports in range ${PORT_RANGE.start}-${PORT_RANGE.end}`);
   return null;
 }
 
@@ -1607,7 +1610,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
           host,
           targetPort: port,
           sessionId: sessionInfo.sessionId,
-          vncUrl: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+          vncUrl: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`.replace(':6081', `:${websockifyPort}`)
         }
       });
     }, 1000);
@@ -1641,7 +1644,7 @@ app.get('/api/vnc/sessions', (req, res) => {
         targetPort: session.targetPort,
         sessionId: session.sessionId,
         createdAt: session.createdAt,
-        vncUrl: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+        vncUrl: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`.replace(':6081', `:${session.port}`)
       }));
 
     res.json({
