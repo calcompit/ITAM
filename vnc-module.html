@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>noVNC - ES6 Module VNC Client</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #vnc-canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            cursor: none;
+        }
+        #status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-size: 14px;
+        }
+        .status-connected { color: #00ff00; }
+        .status-connecting { color: #ffff00; }
+        .status-error { color: #ff0000; }
+    </style>
+</head>
+<body>
+    <div id="status" class="status-connecting">Connecting to VNC...</div>
+    <canvas id="vnc-canvas"></canvas>
+
+    <script type="module">
+        // Import RFB from the ES6 module
+        import { RFB } from './core/rfb.js';
+        
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const host = urlParams.get('host') || '10.51.101.83';
+        const port = urlParams.get('port') || '5900';
+        const password = urlParams.get('password') || '123';
+
+        // Connect to websockify proxy
+        const wsUrl = `ws://10.51.101.49:6081/websockify`;
+        
+        console.log('Connecting to websockify proxy:', wsUrl);
+        console.log('Target VNC server:', `${host}:${port}`);
+        console.log('Password:', password);
+        
+        // Create RFB connection
+        const rfb = new RFB(document.getElementById('vnc-canvas'), wsUrl, {
+            credentials: { password: password },
+            ignoreTLSWarnings: true
+        });
+
+        // Connection events
+        rfb.addEventListener('connect', function() {
+            console.log('VNC Connected successfully');
+            document.getElementById('status').textContent = 'Connected to VNC';
+            document.getElementById('status').className = 'status-connected';
+        });
+
+        rfb.addEventListener('disconnect', function(e) {
+            console.log('VNC Disconnected:', e.detail);
+            document.getElementById('status').textContent = 'Disconnected: ' + (e.detail.clean ? 'Clean' : 'Error');
+            document.getElementById('status').className = 'status-error';
+        });
+
+        rfb.addEventListener('credentialsrequired', function() {
+            console.log('Credentials required');
+            document.getElementById('status').textContent = 'Credentials required';
+            document.getElementById('status').className = 'status-error';
+        });
+
+        rfb.addEventListener('securityfailure', function(e) {
+            console.log('Security failure:', e.detail);
+            document.getElementById('status').textContent = 'Security failure: ' + e.detail.reason;
+            document.getElementById('status').className = 'status-error';
+        });
+
+        rfb.addEventListener('error', function(e) {
+            console.error('VNC Error:', e);
+            document.getElementById('status').textContent = 'Error: ' + e.detail.message;
+            document.getElementById('status').className = 'status-error';
+        });
+
+        // Focus management
+        document.getElementById('vnc-canvas').addEventListener('click', function() {
+            rfb.focus();
+        });
+    </script>
+</body>
+</html>
