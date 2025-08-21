@@ -118,7 +118,7 @@
             
             try {
                 // Create WebSocket connection to websockify
-                const wsUrl = `ws://localhost:6081/websockify`;
+                const wsUrl = `ws://localhost:6081/`;
                 ws = new WebSocket(wsUrl);
 
                 ws.onopen = function() {
