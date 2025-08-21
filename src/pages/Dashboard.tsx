@@ -179,8 +179,8 @@ export function Dashboard({ activeTab }: DashboardProps) {
     try {
       console.log(`Starting VNC for IP: ${ip} (${computerName})`);
       
-      // Start noVNC
-      const response = await fetch(API_CONFIG.VNC_START, {
+      // Use the new VNC connect API
+      const response = await fetch(API_CONFIG.VNC_CONNECT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -188,28 +188,36 @@ export function Dashboard({ activeTab }: DashboardProps) {
         body: JSON.stringify({
           host: ip,
           port: 5900,
-          webPort: 6081
+          password: '123'
         })
       });
 
       const data = await response.json();
       
       if (data.success) {
-        console.log('noVNC started successfully');
+        console.log('VNC connection initiated successfully');
         
-        // Wait a moment for noVNC to start
-        setTimeout(() => {
-          const url = buildNovncUrl(ip, 5900);
-          console.log(`Opening VNC URL: ${url}`);
-          window.open(url, '_blank');
-        }, 2000);
+        // Open VNC in a new window with specific size
+        const vncUrl = data.url;
+        const windowFeatures = 'width=1200,height=800,scrollbars=no,resizable=yes,status=no,location=no,toolbar=no,menubar=no';
+        
+        console.log(`Opening VNC URL in new window: ${vncUrl}`);
+        const vncWindow = window.open(vncUrl, 'vnc_window', windowFeatures);
+        
+        if (vncWindow) {
+          // Focus the new window
+          vncWindow.focus();
+        } else {
+          // Fallback to tab if popup is blocked
+          window.open(vncUrl, '_blank');
+        }
         
         toast({
           title: "VNC Started",
           description: `Connecting to ${computerName} (${ip})...`,
         });
       } else {
-        console.error('Failed to start noVNC:', data.message);
+        console.error('Failed to start VNC:', data.message);
         toast({
           title: "VNC Error",
           description: data.message,

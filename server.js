@@ -1145,10 +1145,19 @@ app.post('/api/vnc/connect', async (req, res) => {
     
     const novncUrl = `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}`;
     
+    // Create window.open JavaScript code
+    const windowOpenScript = `
+      <script>
+        window.open('${novncUrl}', 'vnc_window', 
+          'width=1200,height=800,scrollbars=no,resizable=yes,status=no,location=no,toolbar=no,menubar=no');
+      </script>
+    `;
+    
     res.json({
       success: true,
       message: 'VNC connection initiated',
       url: novncUrl,
+      windowOpenScript: windowOpenScript,
       config: { host, port, password: password ? '***' : undefined }
     });
   } catch (error) {
