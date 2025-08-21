@@ -1084,7 +1084,7 @@ app.post('/api/vnc/start', async (req, res) => {
     res.json({
       success: true,
       message: 'noVNC started',
-      url: `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}&password=123`,
+      url: `http://localhost:6081/vnc.html?host=${host}&port=${port}&password=123`,
       target: `${host}:${port}`
     });
     
