@@ -89,10 +89,27 @@
             console.log('VNC Connected successfully');
             console.log('RFB Object:', rfb);
             console.log('RFB Properties:', Object.getOwnPropertyNames(rfb));
+            
+            // Log all properties to see what's available
+            const properties = Object.getOwnPropertyNames(rfb);
+            properties.forEach(prop => {
+                try {
+                    console.log(`RFB.${prop}:`, rfb[prop]);
+                } catch (e) {
+                    console.log(`RFB.${prop}: [Error accessing property]`);
+                }
+            });
+            
+            // Check specific properties that might exist
             console.log('RFB State:', rfb.state);
             console.log('RFB Viewport:', rfb.viewport);
             console.log('RFB Display:', rfb.display);
             console.log('RFB Target:', rfb.target);
+            console.log('RFB Canvas:', rfb.canvas);
+            console.log('RFB _canvas:', rfb._canvas);
+            console.log('RFB _display:', rfb._display);
+            console.log('RFB _viewport:', rfb._viewport);
+            
             document.getElementById('status').textContent = 'Connected to VNC';
             document.getElementById('status').className = 'status-connected';
         });
@@ -144,6 +161,24 @@
         document.getElementById('vnc-canvas').addEventListener('click', function() {
             rfb.focus();
         });
+
+        // Debug canvas element
+        const canvas = document.getElementById('vnc-canvas');
+        console.log('Canvas element:', canvas);
+        console.log('Canvas width:', canvas.width);
+        console.log('Canvas height:', canvas.height);
+        console.log('Canvas style width:', canvas.style.width);
+        console.log('Canvas style height:', canvas.style.height);
+        
+        // Check if canvas is being updated
+        setInterval(() => {
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const hasData = imageData.data.some(pixel => pixel !== 0);
+            if (hasData) {
+                console.log('Canvas has image data!');
+            }
+        }, 5000);
     </script>
 </body>
 </html>
