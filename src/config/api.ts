@@ -25,5 +25,5 @@ export const API_CONFIG = {
 
 // Helper function to build noVNC URL
 export const buildNovncUrl = (host: string, port: number = 5900) => {
-  return `${API_CONFIG.NOVNC_URL}/vnc_lite.html?host=${host}&port=${port}&password=${API_CONFIG.DEFAULT_VNC_PASSWORD}`;
+  return `${API_CONFIG.NOVNC_URL}/vnc-fixed.html?host=${host}&port=${port}&password=${API_CONFIG.DEFAULT_VNC_PASSWORD}`;
 };
