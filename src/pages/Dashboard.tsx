@@ -40,6 +40,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
   const [showComputerDetails, setShowComputerDetails] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const { toast } = useToast();
   
@@ -110,6 +111,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
     // Listen for data updates (smooth updates without refresh)
     const handleDataUpdate = (data: any) => {
       if (data.data?.updatedComputers) {
+        setIsUpdating(true);
         setComputers(prevComputers => {
           const updatedComputers = [...prevComputers];
           
@@ -128,14 +130,17 @@ export function Dashboard({ activeTab }: DashboardProps) {
           
           return updatedComputers;
         });
+        
+        // Hide updating indicator after 1 second
+        setTimeout(() => setIsUpdating(false), 1000);
       }
     };
 
     websocketService.on('data_change', handleDataChange);
     websocketService.on('data_update', handleDataUpdate);
 
-    // Fallback: Set up polling every 30 seconds if WebSocket fails (without loading)
-    const interval = setInterval(() => loadData(false), 30000);
+    // Fallback: Set up polling every 60 seconds if WebSocket fails (without loading)
+    const interval = setInterval(() => loadData(false), 60000);
 
     return () => {
       clearInterval(interval);
@@ -461,8 +466,14 @@ export function Dashboard({ activeTab }: DashboardProps) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold text-foreground">{getTitle()}</h1>
+          {isUpdating && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="animate-spin rounded-full h-3 w-3 border-b border-primary"></div>
+              <span>Updating...</span>
+            </div>
+          )}
           {selectedSubnet && (
             <Button
               variant="link"
