@@ -1037,6 +1037,8 @@ app.post('/api/vnc/start', async (req, res) => {
       const { exec } = await import('child_process');
       if (process.platform === 'win32') {
         exec('taskkill /f /im python.exe', () => {});
+        // Wait a bit for processes to be killed
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } else {
         exec('pkill -f websockify', () => {});
       }
@@ -1045,13 +1047,16 @@ app.post('/api/vnc/start', async (req, res) => {
     }
     
     // Start websockify process with better error handling
+    const target = `${host}:${port}`;
+    console.log(`Starting websockify with target: ${target}`);
+    
     const websockifyProcess = spawn('python', [
       '-m', 'websockify',
       webPort.toString(),
-      `${host}:${port}`,
+      target,
       '--web', '.',
       '--verbose',
-      '--log-file', 'websockify.log'
+      '--log-file', `websockify-${host}-${port}.log`
     ], {
       cwd: novncDir,
       detached: true,
