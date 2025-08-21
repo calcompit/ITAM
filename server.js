@@ -1526,18 +1526,53 @@ app.post('/api/vnc/start-session', async (req, res) => {
     await killWebsockify(websockifyPort);
 
     // Start websockify process (no password required) - Cross-platform
-    const websockifyProcess = spawn('python', [
-      '-m', 'websockify',
-      websockifyPort.toString(),
-      `${host}:${port}`,
-      '--web', path.join(process.cwd(), 'noVNC'),
-      '--verbose',
-      '--log-file', `websockify-${host}-${port}.log`
-    ], {
-      cwd: path.join(process.cwd(), 'noVNC'),
-      stdio: ['ignore', 'pipe', 'pipe'],
-      detached: true
-    });
+    let websockifyProcess;
+    
+    if (process.platform === 'win32') {
+      // Windows: Use websockify directly if available, otherwise use python
+      websockifyProcess = spawn('websockify', [
+        websockifyPort.toString(),
+        `${host}:${port}`,
+        '--web', path.join(process.cwd(), 'noVNC'),
+        '--verbose',
+        '--log-file', `websockify-${host}-${port}.log`
+      ], {
+        cwd: path.join(process.cwd(), 'noVNC'),
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true
+      });
+      
+      // If websockify command fails, try python -m websockify
+      websockifyProcess.on('error', (error) => {
+        console.log('Websockify command not found, trying python -m websockify...');
+        websockifyProcess = spawn('python', [
+          '-m', 'websockify',
+          websockifyPort.toString(),
+          `${host}:${port}`,
+          '--web', path.join(process.cwd(), 'noVNC'),
+          '--verbose',
+          '--log-file', `websockify-${host}-${port}.log`
+        ], {
+          cwd: path.join(process.cwd(), 'noVNC'),
+          stdio: ['ignore', 'pipe', 'pipe'],
+          detached: true
+        });
+      });
+    } else {
+      // Unix/Linux/Mac: Use python -m websockify
+      websockifyProcess = spawn('python', [
+        '-m', 'websockify',
+        websockifyPort.toString(),
+        `${host}:${port}`,
+        '--web', path.join(process.cwd(), 'noVNC'),
+        '--verbose',
+        '--log-file', `websockify-${host}-${port}.log`
+      ], {
+        cwd: path.join(process.cwd(), 'noVNC'),
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true
+      });
+    }
 
     // Handle process events
     websockifyProcess.on('error', (error) => {
