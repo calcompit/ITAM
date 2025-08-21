@@ -255,12 +255,18 @@ async function killWebsockify(port) {
 }
 
 function cleanupSession(port) {
+  console.log(`[VNC Cleanup] Cleaning up session on port ${port}`);
   const session = activeSessions.get(port);
   if (session && session.process) {
-    session.process.kill();
+    console.log(`[VNC Cleanup] Killing process for session on port ${port}`);
+    try {
+      session.process.kill();
+    } catch (error) {
+      console.log(`[VNC Cleanup] Error killing process: ${error.message}`);
+    }
   }
   activeSessions.delete(port);
-  console.log(`Cleaned up session on port ${port}`);
+  console.log(`[VNC Cleanup] Removed session from activeSessions. Remaining sessions:`, Array.from(activeSessions.keys()));
 }
 
 // Database connection status tracking
@@ -1514,9 +1520,13 @@ app.post('/api/vnc/start-session', async (req, res) => {
 
     // Kill all existing sessions for this user (Single Session Policy)
     const sessionsToKill = [];
+    console.log(`[VNC Start Session] Checking existing sessions for user: ${username}`);
+    console.log(`[VNC Start Session] Current active sessions:`, Array.from(activeSessions.keys()));
+    
     for (const [sessionPort, session] of activeSessions) {
       if (session.username === username) {
         sessionsToKill.push(sessionPort);
+        console.log(`[VNC Start Session] Found existing session on port ${sessionPort} for user: ${username}`);
       }
     }
     
@@ -1528,6 +1538,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
 
     // Find available port
     const websockifyPort = findAvailablePort();
+    console.log(`[VNC Start Session] Selected port: ${websockifyPort}`);
     if (!websockifyPort) {
       return res.status(503).json({
         success: false,
