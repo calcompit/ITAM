@@ -20,8 +20,8 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    // Allow all 10.51.x.x IP addresses
-    if (origin.match(/^https?:\/\/10\.51\.\d+\.\d+/)) {
+    // Allow all 10.x.x.x IP addresses (entire 10.0.0.0/8 range)
+    if (origin.match(/^https?:\/\/10\.\d+\.\d+\.\d+/)) {
       return callback(null, true);
     }
     
