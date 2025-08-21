@@ -466,10 +466,7 @@
                 <input type="checkbox" id="cursor-toggle" checked onchange="toggleCursor(this.checked)">
                 <label for="cursor-toggle">Show Cursor</label>
             </div>
-            <div class="toolbar-toggle">
-                <input type="checkbox" id="mouse-sync" checked onchange="toggleMouseSync(this.checked)">
-                <label for="mouse-sync">Mouse Sync</label>
-            </div>
+
         </div>
 
 
@@ -509,9 +506,8 @@
         let isKeyboardEnabled = true;
         let isMouseEnabled = true;
         let isCursorVisible = true;
-        let isMouseSyncEnabled = true;
-        let monitorCount = 0;
-        let isGridMode = false;
+
+
         
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -661,9 +657,7 @@
                 rfbCanvas.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)';
                 rfbCanvas.style.pointerEvents = 'auto';
                 
-                // Fix mouse position sync
-                rfbCanvas.addEventListener('mousemove', handleMouseMove);
-                rfbCanvas.addEventListener('click', handleMouseClick);
+
                 
                 console.log('Replaced canvas with RFB canvas');
                 updateResolutionInfo();
@@ -853,183 +847,17 @@
             }
         };
 
-        // Enhanced mouse position handling for better VNC sync
-        function handleMouseMove(event) {
-            if (!isMouseSyncEnabled || !rfb) return;
-            
-            const canvas = event.target;
-            const rect = canvas.getBoundingClientRect();
-            
-            // Calculate the actual VNC coordinates
-            const vncX = Math.round((event.clientX - rect.left) * (canvas.width / rect.width));
-            const vncY = Math.round((event.clientY - rect.top) * (canvas.height / rect.height));
-            
-            // Ensure coordinates are within VNC bounds
-            const boundedX = Math.max(0, Math.min(vncX, canvas.width - 1));
-            const boundedY = Math.max(0, Math.min(vncY, canvas.height - 1));
-            
-            // Update RFB mouse position directly
-            if (rfb._mouse && rfb._mouse._pos) {
-                rfb._mouse._pos.x = boundedX;
-                rfb._mouse._pos.y = boundedY;
-            }
-            
-            // Force RFB to update mouse position
-            if (rfb._mouse && rfb._mouse._sendPointer) {
-                rfb._mouse._sendPointer(boundedX, boundedY, 0); // 0 = no buttons pressed
-            }
-        }
-
-        function handleMouseClick(event) {
-            if (!isMouseSyncEnabled || !rfb) return;
-            
-            const canvas = event.target;
-            const rect = canvas.getBoundingClientRect();
-            
-            // Calculate the actual VNC coordinates
-            const vncX = Math.round((event.clientX - rect.left) * (canvas.width / rect.width));
-            const vncY = Math.round((event.clientY - rect.top) * (canvas.height / rect.height));
-            
-            // Ensure coordinates are within VNC bounds
-            const boundedX = Math.max(0, Math.min(vncX, canvas.width - 1));
-            const boundedY = Math.max(0, Math.min(vncY, canvas.height - 1));
-            
-            console.log('Mouse click at VNC coordinates:', boundedX, boundedY);
-            
-            // Send click event to VNC
-            if (rfb._mouse && rfb._mouse._sendPointer) {
-                rfb._mouse._sendPointer(boundedX, boundedY, 1); // 1 = left button
-                setTimeout(() => {
-                    rfb._mouse._sendPointer(boundedX, boundedY, 0); // Release button
-                }, 50);
-            }
-        }
-
-        window.toggleMouseSync = function(enabled) {
-            isMouseSyncEnabled = enabled;
-            console.log('Mouse sync enabled:', enabled);
-        };
-
-        // Multi-Monitor Functions
 
 
-        window.closeMonitor = function(monitorId) {
-            const monitor = document.getElementById(monitorId);
-            if (monitor) {
-                monitor.remove();
-                console.log('Closed monitor:', monitorId);
-            }
-        };
 
-        window.connectToMonitor = function(monitorId) {
-            // Create new VNC connection for this monitor
-            const monitorUrl = `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}&password=${password}&monitor=${monitorId}`;
-            window.open(monitorUrl, monitorId, 'width=800,height=600');
-        };
 
-        window.splitScreen = function() {
-            // Create split screen layout
-            const container = document.createElement('div');
-            container.className = 'monitor-grid';
-            container.style.position = 'fixed';
-            container.style.top = '0';
-            container.style.left = '0';
-            container.style.width = '100vw';
-            container.style.height = '100vh';
-            container.style.zIndex = '998';
-            container.style.background = '#1e3c72';
-            
-            // Create two monitor windows
-            for (let i = 1; i <= 2; i++) {
-                const monitorWindow = document.createElement('div');
-                monitorWindow.className = 'monitor-window';
-                monitorWindow.innerHTML = `
-                    <div class="monitor-header">
-                        <div class="monitor-title">Monitor ${i}</div>
-                        <button class="monitor-close" onclick="closeSplitScreen()">✕</button>
-                    </div>
-                    <div style="padding: 10px; color: #fff;">
-                        <p>Split screen monitor ${i}</p>
-                        <button class="toolbar-button" onclick="connectSplitMonitor(${i})">Connect</button>
-                    </div>
-                `;
-                container.appendChild(monitorWindow);
-            }
-            
-            document.body.appendChild(container);
-            console.log('Split screen created');
-        };
 
-        window.closeSplitScreen = function() {
-            const grid = document.querySelector('.monitor-grid');
-            if (grid) {
-                grid.remove();
-                console.log('Split screen closed');
-            }
-        };
 
-        window.connectSplitMonitor = function(monitorNum) {
-            const monitorUrl = `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}&password=${password}&monitor=${monitorNum}`;
-            window.open(monitorUrl, `split-${monitorNum}`, 'width=800,height=600');
-        };
 
-        window.toggleMonitorGrid = function() {
-            isGridMode = !isGridMode;
-            const btn = document.getElementById('grid-btn');
-            btn.textContent = isGridMode ? '🔲 Single View' : '🔲 Grid View';
-            btn.classList.toggle('active', isGridMode);
-            
-            if (isGridMode) {
-                // Create grid layout
-                const container = document.createElement('div');
-                container.className = 'monitor-grid';
-                container.style.position = 'fixed';
-                container.style.top = '0';
-                container.style.left = '0';
-                container.style.width = '100vw';
-                container.style.height = '100vh';
-                container.style.zIndex = '998';
-                container.style.background = '#1e3c72';
-                
-                // Create 4 monitor windows in grid
-                for (let i = 1; i <= 4; i++) {
-                    const monitorWindow = document.createElement('div');
-                    monitorWindow.className = 'monitor-window';
-                    monitorWindow.innerHTML = `
-                        <div class="monitor-header">
-                            <div class="monitor-title">Grid Monitor ${i}</div>
-                            <button class="monitor-close" onclick="closeGrid()">✕</button>
-                        </div>
-                        <div style="padding: 10px; color: #fff;">
-                            <p>Grid monitor ${i}</p>
-                            <button class="toolbar-button" onclick="connectGridMonitor(${i})">Connect</button>
-                        </div>
-                    `;
-                    container.appendChild(monitorWindow);
-                }
-                
-                document.body.appendChild(container);
-            } else {
-                closeGrid();
-            }
-        };
 
-        window.closeGrid = function() {
-            const grid = document.querySelector('.monitor-grid');
-            if (grid) {
-                grid.remove();
-                console.log('Grid closed');
-            }
-        };
 
-        window.connectGridMonitor = function(monitorNum) {
-            const monitorUrl = `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}&password=${password}&monitor=${monitorNum}`;
-            window.open(monitorUrl, `grid-${monitorNum}`, 'width=800,height=600');
-        };
 
-        // Initialize toolbar state
-        document.getElementById('quality-value').textContent = '6';
-        document.getElementById('compression-value').textContent = '2';
+        // Initialize toolbar state - no longer needed since we use selects
     </script>
 </body>
 </html>
