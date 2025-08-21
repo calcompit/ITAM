@@ -51,6 +51,11 @@ app.use(cors({
       return callback(null, true);
     }
     
+    // Allow all 100.x.x.x IP addresses (entire 100.0.0.0/8 range)
+    if (origin.match(/^https?:\/\/100\.\d+\.\d+\.\d+/)) {
+      return callback(null, true);
+    }
+    
     // Allow localhost for development
     if (origin.match(/^https?:\/\/localhost/)) {
       return callback(null, true);
