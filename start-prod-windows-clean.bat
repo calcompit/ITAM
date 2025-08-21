@@ -17,6 +17,15 @@ echo 🌐 Frontend URL: %FRONTEND_URL%
 echo 🖥️  noVNC URL: %NOVNC_URL%
 echo.
 
+REM Check if Node.js is installed
+node --version >nul 2>&1
+if errorlevel 1 (
+    echo ❌ Error: Node.js is not installed
+    echo Please install Node.js from https://nodejs.org/
+    pause
+    exit /b 1
+)
+
 REM Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
@@ -33,14 +42,26 @@ if errorlevel 1 (
     pip install websockify
 )
 
+REM Install npm dependencies if needed
+if not exist "node_modules" (
+    echo 📦 Installing npm dependencies...
+    npm install
+)
+
 echo ✅ Dependencies checked
 echo.
 
 REM Start the application
 echo 🎯 Starting application...
 echo.
+echo Frontend will be available at: %FRONTEND_URL%
+echo Backend will be available at: %BACKEND_URL%
+echo WebSockify will be available at: %NOVNC_URL%
+echo.
+echo Press Ctrl+C to stop all services
+echo.
 
-REM Start the application using npm script with production environment
+REM Start the application using npm script
 npm run dev:full
 
 pause
