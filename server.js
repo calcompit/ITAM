@@ -1101,13 +1101,19 @@ app.post('/api/vnc/start', async (req, res) => {
 // Helper function to check noVNC status
 async function checkNovncStatus() {
   try {
-    const { default: fetch } = await import('node-fetch');
-    const response = await fetch('http://10.51.101.49:6081', { 
-      timeout: 2000,
-      method: 'HEAD'
+    const { exec } = require('child_process');
+    return new Promise((resolve) => {
+      exec('ps aux | grep "websockify.*6081" | grep -v grep', (error, stdout, stderr) => {
+        console.log('VNC status check:', { error, stdout: stdout.trim(), stderr });
+        if (error || !stdout.trim()) {
+          resolve(false);
+        } else {
+          resolve(true);
+        }
+      });
     });
-    return response.ok;
   } catch (error) {
+    console.error('VNC status check error:', error);
     return false;
   }
 }
