@@ -1516,11 +1516,10 @@ app.post('/api/vnc/start-session', async (req, res) => {
     // Kill any existing websockify process on this port
     await killWebsockify(websockifyPort);
 
-    // Start websockify process (no password required) - Silent mode
-    const websockifyProcess = spawn('websockify', [
-      websockifyPort.toString(),
-      `${host}:${port}`,
-      '--web', 'noVNC'
+    // Start websockify process (no password required) - Completely silent mode
+    const websockifyProcess = spawn('bash', [
+      '-c',
+      `websockify ${websockifyPort} ${host}:${port} --web noVNC > /dev/null 2>&1 &`
     ], {
       stdio: ['ignore', 'ignore', 'ignore'],
       detached: true
