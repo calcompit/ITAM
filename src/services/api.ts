@@ -49,7 +49,8 @@ class ApiService {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
       return await response.json();
     } catch (error) {

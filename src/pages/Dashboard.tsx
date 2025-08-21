@@ -41,6 +41,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
   const [showComputerDetails, setShowComputerDetails] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [updatedMachineIDs, setUpdatedMachineIDs] = useState<Set<string>>(new Set());
 
   const { toast } = useToast();
   
@@ -89,7 +90,16 @@ export function Dashboard({ activeTab }: DashboardProps) {
         setError(null);
       } catch (err) {
         console.error('Failed to load data:', err);
-        setError('Failed to load data from server');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load data from server';
+        setError(errorMessage);
+        
+        // Show error toast
+        toast({
+          title: "Database Connection Error",
+          description: errorMessage,
+          variant: "destructive",
+          duration: 5000,
+        });
       } finally {
         if (showLoading) {
           setLoading(false);
@@ -112,6 +122,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
     const handleDataUpdate = (data: any) => {
       if (data.data?.updatedComputers) {
         setIsUpdating(true);
+        
+        // Track which machines were updated for animation
+        const updatedIDs = new Set<string>();
+        const updatedComputerNames: string[] = [];
+        
         setComputers(prevComputers => {
           const updatedComputers = [...prevComputers];
           
@@ -122,17 +137,39 @@ export function Dashboard({ activeTab }: DashboardProps) {
               // Preserve pinned status
               const wasPinned = updatedComputers[existingIndex].isPinned;
               updatedComputers[existingIndex] = { ...updatedComputer, isPinned: wasPinned };
+              updatedIDs.add(updatedComputer.machineID);
+              updatedComputerNames.push(updatedComputer.computerName);
             } else {
               // New computer
               updatedComputers.push(updatedComputer);
+              updatedIDs.add(updatedComputer.machineID);
+              updatedComputerNames.push(updatedComputer.computerName);
             }
           });
           
           return updatedComputers;
         });
         
-        // Hide updating indicator after 1 second
-        setTimeout(() => setIsUpdating(false), 1000);
+        // Set animation state
+        setUpdatedMachineIDs(updatedIDs);
+        
+        // Show toast notification
+        if (updatedComputerNames.length > 0) {
+          const computerList = updatedComputerNames.slice(0, 3).join(', ');
+          const moreText = updatedComputerNames.length > 3 ? ` and ${updatedComputerNames.length - 3} more` : '';
+          
+          toast({
+            title: "Data Updated",
+            description: `${computerList}${moreText} updated successfully`,
+            duration: 3000,
+          });
+        }
+        
+        // Clear animation after 2 seconds
+        setTimeout(() => {
+          setUpdatedMachineIDs(new Set());
+          setIsUpdating(false);
+        }, 2000);
       }
     };
 
@@ -454,9 +491,12 @@ export function Dashboard({ activeTab }: DashboardProps) {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Error Loading Data</h3>
+          <h3 className="text-lg font-semibold mb-2">Database Connection Error</h3>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <p className="text-sm text-muted-foreground mb-4">
+            Please check your database connection and try again.
+          </p>
+          <Button onClick={() => window.location.reload()}>Retry Connection</Button>
         </div>
       </div>
     );
@@ -482,6 +522,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
             >
               ← Back to Groups
             </Button>
+          )}
+          {computers.length > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {computers.length} computer{computers.length !== 1 ? 's' : ''} loaded
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-4">
@@ -608,6 +653,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
             onPin={handlePin}
             onClick={handleComputerClick}
             onVNC={handleVNC}
+            isUpdated={updatedMachineIDs.has(computer.machineID)}
           />
         ))}
       </div>

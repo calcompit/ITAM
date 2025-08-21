@@ -243,98 +243,9 @@ function cleanupSession(port) {
   console.log(`Cleaned up session on port ${port}`);
 }
 
-// Fallback data when database is unavailable
-const fallbackData = {
-  computers: [
-    {
-      machineID: "DEMO-001",
-      computerName: "DESKTOP-HALKGET",
-      ipAddresses: ["172.17.124.179"],
-      domain: "WORKGROUP",
-      sUser: "DESKTOP-HALKGET\\user",
-      status: "online",
-      cpu: { model: "Intel Core i7", physicalCores: 4, logicalCores: 8 },
-      ram: { totalGB: 16, modules: [] },
-      storage: { totalGB: 500, devices: [] },
-      gpu: [{ name: "Intel HD Graphics" }],
-      network: { adapters: [] },
-      lastBoot: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      winActivated: true,
-      isPinned: false
-    },
-    {
-      machineID: "DEMO-002",
-      computerName: "WK-SVR01",
-      ipAddresses: ["10.13.4.149"],
-      domain: "calcomp.co.th",
-      sUser: "calcomp\\admin",
-      status: "online",
-      cpu: { model: "Intel Xeon", physicalCores: 8, logicalCores: 16 },
-      ram: { totalGB: 32, modules: [] },
-      storage: { totalGB: 1000, devices: [] },
-      gpu: [{ name: "NVIDIA Quadro" }],
-      network: { adapters: [] },
-      lastBoot: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      winActivated: true,
-      isPinned: false
-    },
-    {
-      machineID: "DEMO-003",
-      computerName: "P22070400120002",
-      ipAddresses: ["10.51.101.83"],
-      domain: "pbmfg.calcomp.co.th",
-      sUser: "pbmfg\\user",
-      status: "online",
-      cpu: { model: "AMD Ryzen", physicalCores: 6, logicalCores: 12 },
-      ram: { totalGB: 16, modules: [] },
-      storage: { totalGB: 500, devices: [] },
-      gpu: [{ name: "AMD Radeon" }],
-      network: { adapters: [] },
-      lastBoot: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      winActivated: true,
-      isPinned: false
-    }
-  ],
-  ipGroups: [
-    {
-      subnet: "172.17.124.x",
-      totalComputers: 1,
-      onlineCount: 1,
-      offlineCount: 0,
-      alertCount: 0
-    },
-    {
-      subnet: "10.13.4.x",
-      totalComputers: 1,
-      onlineCount: 1,
-      offlineCount: 0,
-      alertCount: 0
-    },
-    {
-      subnet: "10.51.101.x",
-      totalComputers: 1,
-      onlineCount: 1,
-      offlineCount: 0,
-      alertCount: 0
-    }
-  ],
-  analytics: {
-    totalComputers: 3,
-    cpuTypes: { "Intel Core i7": 1, "Intel Xeon": 1, "AMD Ryzen": 1 },
-    ramDistribution: { "16GB": 2, "32GB": 1 },
-    storageDistribution: { "500GB": 2, "1000GB": 1 },
-    activatedCount: 3,
-    notActivatedCount: 0,
-    onlineCount: 3,
-    offlineCount: 0
-  }
-};
-
-// Database connection status
+// Database connection status tracking
 let dbConnectionStatus = 'disconnected';
+let lastDbError = null;
 let connectionRetryCount = 0;
 const maxRetryCount = 10; // เพิ่มจาก 5
 
@@ -804,10 +715,12 @@ app.get('/api/computers', async (req, res) => {
     res.json(computers);
     
   } catch (err) {
-    // Return fallback data instead of error
     console.error('Error fetching computers:', err.message);
-    console.log('Using fallback data due to database connection error');
-    res.json(fallbackData.computers);
+    res.status(500).json({ 
+      error: 'Failed to fetch computers from database',
+      message: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -966,8 +879,11 @@ app.get('/api/ip-groups', async (req, res) => {
     res.json(result.recordset);
   } catch (err) {
     console.error('Error fetching IP groups:', err.message);
-    // Return fallback data instead of error
-    res.json(fallbackData.ipGroups);
+    res.status(500).json({ 
+      error: 'Failed to fetch IP groups from database',
+      message: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 
@@ -1086,8 +1002,11 @@ app.get('/api/analytics', async (req, res) => {
     res.json(analytics);
   } catch (err) {
     console.error('Error fetching analytics:', err.message);
-    // Return fallback data instead of error
-    res.json(fallbackData.analytics);
+    res.status(500).json({ 
+      error: 'Failed to fetch analytics from database',
+      message: err.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

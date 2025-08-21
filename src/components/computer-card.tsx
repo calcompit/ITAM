@@ -14,15 +14,17 @@ interface ComputerCardProps {
   onPin: (id: string) => void;
   onClick: (computer: Computer) => void;
   onVNC?: (ip: string, computerName: string) => void;
+  isUpdated?: boolean;
 }
 
-export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardProps) {
+export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: ComputerCardProps) {
   return (
     <Card 
       className={cn(
         "relative overflow-hidden cursor-pointer transition-all duration-300",
         "bg-gradient-card border-border shadow-card",
-        "hover:shadow-glow hover:scale-105"
+        "hover:shadow-glow hover:scale-105",
+        isUpdated && "animate-data-update ring-2 ring-blue-500 ring-opacity-50"
       )}
       onClick={() => onClick(computer)}
     >
@@ -95,14 +97,18 @@ export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardPr
           {/* Status with relative time */}
           <div className="text-xs">
             <div className="flex items-center justify-between">
-              <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+              <span className={cn(
+                "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300",
                 computer.status === 'online' 
                   ? 'bg-status-online/20 text-status-online' 
-                  : 'bg-status-offline/20 text-status-offline'
-              }`}>
-                <div className={`w-2 h-2 rounded-full ${
-                  computer.status === 'online' ? 'bg-status-online' : 'bg-status-offline'
-                }`} />
+                  : 'bg-status-offline/20 text-status-offline',
+                isUpdated && "animate-status-change"
+              )}>
+                <div className={cn(
+                  "w-2 h-2 rounded-full transition-all duration-300",
+                  computer.status === 'online' ? 'bg-status-online' : 'bg-status-offline',
+                  isUpdated && "animate-pulse"
+                )} />
                 {computer.status === 'online' ? 'Online' : 'Offline'}
               </span>
               <span className="text-muted-foreground">{formatRelativeTime(computer.updatedAt)}</span>

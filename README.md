@@ -4,15 +4,18 @@ A comprehensive IT asset monitoring system with VNC remote access capabilities.
 
 ## 🚀 Quick Start
 
-### For macOS/Linux:
+### For all platforms:
 ```bash
-chmod +x start.sh
-./start.sh
+npm run dev:full
 ```
 
-### For Windows:
-```cmd
-start.bat
+### Alternative commands:
+```bash
+# Start backend only
+npm run server
+
+# Start frontend only  
+npm run dev
 ```
 
 ## 📱 Platform Support
@@ -65,22 +68,16 @@ start.bat
 
 ## 🎯 Usage
 
-### Development (macOS/Linux)
+### Start the application:
 ```bash
-./start.sh
-```
-
-### Production (Windows)
-```cmd
-start.bat
+npm run dev:full
 ```
 
 The application will automatically:
-- Detect your platform
-- Set appropriate environment variables
-- Start backend server
-- Start frontend development server
-- Configure VNC proxy
+- Start backend server (port 3002)
+- Start frontend development server (port 8080/8081)
+- Configure VNC proxy (port 6081)
+- Set appropriate environment variables based on platform
 
 ## 🔗 Access URLs
 
@@ -128,13 +125,18 @@ DB_SERVER=your_server_ip
 - Disable Windows Defender Firewall for development
 - Use `python` command (not `python3`)
 
-## 📝 Scripts
+**Environment Variables**:
+- The application automatically detects the platform and sets appropriate environment variables
+- For development: uses localhost
+- For production: uses server IP (10.51.101.49)
 
-- **start.sh**: Universal script for macOS/Linux
-- **start.bat**: Universal script for Windows
+## 📝 Available Scripts
+
 - **npm run dev:full**: Start both backend and frontend
 - **npm run server**: Start backend only
 - **npm run dev**: Start frontend only
+- **npm run build**: Build for production
+- **npm run preview**: Preview production build
 
 ## 🤝 Contributing
 
