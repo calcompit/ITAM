@@ -22,7 +22,7 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
 
   const handleWebVNC = () => {
     // Open in new window for web VNC using the Windows proxy server
-    const webVncUrl = `http://10.51.101.49:8081/vnc.html?ip=${ip}&port=${port}&password=123`;
+    const webVncUrl = `http://${window.location.hostname}:${window.location.port}/vnc.html?ip=${ip}&port=${port}&password=123`;
     window.open(webVncUrl, '_blank', 'width=1024,height=768');
   };
 

@@ -13,7 +13,20 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
+// Environment configuration
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isProduction = process.env.NODE_ENV === 'production';
+const HOST = process.env.HOST || (isProduction ? '10.51.101.49' : 'localhost');
 const PORT = process.env.PORT || 3002;
+const FRONTEND_PORT = process.env.FRONTEND_PORT || (isProduction ? 8081 : 8080);
+const NOVNC_PORT = process.env.NOVNC_PORT || 6081;
+
+// Log environment configuration
+console.log(`[CONFIG] Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`[CONFIG] Host: ${HOST}`);
+console.log(`[CONFIG] Backend Port: ${PORT}`);
+console.log(`[CONFIG] Frontend Port: ${FRONTEND_PORT}`);
+console.log(`[CONFIG] noVNC Port: ${NOVNC_PORT}`);
 
 // Middleware
 app.use(cors({
@@ -1658,7 +1671,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
           host,
           targetPort: port,
           sessionId: sessionInfo.sessionId,
-          vncUrl: `http://${process.env.NODE_ENV === 'production' ? '10.51.101.49' : 'localhost'}:${websockifyPort}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+                          vncUrl: `http://${HOST}:${websockifyPort}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
         }
       });
     }, 1000);
@@ -1692,7 +1705,7 @@ app.get('/api/vnc/sessions', (req, res) => {
         targetPort: session.targetPort,
         sessionId: session.sessionId,
         createdAt: session.createdAt,
-        vncUrl: `http://${process.env.NODE_ENV === 'production' ? '10.51.101.49' : 'localhost'}:${session.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+        vncUrl: `http://${HOST}:${session.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
       }));
 
     res.json({
@@ -1822,7 +1835,7 @@ app.post('/api/vnc/connect', async (req, res) => {
       });
     }
     
-    const novncUrl = `http://10.51.101.49:6081/vnc.html?host=${host}&port=${port}&password=123`;
+    const novncUrl = `http://${HOST}:${NOVNC_PORT}/vnc.html?host=${host}&port=${port}&password=123`;
     
     // Create window.open JavaScript code
     const windowOpenScript = `

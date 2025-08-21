@@ -204,7 +204,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
             host: result.existingSession.host,
             targetPort: result.existingSession.targetPort,
             sessionId: result.existingSession.sessionId,
-            vncUrl: `http://${process.env.NODE_ENV === 'production' ? '10.51.101.49' : 'localhost'}:${result.existingSession.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+            vncUrl: `http://${window.location.hostname}:${result.existingSession.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
           };
         }
       }
