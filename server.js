@@ -1498,20 +1498,18 @@ app.post('/api/vnc/start-session', async (req, res) => {
     
     console.log('[VNC Start Session] User ready:', username);
 
-    // Check if user already has an active session for the same target
+    // Kill all existing sessions for this user (Single Session Policy)
+    const sessionsToKill = [];
     for (const [sessionPort, session] of activeSessions) {
-      if (session.username === username && session.host === host && session.targetPort === port) {
-        return res.status(409).json({
-          success: false,
-          message: 'User already has an active session for this target',
-          existingSession: {
-            port: session.port,
-            host: session.host,
-            targetPort: session.targetPort,
-            sessionId: session.sessionId
-          }
-        });
+      if (session.username === username) {
+        sessionsToKill.push(sessionPort);
       }
+    }
+    
+    // Kill existing sessions
+    for (const sessionPort of sessionsToKill) {
+      console.log(`[VNC Start Session] Killing existing session on port ${sessionPort} for user: ${username}`);
+      cleanupSession(sessionPort);
     }
 
     // Find available port
