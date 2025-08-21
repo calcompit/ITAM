@@ -57,12 +57,35 @@
         // Create RFB connection
         const rfb = new RFB(document.getElementById('vnc-canvas'), wsUrl, {
             credentials: { password: password },
-            ignoreTLSWarnings: true
+            ignoreTLSWarnings: true,
+            wsProtocols: ['binary'],
+            repeaterID: '',
+            shared: true,
+            viewOnly: false,
+            showDotCursor: true,
+            background: '#000000',
+            qualityLevel: 6,
+            compressionLevel: 2,
+            enableWebP: true,
+            enableJPEG: true,
+            enablePNG: true,
+            enableResize: true,
+            scaleViewport: true,
+            resizeSession: true,
+            clipViewport: false,
+            scaleQuality: 'fast',
+            mouse: true,
+            keyboard: true,
+            clipboard: true,
+            audio: false,
+            bell: false
         });
 
         // Connection events
         rfb.addEventListener('connect', function() {
             console.log('VNC Connected successfully');
+            console.log('RFB State:', rfb.state);
+            console.log('RFB Viewport:', rfb.viewport);
             document.getElementById('status').textContent = 'Connected to VNC';
             document.getElementById('status').className = 'status-connected';
         });
@@ -87,8 +110,27 @@
 
         rfb.addEventListener('error', function(e) {
             console.error('VNC Error:', e);
+            console.error('Error Detail:', e.detail);
             document.getElementById('status').textContent = 'Error: ' + e.detail.message;
             document.getElementById('status').className = 'status-error';
+        });
+
+        // Add more event listeners for debugging
+        rfb.addEventListener('desktopname', function(e) {
+            console.log('Desktop name:', e.detail.name);
+            document.title = 'noVNC - ' + e.detail.name;
+        });
+
+        rfb.addEventListener('capabilities', function(e) {
+            console.log('Capabilities:', e.detail.capabilities);
+        });
+
+        rfb.addEventListener('clipboard', function(e) {
+            console.log('Clipboard event:', e.detail.text);
+        });
+
+        rfb.addEventListener('bell', function() {
+            console.log('Bell event');
         });
 
         // Focus management
