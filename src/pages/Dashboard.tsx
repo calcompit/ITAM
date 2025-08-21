@@ -8,7 +8,7 @@ import { ComputerCard } from "@/components/computer-card";
 import { IPGroupCard } from "@/components/ip-group-card";
 import { Analytics } from "@/pages/Analytics";
 import { AlertsPage } from "@/pages/AlertsPage";
-import { API_CONFIG, buildNovncUrl } from "@/config/api";
+import { API_CONFIG } from "@/config/api";
 import { mockComputers } from "@/data/mock-data";
 import { 
   Monitor, 
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
+
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
 
@@ -36,7 +37,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [pinnedComputers, setPinnedComputers] = useState<string[]>([]);
   const [selectedSubnet, setSelectedSubnet] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [novncStatus, setNovncStatus] = useState<{ isRunning: boolean } | null>(null);
+
   const { toast } = useToast();
   
   // Load pinned computers from localStorage
@@ -141,22 +142,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
     };
   }, []);
 
-  // Check noVNC status
-  const checkNovncStatus = async () => {
-    try {
-      const response = await fetch(API_CONFIG.VNC_STATUS);
-      const data = await response.json();
-      setNovncStatus(data);
-    } catch (error) {
-      console.error('Failed to check noVNC status:', error);
-      setNovncStatus({ isRunning: false });
-    }
-  };
 
-  // Check noVNC status on component mount
-  useEffect(() => {
-    checkNovncStatus();
-  }, []);
 
   const handlePin = (machineID: string) => {
     const updatedComputers = computers.map(computer => {
@@ -179,50 +165,167 @@ export function Dashboard({ activeTab }: DashboardProps) {
     try {
       console.log(`Starting VNC for IP: ${ip} (${computerName})`);
       
-      // Change websockify target using API
-      const response = await fetch(`/api/vnc/change-target`, {
+      const currentUser = localStorage.getItem('currentUser');
+      const currentPassword = localStorage.getItem('currentPassword');
+      
+      if (!currentUser || !currentPassword) {
+        toast({
+          title: "Not Authenticated",
+          description: "Please login to the main application first",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Login to VNC service
+      console.log('Attempting VNC login with:', { username: currentUser, password: currentPassword ? '***' : 'undefined' });
+      
+      const loginResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host: ip,
-          port: 5900
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: currentUser, password: currentPassword })
+      });
+
+      console.log('VNC login response status:', loginResponse.status);
+      
+      if (!loginResponse.ok) {
+        const errorData = await loginResponse.json().catch(() => ({}));
+        console.error('VNC login error:', errorData);
+        
+        toast({
+          title: "VNC Authentication Failed",
+          description: errorData.message || "Please login to the main application first",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const loginResult = await loginResponse.json();
+      console.log('VNC login successful:', loginResult);
+
+      // Start VNC session
+      const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: currentUser, 
+          host: ip, 
+          port: 5900 
         })
       });
 
-      const data = await response.json();
+      let session = null;
+      if (sessionResponse.ok) {
+        const result = await sessionResponse.json();
+        session = result.session;
+      } else if (sessionResponse.status === 409) {
+        // User already has an active session for this target
+        const result = await sessionResponse.json();
+        if (result.existingSession) {
+          session = {
+            port: result.existingSession.port,
+            host: result.existingSession.host,
+            targetPort: result.existingSession.targetPort,
+            sessionId: result.existingSession.sessionId,
+            vncUrl: `http://10.51.101.49:${result.existingSession.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=`
+          };
+        }
+      }
 
-      if (response.ok && data.success) {
-        console.log('Websockify target changed successfully');
+      // Wait for websockify to be ready (simplified approach)
+      if (session) {
+        console.log('Starting VNC Connection...');
+        toast({
+          title: "Starting VNC Connection",
+          description: `Connecting to ${computerName} (${ip})...`,
+        });
         
-        // Wait a moment for websockify to restart
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Simple delay instead of CORS-prone fetch check
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        console.log(`Proceeding with VNC connection on port ${session.port}`);
+      }
+      
+      if (session) {
+        console.log('VNC session started/retrieved successfully');
         
         // Open VNC in a new window with specific size
-        const vncUrl = data.url || `http://localhost:6081/vnc.html?host=${ip}&port=5900&password=123`;
         const windowFeatures = 'width=1200,height=800,scrollbars=no,resizable=yes,status=no,location=no,toolbar=no,menubar=no';
         
-        console.log(`Opening VNC URL in new window: ${vncUrl}`);
-        const vncWindow = window.open(vncUrl, 'vnc_window', windowFeatures);
+        console.log(`Opening VNC URL in new window: ${session.vncUrl}`);
         
-        if (vncWindow) {
-          // Focus the new window
-          vncWindow.focus();
+        // Try to open window with different approaches
+        let vncWindow = null;
+        
+        try {
+          // Method 1: Direct window.open
+          vncWindow = window.open(session.vncUrl, 'vnc_window', windowFeatures);
+          console.log('Window open result:', vncWindow);
+          
+          if (!vncWindow || vncWindow.closed) {
+            // Method 2: Try without features
+            vncWindow = window.open(session.vncUrl, '_blank');
+            console.log('Window open without features result:', vncWindow);
+          }
+          
+          if (!vncWindow || vncWindow.closed) {
+            // Method 3: Try with location.href
+            console.log('Trying location.href fallback');
+            window.location.href = session.vncUrl;
+            return;
+          }
+        } catch (error) {
+          console.error('Error opening window:', error);
+        }
+        
+        if (!vncWindow || vncWindow.closed) {
+          // Popup blocked - show alert
+          toast({
+            title: "Popup Blocked",
+            description: "Please allow popups for this site to open VNC connections automatically",
+            variant: "destructive",
+          });
+          
+          // Show manual link container
+          const container = document.getElementById('vnc-container');
+          if (container) {
+            container.classList.remove('hidden');
+            
+            // Create manual link
+            const link = document.createElement('a');
+            link.href = session.vncUrl;
+            link.target = '_blank';
+            link.textContent = `Open VNC Viewer for ${computerName} (${ip})`;
+            link.style.display = 'block';
+            link.style.marginTop = '10px';
+            link.style.padding = '10px';
+            link.style.backgroundColor = '#007bff';
+            link.style.color = 'white';
+            link.style.textDecoration = 'none';
+            link.style.borderRadius = '5px';
+            link.style.textAlign = 'center';
+            
+            container.appendChild(link);
+          }
         } else {
-          // Fallback to tab if popup is blocked
-          window.open(vncUrl, '_blank');
+          // Send message to enable local scaling after a delay
+          setTimeout(() => {
+            try {
+              vncWindow.postMessage('enableLocalScaling', '*');
+            } catch (error) {
+              console.error('Error sending postMessage:', error);
+            }
+          }, 5000);
         }
         
         toast({
-          title: "VNC Started",
-          description: `Connecting to ${computerName} (${ip})...`,
+          title: "VNC Session Ready",
+          description: `Connected to ${computerName} (${ip}) on port ${session.port}`,
         });
       } else {
-        console.error('Failed to change websockify target:', data.message);
+        console.error('Failed to start VNC session');
         toast({
           title: "VNC Error",
-          description: data.message || "Failed to change VNC target",
+          description: "Failed to start VNC session",
           variant: "destructive",
         });
       }
@@ -398,22 +501,6 @@ export function Dashboard({ activeTab }: DashboardProps) {
           )}
         </div>
         <div className="flex items-center gap-4">
-          {/* noVNC Status */}
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${novncStatus?.isRunning ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-sm text-muted-foreground">
-              noVNC: {novncStatus?.isRunning ? 'Running' : 'Stopped'}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={checkNovncStatus}
-              className="h-6 px-2"
-            >
-              <RefreshCw className="h-3 w-3" />
-            </Button>
-          </div>
-          
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -521,6 +608,13 @@ export function Dashboard({ activeTab }: DashboardProps) {
         </div>
       )}
 
+      {/* VNC Links Container - Hidden by default */}
+      <div id="vnc-container" className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
+        <h3 className="text-sm font-medium text-blue-800 mb-2">VNC Connections</h3>
+        <p className="text-xs text-blue-600 mb-2">Click the links below if popup was blocked:</p>
+        {/* VNC links will be added here dynamically */}
+      </div>
+
       {/* Computers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {getDisplayComputers().map((computer) => (
@@ -533,6 +627,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
           />
         ))}
       </div>
+
+      {/* Container for manual VNC links */}
+      <div id="vnc-container"></div>
     </div>
   );
 }

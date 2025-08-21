@@ -1,21 +1,21 @@
 // API Configuration
 export const API_CONFIG = {
-  // Backend server URL (localhost)
-  BACKEND_URL: 'http://localhost:3002',
+  // Backend server URL (Windows server)
+  BACKEND_URL: 'http://10.51.101.49:3002',
   
   // API endpoints
-  API_BASE_URL: 'http://localhost:3002/api',
+  API_BASE_URL: 'http://10.51.101.49:3002/api',
   
   // VNC endpoints
-  VNC_STATUS: 'http://localhost:3002/api/vnc/status',
-  VNC_START: 'http://localhost:3002/api/vnc/start',
-  VNC_CONNECT: 'http://localhost:3002/api/vnc/connect',
+  VNC_STATUS: 'http://10.51.101.49:3002/api/vnc/status',
+  VNC_START: 'http://10.51.101.49:3002/api/vnc/start',
+  VNC_CONNECT: 'http://10.51.101.49:3002/api/vnc/connect',
   
-  // noVNC web interface (localhost)
-  NOVNC_URL: 'http://localhost:6081',
+  // noVNC web interface (Windows server)
+  NOVNC_URL: 'http://10.51.101.49:6081',
   
-  // Frontend URL (localhost)
-  FRONTEND_URL: 'http://localhost:8082',
+  // Frontend URL (Windows server)
+  FRONTEND_URL: 'http://10.51.101.49:8082',
   
   // Default VNC settings
   DEFAULT_VNC_PORT: 5900,

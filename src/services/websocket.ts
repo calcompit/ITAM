@@ -5,7 +5,7 @@ export class WebSocketService {
   private reconnectDelay = 1000;
   private listeners: Map<string, Function[]> = new Map();
 
-  constructor(private url: string = 'ws://localhost:3002') {}
+  constructor(private url: string = 'ws://10.51.101.49:3002') {}
 
   connect() {
     try {
@@ -13,6 +13,15 @@ export class WebSocketService {
       
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
+        
+        // Send authentication message if user is logged in
+        const currentUser = localStorage.getItem('currentUser');
+        if (currentUser) {
+          this.ws?.send(JSON.stringify({
+            type: 'authenticate',
+            username: currentUser
+          }));
+        }
       };
 
       this.ws.onmessage = (event) => {
@@ -49,6 +58,16 @@ export class WebSocketService {
 
   private handleMessage(data: any) {
     const { type } = data;
+    
+    // Handle session termination
+    if (type === 'session_terminated') {
+      console.log('Session terminated by server:', data.message);
+      // Clear local storage and redirect to login
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('currentPassword');
+      window.location.href = '/login';
+      return;
+    }
     
     if (this.listeners.has(type)) {
       this.listeners.get(type)?.forEach(callback => {

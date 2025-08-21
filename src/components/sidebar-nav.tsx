@@ -7,7 +7,6 @@ import {
   BarChart3,
   Bell,
   LogOut,
-  MonitorPlay,
   Home
 } from "lucide-react";
 
@@ -47,6 +46,8 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user }: SidebarNa
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "alerts", label: "Alerts", icon: Bell },
   ];
+
+
 
   return (
     <div className="w-64 h-screen bg-card border-r border-border flex flex-col">

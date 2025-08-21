@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { Login } from "./pages/Login";
 
+
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -32,6 +33,7 @@ const App = () => {
             <Route path="/" element={
               user ? <Index onLogout={handleLogout} user={user} /> : <Login onLogin={handleLogin} />
             } />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
