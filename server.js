@@ -1595,6 +1595,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
     
     // Use python -m websockify for all platforms
     websockifyProcess = spawn(pythonCommand, [
+      '-W', 'ignore',  // Suppress Python warnings
       '-m', 'websockify',
       websockifyPort.toString(),
       `${host}:${port}`,
@@ -1605,7 +1606,11 @@ app.post('/api/vnc/start-session', async (req, res) => {
     ], {
       cwd: path.join(process.cwd(), 'noVNC'),
       stdio: ['ignore', 'pipe', 'pipe'],
-      detached: true
+      detached: true,
+      env: {
+        ...process.env,
+        PYTHONWARNINGS: 'ignore'  // Suppress Python warnings
+      }
     });
 
     // Handle process events
