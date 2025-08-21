@@ -27,7 +27,7 @@ def test_websockify():
     # Check websockify
     try:
         import websockify
-        print("✅ websockify is installed")
+        print("OK websockify is installed")
     except ImportError:
         print("❌ websockify is not installed")
         print("Please run: pip install websockify")
@@ -36,7 +36,7 @@ def test_websockify():
     # Check noVNC directory
     novnc_dir = "noVNC"
     if os.path.exists(novnc_dir):
-        print(f"✅ noVNC directory found: {novnc_dir}")
+        print(f"OK noVNC directory found: {novnc_dir}")
     else:
         print(f"❌ noVNC directory not found: {novnc_dir}")
         print("Please run: git clone https://github.com/novnc/noVNC.git")
@@ -44,7 +44,7 @@ def test_websockify():
     
     # Check port 6081
     if check_port(6081):
-        print("✅ Port 6081 is available")
+        print("OK Port 6081 is available")
     else:
         print("❌ Port 6081 is in use")
         return False
@@ -75,12 +75,12 @@ def test_websockify():
         
         # Check if process is still running
         if process.poll() is None:
-            print("✅ Websockify is running")
+            print("OK Websockify is running")
             
             # Kill the process
             process.terminate()
             process.wait()
-            print("✅ Websockify test completed successfully")
+            print("OK Websockify test completed successfully")
             return True
         else:
             stdout, stderr = process.communicate()
@@ -96,8 +96,8 @@ def test_websockify():
 if __name__ == "__main__":
     success = test_websockify()
     if success:
-        print("\n🎉 Test passed!")
-        print("\n✅ Websockify is working correctly!")
+        print("\nTest passed!")
+        print("\nOK Websockify is working correctly!")
         print("\n📋 Next steps:")
         print("1. Start the application: start.bat")
         print("2. Open: http://localhost:8080")
