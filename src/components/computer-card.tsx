@@ -64,7 +64,6 @@ export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardPr
             <div className="flex items-center gap-2">
               <ClickableText 
                 text={computer.ipAddresses[0] || "N/A"}
-                title="Click to copy IP address"
                 className="text-sm font-mono text-foreground hover:text-blue-600 dark:hover:text-blue-400"
                 onClick={(e) => e.stopPropagation()}
               />
@@ -77,7 +76,6 @@ export function ComputerCard({ computer, onPin, onClick, onVNC }: ComputerCardPr
                     onVNC(computer.ipAddresses[0], computer.computerName);
                   }}
                   className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                  title={`VNC to ${computer.ipAddresses[0]}`}
                 >
                   <MonitorCheck className="h-4 w-4 text-blue-500" />
                 </Button>
