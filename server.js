@@ -356,13 +356,22 @@ async function testConnection() {
 // Setup realtime monitoring using Service Broker
 async function setupRealtimeMonitoring(pool) {
   try {
-    // Skip Service Broker for now to avoid SQL errors
-    // Just use polling instead
-    console.log('Using polling monitoring instead of Service Broker');
-    startPollingMonitoring();
+    console.log('Setting up Service Broker for real-time monitoring...');
+    
+    // Create Service Broker objects
+    await createServiceBrokerObjects(pool);
+    
+    // Start monitoring for changes
+    await startChangeMonitoring(pool);
+    
+    // Start listening for messages
+    startListeningForMessages(pool);
+    
+    console.log('Service Broker setup completed successfully');
     
   } catch (err) {
-    // Fallback to polling
+    console.error('Service Broker setup failed:', err.message);
+    console.log('Falling back to polling monitoring...');
     startPollingMonitoring();
   }
 }
@@ -532,6 +541,59 @@ async function startMessageListener(pool) {
       }
     } catch (err) {
       // Silent error handling
+    }
+    
+    // Continue listening
+    setTimeout(listenForMessages, 1000);
+  };
+  
+  listenForMessages();
+}
+
+// Start listening for Service Broker messages
+function startListeningForMessages(pool) {
+  const listenForMessages = async () => {
+    try {
+      const result = await pool.request().query(`
+        WAITFOR (
+          RECEIVE TOP(1)
+            message_type_name,
+            message_body,
+            conversation_handle
+          FROM [ITAssetChangeQueue]
+        ), TIMEOUT 5000
+      `);
+      
+      if (result.recordset.length > 0) {
+        const message = result.recordset[0];
+        
+        if (message.message_type_name === 'ITAssetChangeMessage') {
+          try {
+            const changeData = JSON.parse(message.message_body.toString());
+            console.log('[Service Broker] Received change:', changeData);
+            
+            // Broadcast to WebSocket clients
+            broadcast({
+              type: 'data_update',
+              data: {
+                changeType: changeData.changeType,
+                machineID: changeData.MachineID,
+                computerName: changeData.ComputerName,
+                timestamp: changeData.timestamp
+              }
+            });
+          } catch (parseError) {
+            console.error('[Service Broker] Error parsing message:', parseError);
+          }
+        }
+        
+        // End the conversation
+        await pool.request()
+          .input('handle', sql.UniqueIdentifier, message.conversation_handle)
+          .query('END CONVERSATION @handle');
+      }
+    } catch (err) {
+      console.error('[Service Broker] Error listening for messages:', err.message);
     }
     
     // Continue listening
