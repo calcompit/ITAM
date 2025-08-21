@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import { spawn } from 'child_process';
+import path from 'path';
 
 dotenv.config();
 
