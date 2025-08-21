@@ -1,21 +1,21 @@
 // API Configuration
 export const API_CONFIG = {
-  // Backend server URL (development: localhost, production: 10.51.101.49)
-  BACKEND_URL: process.env.NODE_ENV === 'production' ? 'http://10.51.101.49:3002' : 'http://localhost:3002',
+  // Backend server URL - Use server IP for production
+  BACKEND_URL: 'http://10.51.101.49:3002',
   
   // API endpoints
-  API_BASE_URL: process.env.NODE_ENV === 'production' ? 'http://10.51.101.49:3002/api' : 'http://localhost:3002/api',
+  API_BASE_URL: 'http://10.51.101.49:3002/api',
   
   // VNC endpoints
-  VNC_STATUS: process.env.NODE_ENV === 'production' ? 'http://10.51.101.49:3002/api/vnc/status' : 'http://localhost:3002/api/vnc/status',
-  VNC_START: process.env.NODE_ENV === 'production' ? 'http://10.51.101.49:3002/api/vnc/start' : 'http://localhost:3002/api/vnc/start',
-  VNC_CONNECT: process.env.NODE_ENV === 'production' ? 'http://10.51.101.49:3002/api/vnc/connect' : 'http://localhost:3002/api/vnc/connect',
+  VNC_STATUS: 'http://10.51.101.49:3002/api/vnc/status',
+  VNC_START: 'http://10.51.101.49:3002/api/vnc/start',
+  VNC_CONNECT: 'http://10.51.101.49:3002/api/vnc/connect',
   
-  // noVNC web interface (development: localhost, production: 10.51.101.49)
-  NOVNC_URL: process.env.NODE_ENV === 'production' ? 'http://10.51.101.49:6081' : 'http://localhost:6081',
+  // noVNC web interface
+  NOVNC_URL: 'http://10.51.101.49:6081',
   
-  // Frontend URL (development: localhost, production: 10.51.101.49)
-  FRONTEND_URL: process.env.NODE_ENV === 'production' ? 'http://10.51.101.49:8081' : 'http://localhost:8081',
+  // Frontend URL
+  FRONTEND_URL: 'http://10.51.101.49:8080',
   
   // Default VNC settings
   DEFAULT_VNC_PORT: 5900,
