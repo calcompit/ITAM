@@ -1132,9 +1132,9 @@ app.get('/api/vnc/status', async (req, res) => {
   }
 });
 
-app.post('/api/vnc/connect', async (req, res) => {
+app.post('/api/vnc/change-target', async (req, res) => {
   try {
-    const { host, port = 5900, password } = req.body;
+    const { host, port = 5900 } = req.body;
     
     if (!host) {
       return res.status(400).json({
@@ -1165,6 +1165,31 @@ app.post('/api/vnc/connect', async (req, res) => {
       });
     } catch (error) {
       console.error('Error managing websockify:', error);
+    }
+    
+    res.json({
+      success: true,
+      message: `Websockify target changed to ${host}:${port}`
+    });
+  } catch (error) {
+    console.error('Error changing VNC target:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to change VNC target',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/vnc/connect', async (req, res) => {
+  try {
+    const { host, port = 5900, password } = req.body;
+    
+    if (!host) {
+      return res.status(400).json({
+        success: false,
+        message: 'Host is required'
+      });
     }
     
     const novncUrl = `http://localhost:6081/vnc.html?host=${host}&port=${port}&password=123`;
