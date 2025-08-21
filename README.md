@@ -2,23 +2,65 @@
 
 A comprehensive IT asset monitoring system with VNC remote access capabilities.
 
-## 🚀 Quick Start
+## Quick Start
 
-### For all platforms:
+### Development Scripts
+
+The project now supports multiple environment configurations:
+
+#### For macOS (localhost):
 ```bash
+npm run mac
+```
+- **Backend**: http://localhost:3002
+- **Frontend**: http://localhost:8080
+- **VNC**: http://localhost:6081
+
+#### For Windows 10 (10.51.101.49):
+```bash
+npm run win10
+```
+- **Backend**: http://10.51.101.49:3002
+- **Frontend**: http://10.51.101.49:8081
+- **VNC**: http://10.51.101.49:6081
+
+#### For Windows 100 (100.117.205.41):
+```bash
+npm run win100
+```
+- **Backend**: http://100.117.205.41:3002
+- **Frontend**: http://100.117.205.41:8081
+- **VNC**: http://100.117.205.41:6081
+
+### Individual Server Scripts
+
+You can also run just the backend server for each environment:
+
+```bash
+# macOS
+npm run server:mac
+
+# Windows 10
+npm run server:win10
+
+# Windows 100
+npm run server:win100
+```
+
+### Legacy Scripts
+
+```bash
+# Original development (uses environment variables)
 npm run dev:full
-```
 
-### Alternative commands:
-```bash
-# Start backend only
-npm run server
-
-# Start frontend only  
+# Frontend only
 npm run dev
+
+# Backend only
+npm run server
 ```
 
-## 📱 Platform Support
+## �� Platform Support
 
 ### macOS (Development Mode)
 - **Host**: localhost

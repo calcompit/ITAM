@@ -13,10 +13,22 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// Environment configuration - Use server IP for production
+// Environment configuration - Use environment variables
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
-const HOST = '10.51.101.49'; // Always use server IP
+
+// Get HOST from environment variables with fallbacks
+const getHost = () => {
+  if (process.env.HOST) {
+    return process.env.HOST;
+  }
+  if (isDevelopment) {
+    return 'localhost';
+  }
+  return '10.51.101.49';
+};
+
+const HOST = getHost();
 const PORT = process.env.PORT || 3002;
 const FRONTEND_PORT = process.env.FRONTEND_PORT || 8080;
 const NOVNC_PORT = process.env.NOVNC_PORT || 6081;

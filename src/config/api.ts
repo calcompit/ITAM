@@ -1,21 +1,60 @@
 // API Configuration
+const getBackendUrl = () => {
+  // Check environment variables first
+  if (process.env.BACKEND_URL) {
+    return process.env.BACKEND_URL;
+  }
+  
+  // Fallback based on NODE_ENV
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:3002';
+  }
+  return 'http://10.51.101.49:3002';
+};
+
+const getFrontendUrl = () => {
+  // Check environment variables first
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL;
+  }
+  
+  // Fallback based on NODE_ENV
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:8080';
+  }
+  return 'http://10.51.101.49:8081';
+};
+
+const getNovncUrl = () => {
+  // Check environment variables first
+  if (process.env.NOVNC_URL) {
+    return process.env.NOVNC_URL;
+  }
+  
+  // Fallback based on NODE_ENV
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:6081';
+  }
+  return 'http://10.51.101.49:6081';
+};
+
 export const API_CONFIG = {
-  // Backend server URL - Use server IP for production
-  BACKEND_URL: 'http://10.51.101.49:3002',
+  // Backend server URL - Use environment variables
+  BACKEND_URL: getBackendUrl(),
   
   // API endpoints
-  API_BASE_URL: 'http://10.51.101.49:3002/api',
+  API_BASE_URL: `${getBackendUrl()}/api`,
   
   // VNC endpoints
-  VNC_STATUS: 'http://10.51.101.49:3002/api/vnc/status',
-  VNC_START: 'http://10.51.101.49:3002/api/vnc/start',
-  VNC_CONNECT: 'http://10.51.101.49:3002/api/vnc/connect',
+  VNC_STATUS: `${getBackendUrl()}/api/vnc/status`,
+  VNC_START: `${getBackendUrl()}/api/vnc/start`,
+  VNC_CONNECT: `${getBackendUrl()}/api/vnc/connect`,
   
   // noVNC web interface
-  NOVNC_URL: 'http://10.51.101.49:6081',
+  NOVNC_URL: getNovncUrl(),
   
   // Frontend URL
-  FRONTEND_URL: 'http://10.51.101.49:8080',
+  FRONTEND_URL: getFrontendUrl(),
   
   // Default VNC settings
   DEFAULT_VNC_PORT: 5900,
