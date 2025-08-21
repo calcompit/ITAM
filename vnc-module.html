@@ -37,6 +37,9 @@
 <body>
     <div id="status">Connecting to VNC...</div>
     <canvas id="vnc-canvas"></canvas>
+    
+    <!-- Simple mouse test button -->
+    <button id="mouse-test" style="position: fixed; top: 10px; right: 10px; z-index: 1001; padding: 5px 10px; background: #333; color: white; border: none; border-radius: 3px; cursor: pointer; display: none;">Test Mouse</button>
 
     <script type="module">
         import RFB from './core/rfb.js';
@@ -73,6 +76,19 @@
             
             // Check and fix canvas after connection
             setTimeout(checkAndFixCanvas, 1000);
+            
+            // Show mouse test button
+            const testButton = document.getElementById('mouse-test');
+            if (testButton) {
+                testButton.style.display = 'block';
+                testButton.onclick = function() {
+                    console.log('=== Mouse Test ===');
+                    console.log('Canvas dimensions:', rfb._canvas.width, 'x', rfb._canvas.height);
+                    console.log('Display dimensions:', rfb._canvas.getBoundingClientRect().width, 'x', rfb._canvas.getBoundingClientRect().height);
+                    console.log('Scale factors:', rfb._canvas.width / rfb._canvas.getBoundingClientRect().width, 'x', rfb._canvas.height / rfb._canvas.getBoundingClientRect().height);
+                    alert('Mouse test info logged to console. Try clicking on VNC screen and check console.');
+                };
+            }
         });
 
         rfb.addEventListener('disconnect', function(e) {
@@ -102,6 +118,55 @@
             console.log('Desktop name:', e.detail.name);
         });
 
+        // Mouse event handler for accurate VNC coordinates
+        function handleMouseEvent(event) {
+            if (!rfb || !rfb._canvas) return;
+            
+            const canvas = rfb._canvas;
+            const rect = canvas.getBoundingClientRect();
+            
+            // Calculate the actual VNC coordinates
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            // Convert to VNC coordinates using scale factors
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const vncX = Math.round(mouseX * scaleX);
+            const vncY = Math.round(mouseY * scaleY);
+            
+            // Ensure coordinates are within bounds
+            const boundedX = Math.max(0, Math.min(vncX, canvas.width - 1));
+            const boundedY = Math.max(0, Math.min(vncY, canvas.height - 1));
+            
+            // Prevent default browser behavior
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Send the event to VNC
+            if (rfb._mouse && rfb._mouse._sendPointer) {
+                let buttonMask = 0;
+                
+                if (event.type === 'mousedown' || event.type === 'click') {
+                    if (event.button === 0) buttonMask = 1; // Left button
+                    else if (event.button === 1) buttonMask = 2; // Middle button
+                    else if (event.button === 2) buttonMask = 4; // Right button
+                }
+                
+                rfb._mouse._sendPointer(boundedX, boundedY, buttonMask);
+                
+                if (event.type === 'click') {
+                    // Release button after click
+                    setTimeout(() => {
+                        rfb._mouse._sendPointer(boundedX, boundedY, 0);
+                    }, 50);
+                }
+            }
+            
+            console.log(`Mouse ${event.type}: (${mouseX}, ${mouseY}) -> VNC (${boundedX}, ${boundedY})`);
+        }
+
         // Function to check and fix canvas display
         function checkAndFixCanvas() {
             console.log('Checking canvas...');
@@ -123,6 +188,12 @@
                 
                 // Replace the canvas in DOM
                 htmlCanvas.parentNode.replaceChild(rfbCanvas, htmlCanvas);
+                
+                // Add mouse event handling for accurate coordinates
+                rfbCanvas.addEventListener('mousedown', handleMouseEvent, true);
+                rfbCanvas.addEventListener('mouseup', handleMouseEvent, true);
+                rfbCanvas.addEventListener('mousemove', handleMouseEvent, true);
+                rfbCanvas.addEventListener('click', handleMouseEvent, true);
                 
                 console.log('Canvas replaced with RFB internal canvas');
             } else {
