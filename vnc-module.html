@@ -60,7 +60,9 @@
             target: `${host}:${port}`,
             ignoreTLSWarnings: true,
             allowTLSWarnings: true,
-            suppressTLSWarnings: true
+            suppressTLSWarnings: true,
+            width: window.innerWidth,
+            height: window.innerHeight
         });
 
         // Connection events
@@ -68,6 +70,9 @@
             console.log('VNC Connected successfully');
             document.getElementById('status').textContent = 'Connected to VNC';
             document.getElementById('status').style.color = '#4ade80';
+            
+            // Check and fix canvas after connection
+            setTimeout(checkAndFixCanvas, 1000);
         });
 
         rfb.addEventListener('disconnect', function(e) {
@@ -96,6 +101,35 @@
         rfb.addEventListener('desktopname', function(e) {
             console.log('Desktop name:', e.detail.name);
         });
+
+        // Function to check and fix canvas display
+        function checkAndFixCanvas() {
+            console.log('Checking canvas...');
+            
+            // Check if RFB has internal canvas
+            if (rfb && rfb._canvas) {
+                console.log('RFB internal canvas found:', rfb._canvas);
+                console.log('Canvas dimensions:', rfb._canvas.width, 'x', rfb._canvas.height);
+                
+                // Replace the HTML canvas with RFB's internal canvas
+                const htmlCanvas = document.getElementById('vnc-canvas');
+                const rfbCanvas = rfb._canvas;
+                
+                // Copy styles from HTML canvas to RFB canvas
+                rfbCanvas.style.width = '100vw';
+                rfbCanvas.style.height = '100vh';
+                rfbCanvas.style.display = 'block';
+                rfbCanvas.style.cursor = 'crosshair';
+                
+                // Replace the canvas in DOM
+                htmlCanvas.parentNode.replaceChild(rfbCanvas, htmlCanvas);
+                
+                console.log('Canvas replaced with RFB internal canvas');
+            } else {
+                console.log('RFB internal canvas not found, retrying...');
+                setTimeout(checkAndFixCanvas, 500);
+            }
+        }
     </script>
 </body>
 </html>
