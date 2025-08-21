@@ -1516,7 +1516,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
     // Kill any existing websockify process on this port
     await killWebsockify(websockifyPort);
 
-    // Start websockify process
+    // Start websockify process (no password required)
     const websockifyProcess = spawn('websockify', [
       websockifyPort.toString(),
       `${host}:${port}`,
@@ -1570,7 +1570,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
         host,
         targetPort: port,
         sessionId: sessionInfo.sessionId,
-                    vncUrl: `http://10.51.101.49:${websockifyPort}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=`
+                    vncUrl: `http://10.51.101.49:${websockifyPort}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
       }
     });
 
@@ -1603,7 +1603,7 @@ app.get('/api/vnc/sessions', (req, res) => {
         targetPort: session.targetPort,
         sessionId: session.sessionId,
         createdAt: session.createdAt,
-        vncUrl: `http://localhost:${session.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=`
+        vncUrl: `http://10.51.101.49:${session.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
       }));
 
     res.json({
