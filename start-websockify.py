@@ -27,11 +27,11 @@ class WebSocketHandler(BaseHTTPRequestHandler):
             </head>
             <body>
                 <h1>VNC WebSocket Proxy</h1>
-                <p>Target: {target}</p>
+                <p>Target: 172.17.124.179:5900</p>
                 <p>Status: Running</p>
             </body>
             </html>
-            """.format(target=target)
+            """
             
             self.wfile.write(html.encode())
         else:
