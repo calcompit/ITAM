@@ -1527,8 +1527,12 @@ app.post('/api/vnc/start-session', async (req, res) => {
     // Start websockify process (no password required) - Cross-platform
     let websockifyProcess;
     
+    // Detect platform and use appropriate Python command
+    const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+    console.log(`[VNC] Using Python command: ${pythonCommand} on platform: ${process.platform}`);
+    
     // Use python -m websockify for all platforms
-    websockifyProcess = spawn('python', [
+    websockifyProcess = spawn(pythonCommand, [
       '-m', 'websockify',
       websockifyPort.toString(),
       `${host}:${port}`,
