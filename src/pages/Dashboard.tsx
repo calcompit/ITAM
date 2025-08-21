@@ -221,14 +221,15 @@ export function Dashboard({ activeTab }: DashboardProps) {
         let vncWindow = null;
         
         try {
-          // Method 1: Simple window.open
-          vncWindow = window.open(session.vncUrl, '_blank');
+          // Method 1: Force new window with specific features
+          const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no';
+          vncWindow = window.open(session.vncUrl, 'vnc_window', windowFeatures);
           console.log('Window open result:', vncWindow);
           
           if (!vncWindow || vncWindow.closed) {
-            // Method 2: Try with basic features
-            vncWindow = window.open(session.vncUrl, '_blank', 'width=1200,height=800');
-            console.log('Window open with features result:', vncWindow);
+            // Method 2: Try with minimal features
+            vncWindow = window.open(session.vncUrl, 'vnc_window', 'width=1200,height=800');
+            console.log('Window open with minimal features result:', vncWindow);
           }
           
           if (!vncWindow || vncWindow.closed) {

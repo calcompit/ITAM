@@ -102,8 +102,9 @@ export function Analytics() {
         
         console.log('Opening VNC URL in new window:', vncUrl);
         
-        // Try to open VNC window
-        const vncWindow = window.open(vncUrl, '_blank');
+        // Try to open VNC window as new window
+        const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no';
+        const vncWindow = window.open(vncUrl, 'vnc_window', windowFeatures);
         
         console.log('Window open result:', vncWindow);
         
