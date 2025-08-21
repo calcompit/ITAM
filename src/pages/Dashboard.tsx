@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { ComputerCard } from "@/components/computer-card";
+import { ComputerDetailsModal } from "@/components/computer-details-modal";
 import { IPGroupCard } from "@/components/ip-group-card";
 import { Analytics } from "@/pages/Analytics";
 import { AlertsPage } from "@/pages/AlertsPage";
@@ -37,6 +38,8 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [pinnedComputers, setPinnedComputers] = useState<string[]>([]);
   const [selectedSubnet, setSelectedSubnet] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
+  const [showComputerDetails, setShowComputerDetails] = useState(false);
 
   const { toast } = useToast();
   
@@ -159,6 +162,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
       .filter(computer => computer.isPinned)
       .map(computer => computer.machineID);
     savePinnedComputers(pinnedMachineIDs);
+  };
+
+  const handleComputerClick = (computer: APIComputer) => {
+    setSelectedComputer(computer);
+    setShowComputerDetails(true);
   };
 
   const handleVNC = async (ip: string, computerName: string) => {
@@ -587,7 +595,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
             key={computer.machineID}
             computer={computer}
             onPin={handlePin}
-            onClick={(computer) => {}}
+            onClick={handleComputerClick}
             onVNC={handleVNC}
           />
         ))}
@@ -595,6 +603,16 @@ export function Dashboard({ activeTab }: DashboardProps) {
 
       {/* Container for manual VNC links */}
       <div id="vnc-container"></div>
+
+      {/* Computer Details Modal */}
+      <ComputerDetailsModal
+        computer={selectedComputer}
+        open={showComputerDetails}
+        onClose={() => {
+          setShowComputerDetails(false);
+          setSelectedComputer(null);
+        }}
+      />
     </div>
   );
 }
