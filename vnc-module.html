@@ -4,14 +4,20 @@
     <meta charset="utf-8">
     <title>noVNC - ES6 Module VNC Client</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background: #000;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
+            height: 100vh;
         }
+
         #vnc-canvas {
             width: 100vw !important;
             height: 100vh !important;
@@ -20,162 +26,355 @@
             object-fit: contain;
             max-width: 100%;
             max-height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
+
+        /* Modern Status Bar */
         #status {
             position: fixed;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.9);
-            padding: 10px 15px;
-            border-radius: 8px;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.85);
+            padding: 12px 20px;
+            border-radius: 12px;
             z-index: 1000;
             font-size: 14px;
-            border: 1px solid #333;
-            backdrop-filter: blur(10px);
-        }
-        .status-connected { color: #00ff00; }
-        .status-connecting { color: #ffff00; }
-        .status-error { color: #ff0000; }
-
-        /* VNC Tool Menu */
-        #vnc-toolbar {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
-            border-radius: 8px;
-            padding: 10px;
-            z-index: 1001;
-            border: 1px solid #333;
-            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
             min-width: 200px;
         }
+        .status-connected { 
+            color: #4ade80; 
+            border-color: rgba(74, 222, 128, 0.3);
+        }
+        .status-connecting { 
+            color: #fbbf24; 
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+        .status-error { 
+            color: #f87171; 
+            border-color: rgba(248, 113, 113, 0.3);
+        }
+
+        /* Modern VNC Toolbar */
+        #vnc-toolbar {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.85);
+            border-radius: 16px;
+            padding: 20px;
+            z-index: 1001;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            min-width: 280px;
+            max-height: 80vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+        #vnc-toolbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        #vnc-toolbar::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+        }
+        #vnc-toolbar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 3px;
+        }
+
         .toolbar-section {
-            margin-bottom: 15px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
         }
         .toolbar-section:last-child {
             border-bottom: none;
             margin-bottom: 0;
         }
         .toolbar-title {
-            font-size: 12px;
-            color: #888;
-            margin-bottom: 8px;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 12px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-weight: 600;
         }
         .toolbar-button {
-            background: #333;
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
             color: #fff;
             border: none;
-            padding: 6px 12px;
-            margin: 2px;
-            border-radius: 4px;
+            padding: 8px 16px;
+            margin: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
         .toolbar-button:hover {
-            background: #555;
-            transform: translateY(-1px);
+            background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
         .toolbar-button.active {
-            background: #007acc;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
         .toolbar-button.danger {
-            background: #d32f2f;
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
         }
         .toolbar-button.danger:hover {
-            background: #f44336;
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
         }
+
         .toolbar-slider {
             width: 100%;
-            margin: 5px 0;
+            margin: 8px 0;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.1);
+            outline: none;
         }
+        .toolbar-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .toolbar-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
         .toolbar-label {
-            font-size: 11px;
-            color: #ccc;
-            margin: 5px 0;
+            font-size: 12px;
+            color: #cbd5e1;
+            margin: 8px 0 4px 0;
+            font-weight: 500;
         }
         .toolbar-value {
-            font-size: 10px;
-            color: #888;
+            font-size: 11px;
+            color: #94a3b8;
             text-align: center;
+            font-weight: 600;
         }
         .toolbar-toggle {
             display: flex;
             align-items: center;
-            margin: 5px 0;
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+        .toolbar-toggle:hover {
+            background: rgba(255,255,255,0.05);
         }
         .toolbar-toggle input[type="checkbox"] {
-            margin-right: 8px;
+            margin-right: 10px;
+            width: 16px;
+            height: 16px;
+            accent-color: #3b82f6;
         }
         .toolbar-toggle label {
-            font-size: 11px;
-            color: #ccc;
+            font-size: 12px;
+            color: #cbd5e1;
+            font-weight: 500;
         }
 
-        /* Minimize/Maximize Toolbar */
+        /* Modern Toolbar Toggle */
         #toolbar-toggle {
             position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.9);
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
             color: #fff;
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
             cursor: pointer;
             z-index: 1002;
-            font-size: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            backdrop-filter: blur(20px);
         }
         #toolbar-toggle:hover {
-            background: rgba(0,0,0,0.95);
+            background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
         }
         .toolbar-hidden #vnc-toolbar {
             display: none;
         }
 
-        /* Connection Info */
+        /* Modern Connection Info */
         #connection-info {
             position: fixed;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.9);
-            padding: 10px 15px;
-            border-radius: 8px;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.85);
+            padding: 16px 20px;
+            border-radius: 12px;
             z-index: 1000;
             font-size: 12px;
-            border: 1px solid #333;
-            backdrop-filter: blur(10px);
-            max-width: 300px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            max-width: 320px;
+            transition: all 0.3s ease;
         }
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin: 2px 0;
+            margin: 6px 0;
+            padding: 4px 0;
         }
         .info-label {
-            color: #888;
+            color: #94a3b8;
+            font-weight: 500;
         }
         .info-value {
             color: #fff;
+            font-weight: 600;
+        }
+
+        /* Multi-Monitor Controls */
+        #monitor-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.85);
+            border-radius: 12px;
+            padding: 16px;
+            z-index: 1000;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            min-width: 200px;
+        }
+        .monitor-button {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            margin: 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .monitor-button:hover {
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
 
         /* Loading Spinner */
         .loading {
             display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #333;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             border-top-color: #fff;
             animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
         }
         @keyframes spin {
             to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            #vnc-toolbar {
+                right: 10px;
+                left: 10px;
+                top: 10px;
+                max-height: 70vh;
+            }
+            #status, #connection-info {
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+            #monitor-controls {
+                right: 10px;
+                bottom: 10px;
+            }
+        }
+
+        /* Animation for toolbar */
+        .toolbar-enter {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Monitor Grid Layout */
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            height: 100vh;
+        }
+        .monitor-window {
+            background: rgba(0,0,0,0.9);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        .monitor-header {
+            background: rgba(0,0,0,0.8);
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .monitor-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+        .monitor-close {
+            background: #dc2626;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -184,12 +383,12 @@
         <span class="loading"></span> Connecting to VNC...
     </div>
     
-    <div id="toolbar-toggle" onclick="toggleToolbar()">⚙️ Tools</div>
+    <div id="toolbar-toggle" onclick="toggleToolbar()">⚙️ VNC Tools</div>
     
-    <div id="vnc-toolbar">
+    <div id="vnc-toolbar" class="toolbar-enter">
         <!-- Display Controls -->
         <div class="toolbar-section">
-            <div class="toolbar-title">Display</div>
+            <div class="toolbar-title">🖥️ Display</div>
             <button class="toolbar-button" onclick="fitToScreen()">📐 Fit Screen</button>
             <button class="toolbar-button" onclick="actualSize()">🔍 100%</button>
             <button class="toolbar-button" onclick="fullscreen()">⛶ Fullscreen</button>
@@ -199,7 +398,7 @@
 
         <!-- Quality Controls -->
         <div class="toolbar-section">
-            <div class="toolbar-title">Quality</div>
+            <div class="toolbar-title">🎨 Quality</div>
             <div class="toolbar-label">Quality Level</div>
             <input type="range" class="toolbar-slider" id="quality-slider" min="1" max="9" value="6" onchange="setQuality(this.value)">
             <div class="toolbar-value" id="quality-value">6</div>
@@ -211,7 +410,7 @@
 
         <!-- Connection Controls -->
         <div class="toolbar-section">
-            <div class="toolbar-title">Connection</div>
+            <div class="toolbar-title">🔗 Connection</div>
             <button class="toolbar-button" onclick="reconnect()">🔄 Reconnect</button>
             <button class="toolbar-button danger" onclick="disconnect()">❌ Disconnect</button>
             <button class="toolbar-button" onclick="toggleViewOnly()" id="viewonly-btn">👁️ View Only</button>
@@ -219,7 +418,7 @@
 
         <!-- Keyboard Controls -->
         <div class="toolbar-section">
-            <div class="toolbar-title">Keyboard</div>
+            <div class="toolbar-title">⌨️ Keyboard</div>
             <button class="toolbar-button" onclick="sendCtrlAltDel()">⌨️ Ctrl+Alt+Del</button>
             <button class="toolbar-button" onclick="sendPrintScreen()">📸 Print Screen</button>
             <button class="toolbar-button" onclick="toggleKeyboard()" id="keyboard-btn">⌨️ Keyboard</button>
@@ -227,7 +426,7 @@
 
         <!-- Clipboard Controls -->
         <div class="toolbar-section">
-            <div class="toolbar-title">Clipboard</div>
+            <div class="toolbar-title">📋 Clipboard</div>
             <button class="toolbar-button" onclick="copyFromRemote()">📋 Copy From</button>
             <button class="toolbar-button" onclick="pasteToRemote()">📋 Paste To</button>
             <button class="toolbar-button" onclick="clearClipboard()">🗑️ Clear</button>
@@ -235,7 +434,7 @@
 
         <!-- Mouse Controls -->
         <div class="toolbar-section">
-            <div class="toolbar-title">Mouse</div>
+            <div class="toolbar-title">🖱️ Mouse</div>
             <div class="toolbar-toggle">
                 <input type="checkbox" id="mouse-toggle" checked onchange="toggleMouse(this.checked)">
                 <label for="mouse-toggle">Enable Mouse</label>
@@ -245,6 +444,14 @@
                 <label for="cursor-toggle">Show Cursor</label>
             </div>
         </div>
+    </div>
+
+    <!-- Multi-Monitor Controls -->
+    <div id="monitor-controls">
+        <div class="toolbar-title">🖥️ Multi-Monitor</div>
+        <button class="monitor-button" onclick="addMonitor()">➕ Add Monitor</button>
+        <button class="monitor-button" onclick="splitScreen()">📐 Split Screen</button>
+        <button class="monitor-button" onclick="toggleMonitorGrid()" id="grid-btn">🔲 Grid View</button>
     </div>
 
     <div id="connection-info">
@@ -259,6 +466,10 @@
         <div class="info-row">
             <span class="info-label">Desktop:</span>
             <span class="info-value" id="desktop-info">-</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Resolution:</span>
+            <span class="info-value" id="resolution-info">-</span>
         </div>
     </div>
 
@@ -275,6 +486,8 @@
         let isKeyboardEnabled = true;
         let isMouseEnabled = true;
         let isCursorVisible = true;
+        let monitorCount = 0;
+        let isGridMode = false;
         
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -391,6 +604,7 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             console.log('Canvas resized on window resize:', canvas.width, 'x', canvas.height);
+            updateResolutionInfo();
         });
         
         // Function to check RFB canvas after connection
@@ -415,8 +629,19 @@
                 rfbCanvas.style.objectFit = 'contain';
                 rfbCanvas.style.maxWidth = '100%';
                 rfbCanvas.style.maxHeight = '100%';
+                rfbCanvas.style.borderRadius = '8px';
+                rfbCanvas.style.boxShadow = '0 8px 32px rgba(0,0,0,0.3)';
                 
                 console.log('Replaced canvas with RFB canvas');
+                updateResolutionInfo();
+            }
+        }
+
+        function updateResolutionInfo() {
+            if (rfb && rfb._canvas) {
+                const width = rfb._canvas.width;
+                const height = rfb._canvas.height;
+                document.getElementById('resolution-info').textContent = `${width} x ${height}`;
             }
         }
 
@@ -424,7 +649,7 @@
         window.toggleToolbar = function() {
             document.body.classList.toggle('toolbar-hidden');
             const toggle = document.getElementById('toolbar-toggle');
-            toggle.textContent = document.body.classList.contains('toolbar-hidden') ? '⚙️ Tools' : '⚙️ Tools';
+            toggle.textContent = document.body.classList.contains('toolbar-hidden') ? '⚙️ VNC Tools' : '⚙️ VNC Tools';
         };
 
         window.fitToScreen = function() {
@@ -583,6 +808,151 @@
                 rfb._canvas.style.cursor = visible ? 'default' : 'none';
                 console.log('Cursor visible:', visible);
             }
+        };
+
+        // Multi-Monitor Functions
+        window.addMonitor = function() {
+            monitorCount++;
+            const monitorId = `monitor-${monitorCount}`;
+            
+            // Create new monitor window
+            const monitorWindow = document.createElement('div');
+            monitorWindow.className = 'monitor-window';
+            monitorWindow.id = monitorId;
+            monitorWindow.style.position = 'fixed';
+            monitorWindow.style.top = '50px';
+            monitorWindow.style.left = '50px';
+            monitorWindow.style.width = '400px';
+            monitorWindow.style.height = '300px';
+            monitorWindow.style.zIndex = '999';
+            
+            monitorWindow.innerHTML = `
+                <div class="monitor-header">
+                    <div class="monitor-title">Monitor ${monitorCount}</div>
+                    <button class="monitor-close" onclick="closeMonitor('${monitorId}')">✕</button>
+                </div>
+                <div style="padding: 10px; color: #fff;">
+                    <p>New VNC connection to: ${host}:${port}</p>
+                    <button class="toolbar-button" onclick="connectToMonitor('${monitorId}')">Connect</button>
+                </div>
+            `;
+            
+            document.body.appendChild(monitorWindow);
+            console.log('Added monitor:', monitorId);
+        };
+
+        window.closeMonitor = function(monitorId) {
+            const monitor = document.getElementById(monitorId);
+            if (monitor) {
+                monitor.remove();
+                console.log('Closed monitor:', monitorId);
+            }
+        };
+
+        window.connectToMonitor = function(monitorId) {
+            // Create new VNC connection for this monitor
+            const monitorUrl = `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}&password=${password}&monitor=${monitorId}`;
+            window.open(monitorUrl, monitorId, 'width=800,height=600');
+        };
+
+        window.splitScreen = function() {
+            // Create split screen layout
+            const container = document.createElement('div');
+            container.className = 'monitor-grid';
+            container.style.position = 'fixed';
+            container.style.top = '0';
+            container.style.left = '0';
+            container.style.width = '100vw';
+            container.style.height = '100vh';
+            container.style.zIndex = '998';
+            container.style.background = '#1e3c72';
+            
+            // Create two monitor windows
+            for (let i = 1; i <= 2; i++) {
+                const monitorWindow = document.createElement('div');
+                monitorWindow.className = 'monitor-window';
+                monitorWindow.innerHTML = `
+                    <div class="monitor-header">
+                        <div class="monitor-title">Monitor ${i}</div>
+                        <button class="monitor-close" onclick="closeSplitScreen()">✕</button>
+                    </div>
+                    <div style="padding: 10px; color: #fff;">
+                        <p>Split screen monitor ${i}</p>
+                        <button class="toolbar-button" onclick="connectSplitMonitor(${i})">Connect</button>
+                    </div>
+                `;
+                container.appendChild(monitorWindow);
+            }
+            
+            document.body.appendChild(container);
+            console.log('Split screen created');
+        };
+
+        window.closeSplitScreen = function() {
+            const grid = document.querySelector('.monitor-grid');
+            if (grid) {
+                grid.remove();
+                console.log('Split screen closed');
+            }
+        };
+
+        window.connectSplitMonitor = function(monitorNum) {
+            const monitorUrl = `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}&password=${password}&monitor=${monitorNum}`;
+            window.open(monitorUrl, `split-${monitorNum}`, 'width=800,height=600');
+        };
+
+        window.toggleMonitorGrid = function() {
+            isGridMode = !isGridMode;
+            const btn = document.getElementById('grid-btn');
+            btn.textContent = isGridMode ? '🔲 Single View' : '🔲 Grid View';
+            btn.classList.toggle('active', isGridMode);
+            
+            if (isGridMode) {
+                // Create grid layout
+                const container = document.createElement('div');
+                container.className = 'monitor-grid';
+                container.style.position = 'fixed';
+                container.style.top = '0';
+                container.style.left = '0';
+                container.style.width = '100vw';
+                container.style.height = '100vh';
+                container.style.zIndex = '998';
+                container.style.background = '#1e3c72';
+                
+                // Create 4 monitor windows in grid
+                for (let i = 1; i <= 4; i++) {
+                    const monitorWindow = document.createElement('div');
+                    monitorWindow.className = 'monitor-window';
+                    monitorWindow.innerHTML = `
+                        <div class="monitor-header">
+                            <div class="monitor-title">Grid Monitor ${i}</div>
+                            <button class="monitor-close" onclick="closeGrid()">✕</button>
+                        </div>
+                        <div style="padding: 10px; color: #fff;">
+                            <p>Grid monitor ${i}</p>
+                            <button class="toolbar-button" onclick="connectGridMonitor(${i})">Connect</button>
+                        </div>
+                    `;
+                    container.appendChild(monitorWindow);
+                }
+                
+                document.body.appendChild(container);
+            } else {
+                closeGrid();
+            }
+        };
+
+        window.closeGrid = function() {
+            const grid = document.querySelector('.monitor-grid');
+            if (grid) {
+                grid.remove();
+                console.log('Grid closed');
+            }
+        };
+
+        window.connectGridMonitor = function(monitorNum) {
+            const monitorUrl = `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}&password=${password}&monitor=${monitorNum}`;
+            window.open(monitorUrl, `grid-${monitorNum}`, 'width=800,height=600');
         };
 
         // Initialize toolbar state
