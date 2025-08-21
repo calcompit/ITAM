@@ -1537,7 +1537,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
       '--web', path.join(process.cwd(), 'noVNC'),
       '--verbose',
       '--log-file', `websockify-${host}-${port}.log`,
-      '--run-once'
+      '--idle-timeout', '300'
     ], {
       cwd: path.join(process.cwd(), 'noVNC'),
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -1579,17 +1579,20 @@ app.post('/api/vnc/start-session', async (req, res) => {
 
     console.log(`Started VNC session for ${username} on port ${websockifyPort} -> ${host}:${port}`);
 
-    res.json({
-      success: true,
-      message: 'VNC session started successfully',
-      session: {
-        port: websockifyPort,
-        host,
-        targetPort: port,
-        sessionId: sessionInfo.sessionId,
-                    vncUrl: `http://10.51.101.49:${websockifyPort}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
-      }
-    });
+    // Wait a moment for websockify to start
+    setTimeout(() => {
+      res.json({
+        success: true,
+        message: 'VNC session started successfully',
+        session: {
+          port: websockifyPort,
+          host,
+          targetPort: port,
+          sessionId: sessionInfo.sessionId,
+          vncUrl: `http://10.51.101.49:${websockifyPort}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+        }
+      });
+    }, 1000);
 
   } catch (error) {
     console.error('Start VNC session error:', error);
