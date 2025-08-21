@@ -20,7 +20,7 @@ export default {
 		screens: {
 			'sm': '640px',
 			'md': '768px',
-			'lg': '1024px',
+			'lg': '1100px',
 			'xl': '1280px',
 			'2xl': '1500px',
 			'3xl': '1600px'
