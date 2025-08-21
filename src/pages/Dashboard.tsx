@@ -221,8 +221,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
         let vncWindow = null;
         
         try {
-          // Method 1: Direct window.open
-          vncWindow = window.open(session.vncUrl, 'vnc_window', windowFeatures);
+          // Method 1: Direct window.open with specific features
+          const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=yes,toolbar=yes,location=yes,status=yes';
+          vncWindow = window.open(session.vncUrl, '_blank', windowFeatures);
           console.log('Window open result:', vncWindow);
           
           if (!vncWindow || vncWindow.closed) {
