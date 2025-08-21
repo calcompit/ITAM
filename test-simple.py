@@ -29,7 +29,7 @@ def test_websockify():
         import websockify
         print("OK websockify is installed")
     except ImportError:
-        print("❌ websockify is not installed")
+        print("ERROR websockify is not installed")
         print("Please run: pip install websockify")
         return False
     
@@ -38,7 +38,7 @@ def test_websockify():
     if os.path.exists(novnc_dir):
         print(f"OK noVNC directory found: {novnc_dir}")
     else:
-        print(f"❌ noVNC directory not found: {novnc_dir}")
+        print(f"ERROR noVNC directory not found: {novnc_dir}")
         print("Please run: git clone https://github.com/novnc/noVNC.git")
         return False
     
@@ -46,7 +46,7 @@ def test_websockify():
     if check_port(6081):
         print("OK Port 6081 is available")
     else:
-        print("❌ Port 6081 is in use")
+        print("ERROR Port 6081 is in use")
         return False
     
     # Test websockify command (simple mode without --web)
@@ -84,13 +84,13 @@ def test_websockify():
             return True
         else:
             stdout, stderr = process.communicate()
-            print(f"❌ Websockify failed to start")
+            print(f"ERROR Websockify failed to start")
             print(f"STDOUT: {stdout.decode()}")
             print(f"STDERR: {stderr.decode()}")
             return False
             
     except Exception as e:
-        print(f"❌ Error testing websockify: {e}")
+        print(f"ERROR Error testing websockify: {e}")
         return False
 
 if __name__ == "__main__":
@@ -98,15 +98,15 @@ if __name__ == "__main__":
     if success:
         print("\nTest passed!")
         print("\nOK Websockify is working correctly!")
-        print("\n📋 Next steps:")
+        print("\nNext steps:")
         print("1. Start the application: start.bat")
         print("2. Open: http://localhost:8080")
         print("3. Click any IP address to start VNC")
         print("4. VNC will open at: http://localhost:6081/vnc.html")
         print("5. Use password: 123")
     else:
-        print("\n❌ Test failed!")
-        print("\n🔧 Troubleshooting:")
+        print("\nTest failed!")
+        print("\nTroubleshooting:")
         print("1. Check if noVNC directory exists")
         print("2. Run: pip install websockify")
         print("3. Check if port 6081 is available")
