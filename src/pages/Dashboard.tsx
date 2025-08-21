@@ -198,7 +198,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
         console.log('VNC connection initiated successfully');
         
         // Open VNC in a new window with specific size
-        const vncUrl = data.url;
+        const vncUrl = `http://localhost:6081/vnc.html?host=${ip}&port=5900&password=123`;
         const windowFeatures = 'width=1200,height=800,scrollbars=no,resizable=yes,status=no,location=no,toolbar=no,menubar=no';
         
         console.log(`Opening VNC URL in new window: ${vncUrl}`);
