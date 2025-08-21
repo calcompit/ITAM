@@ -51,11 +51,11 @@ const sqlConfig = {
   options: {
     encrypt: true,
     trustServerCertificate: true,
-    connectTimeout: 3000,
-    requestTimeout: 3000,
-    connectionRetryInterval: 500,
-    maxRetriesOnTries: 1,
-    cancelTimeout: 2000,
+    connectTimeout: 10000,
+    requestTimeout: 10000,
+    connectionRetryInterval: 1000,
+    maxRetriesOnTries: 3,
+    cancelTimeout: 5000,
     packetSize: 4096,
     useUTC: false,
     // Fix TLS warning by setting proper server name
