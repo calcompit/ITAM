@@ -11,6 +11,11 @@
             background: #000;
             overflow: hidden;
             height: 100vh;
+            /* Optimize for new window */
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
         
         #vnc-canvas {
@@ -18,6 +23,10 @@
             height: 100vh;
             display: block;
             cursor: crosshair;
+            /* Optimize for new window */
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
         }
         
         #status {
@@ -86,9 +95,22 @@
                     console.log('Canvas dimensions:', rfb._canvas.width, 'x', rfb._canvas.height);
                     console.log('Display dimensions:', rfb._canvas.getBoundingClientRect().width, 'x', rfb._canvas.getBoundingClientRect().height);
                     console.log('Scale factors:', rfb._canvas.width / rfb._canvas.getBoundingClientRect().width, 'x', rfb._canvas.height / rfb._canvas.getBoundingClientRect().height);
+                    console.log('Window size:', window.innerWidth, 'x', window.innerHeight);
                     alert('Mouse test info logged to console. Try clicking on VNC screen and check console.');
                 };
             }
+            
+            // Handle window resize for better mouse accuracy
+            window.addEventListener('resize', function() {
+                if (rfb && rfb._canvas) {
+                    console.log('Window resized to:', window.innerWidth, 'x', window.innerHeight);
+                    // Recalculate mouse coordinates after resize
+                    setTimeout(() => {
+                        const rect = rfb._canvas.getBoundingClientRect();
+                        console.log('Canvas rect after resize:', rect.width, 'x', rect.height);
+                    }, 100);
+                }
+            });
         });
 
         rfb.addEventListener('disconnect', function(e) {
