@@ -1079,7 +1079,7 @@ app.post('/api/vnc/start', async (req, res) => {
     res.json({
       success: true,
       message: 'noVNC started',
-      url: `http://10.51.101.49:6081/vnc-fixed.html?host=${host}&port=${port}&password=123`
+      url: `http://10.51.101.49:6081/vnc-simple.html?host=${host}&port=${port}&password=123`
     });
     
   } catch (error) {
@@ -1137,7 +1137,7 @@ app.post('/api/vnc/connect', async (req, res) => {
       });
     }
     
-    const novncUrl = `http://10.51.101.49:6081/vnc-fixed.html?host=${host}&port=${port}`;
+    const novncUrl = `http://10.51.101.49:6081/vnc-simple.html?host=${host}&port=${port}`;
     
     res.json({
       success: true,
