@@ -1311,49 +1311,16 @@ app.get('/api/vnc/health', (req, res) => {
   });
 });
 
-// VNC User authentication
+// VNC User authentication - Simplified (no database check, just session management)
 app.post('/api/vnc/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username } = req.body;
     
-    console.log('[VNC Login] Attempt:', { username, password: password ? '***' : 'undefined' });
+    console.log('[VNC Login] Attempt for user:', username);
     
-    if (!username || !password) {
-      console.log('[VNC Login] Missing credentials');
-      return res.status(400).json({ success: false, message: 'Username and password required' });
-    }
-
-    // Verify credentials against database (same as main login)
-    try {
-      const pool = await sql.connect(sqlConfig);
-      const result = await pool.request()
-        .input('username', sql.VarChar, username)
-        .input('password', sql.VarChar, password)
-        .query(`
-          SELECT TOP (1000) [username], [password]
-          FROM [mes].[dbo].[TBL_IT_MAINTAINUSER]
-          WHERE [username] = @username AND [password] = @password
-        `);
-
-      if (result.recordset.length === 0) {
-        console.log('[VNC Login] Invalid credentials for user:', username);
-        return res.status(401).json({ 
-          success: false, 
-          message: 'Invalid username or password' 
-        });
-      }
-      
-      console.log('[VNC Login] Credentials verified for user:', username);
-    } catch (dbError) {
-      console.error('[VNC Login] Database error:', dbError.message);
-      console.log('[VNC Login] Using fallback authentication for user:', username);
-      
-      // Fallback: Accept any user if database is down
-      // This allows VNC to work even when database is unavailable
-      console.log('[VNC Login] Fallback authentication successful for user:', username);
-      
-      // Don't return error, continue with fallback authentication
-      // Accept any username/password when database is down
+    if (!username) {
+      console.log('[VNC Login] Missing username');
+      return res.status(400).json({ success: false, message: 'Username required' });
     }
 
     // Check if user is already logged in elsewhere
@@ -1393,7 +1360,7 @@ app.post('/api/vnc/login', async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Login successful (replaced old session)',
+      message: 'VNC access granted',
       user: { username },
       replacedOldSession: true
     });
@@ -1489,37 +1456,37 @@ app.get('/api/vnc/sessions/status', async (req, res) => {
   }
 });
 
-// Start VNC session
+// Start VNC session - Simplified (no authentication check)
 app.post('/api/vnc/start-session', async (req, res) => {
   try {
-    const { host, port = 5900, sessionId, username } = req.body;
+    const { host, port = 5900, sessionId, username = 'default' } = req.body;
     
     console.log('[VNC Start Session] Request:', { host, port, username });
-    console.log('[VNC Start Session] Authenticated users:', Array.from(authenticatedUsers.keys()));
     
-    if (!host || !username) {
-      console.log('[VNC Start Session] Missing host or username');
+    if (!host) {
+      console.log('[VNC Start Session] Missing host');
       return res.status(400).json({
         success: false,
-        message: 'Host and username required'
+        message: 'Host required'
       });
     }
 
-    // Check authentication
+    // Auto-authenticate user if not exists
     if (!authenticatedUsers.has(username)) {
-      console.log('[VNC Start Session] User not authenticated:', username);
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
+      console.log('[VNC Start Session] Auto-authenticating user:', username);
+      authenticatedUsers.set(username, {
+        username,
+        authenticatedAt: new Date(),
+        lastActivity: new Date()
       });
+    } else {
+      // Update last activity
+      const currentUserInfo = authenticatedUsers.get(username);
+      currentUserInfo.lastActivity = new Date();
+      authenticatedUsers.set(username, currentUserInfo);
     }
     
-    // Update last activity
-    const currentUserInfo = authenticatedUsers.get(username);
-    currentUserInfo.lastActivity = new Date();
-    authenticatedUsers.set(username, currentUserInfo);
-    
-    console.log('[VNC Start Session] User authenticated:', username);
+    console.log('[VNC Start Session] User ready:', username);
 
     // Check if user already has an active session for the same target
     for (const [sessionPort, session] of activeSessions) {

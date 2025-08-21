@@ -165,45 +165,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
     try {
       console.log(`Starting VNC for IP: ${ip} (${computerName})`);
       
-      const currentUser = localStorage.getItem('currentUser');
-      const currentPassword = localStorage.getItem('currentPassword');
+      const currentUser = localStorage.getItem('currentUser') || 'default';
       
-      if (!currentUser || !currentPassword) {
-        toast({
-          title: "Not Authenticated",
-          description: "Please login to the main application first",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Login to VNC service
-      console.log('Attempting VNC login with:', { username: currentUser, password: currentPassword ? '***' : 'undefined' });
-      
-      const loginResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: currentUser, password: currentPassword })
-      });
-
-      console.log('VNC login response status:', loginResponse.status);
-      
-      if (!loginResponse.ok) {
-        const errorData = await loginResponse.json().catch(() => ({}));
-        console.error('VNC login error:', errorData);
-        
-        toast({
-          title: "VNC Authentication Failed",
-          description: errorData.message || "Please login to the main application first",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const loginResult = await loginResponse.json();
-      console.log('VNC login successful:', loginResult);
-
-      // Start VNC session
+      // Start VNC session directly (no login required)
       const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

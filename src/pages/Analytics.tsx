@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Search, Filter, BarChart3, Cpu, HardDrive, MemoryStick, CheckCircle, AlertTriangle } from "lucide-react";
 import { apiService, type APIComputer } from "@/services/api";
 import { websocketService } from "@/services/websocket";
+import { API_CONFIG } from "@/config/api";
+import { useToast } from "@/hooks/use-toast";
 
 export function Analytics() {
   const [computers, setComputers] = useState<APIComputer[]>([]);
@@ -23,6 +25,7 @@ export function Analytics() {
   const [error, setError] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const { toast } = useToast();
 
   // Load pinned computers from localStorage
   const loadPinnedComputers = (): string[] => {
@@ -40,6 +43,116 @@ export function Analytics() {
       localStorage.setItem('pinnedComputers', JSON.stringify(pinnedMachineIDs));
     } catch (error) {
       // Ignore localStorage errors
+    }
+  };
+
+  // VNC connection handler
+  const handleVNC = async (ip: string, computerName: string) => {
+    try {
+      console.log(`Starting VNC for IP: ${ip} (${computerName})`);
+      
+      const currentUser = localStorage.getItem('currentUser') || 'default';
+      
+      // Start VNC session directly (no login required)
+      const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: currentUser, 
+          host: ip, 
+          port: 5900 
+        })
+      });
+
+      let session = null;
+      if (sessionResponse.ok) {
+        const result = await sessionResponse.json();
+        session = result.session;
+      } else if (sessionResponse.status === 409) {
+        // User already has an active session for this target
+        const result = await sessionResponse.json();
+        if (result.existingSession) {
+          session = {
+            port: result.existingSession.port,
+            host: result.existingSession.host,
+            targetPort: result.existingSession.targetPort,
+            sessionId: result.existingSession.sessionId,
+            vncUrl: `http://10.51.101.49:${result.existingSession.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=`
+          };
+        }
+      }
+
+      // Wait for websockify to be ready (simplified approach)
+      if (session) {
+        console.log('Starting VNC Connection...');
+        toast({
+          title: "Starting VNC Connection",
+          description: `Connecting to ${computerName} (${ip})...`,
+        });
+        
+        // Simple delay instead of CORS-prone fetch check
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        console.log(`Proceeding with VNC connection on port ${session.port}`);
+      }
+      
+      if (session) {
+        console.log('VNC session started/retrieved successfully');
+        
+        const vncUrl = session.vncUrl || `http://10.51.101.49:${session.port}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=`;
+        
+        console.log('Opening VNC URL in new window:', vncUrl);
+        
+        // Try to open VNC window
+        const vncWindow = window.open(vncUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+        
+        console.log('Window open result:', vncWindow);
+        
+        if (!vncWindow) {
+          // Popup blocked - show manual link
+          toast({
+            title: "Popup Blocked",
+            description: "Please allow popups or click the link below to open VNC",
+            variant: "destructive",
+          });
+          
+          // Create manual link container if it doesn't exist
+          let vncContainer = document.getElementById('vnc-container');
+          if (!vncContainer) {
+            vncContainer = document.createElement('div');
+            vncContainer.id = 'vnc-container';
+            vncContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; background: white; border: 1px solid #ccc; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);';
+            document.body.appendChild(vncContainer);
+          }
+          
+          vncContainer.innerHTML = `
+            <div style="margin-bottom: 10px; font-weight: bold;">VNC Connections</div>
+            <div style="margin-bottom: 5px;">
+              <a href="${vncUrl}" target="_blank" style="color: blue; text-decoration: underline;">
+                ${computerName} (${ip})
+              </a>
+            </div>
+            <button onclick="this.parentElement.remove()" style="background: #f44336; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">
+              Close
+            </button>
+          `;
+          
+          // Auto-remove after 30 seconds
+          setTimeout(() => {
+            if (vncContainer && vncContainer.parentElement) {
+              vncContainer.remove();
+            }
+          }, 30000);
+        }
+      } else {
+        throw new Error('Failed to start VNC session');
+      }
+    } catch (error) {
+      console.error('Failed to start VNC session', error);
+      toast({
+        title: "VNC Connection Failed",
+        description: "Failed to start VNC session. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -445,6 +558,7 @@ export function Analytics() {
             computer={computer}
             onPin={handlePin}
             onClick={(computer) => setSelectedComputer(computer)}
+            onVNC={(ip, computerName) => handleVNC(ip, computerName)}
           />
         ))}
       </div>
