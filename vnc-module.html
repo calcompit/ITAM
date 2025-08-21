@@ -118,6 +118,9 @@
             
             document.getElementById('status').textContent = 'Connected to VNC';
             document.getElementById('status').className = 'status-connected';
+            
+            // Check and replace with RFB canvas after connection
+            setTimeout(checkRFBCanvas, 1000);
         });
 
         rfb.addEventListener('disconnect', function(e) {
@@ -189,6 +192,33 @@
             console.log('Canvas resized on window resize:', canvas.width, 'x', canvas.height);
         });
         
+        // Function to check RFB canvas after connection
+        function checkRFBCanvas() {
+            if (rfb && rfb._canvas) {
+                console.log('RFB Canvas found:', rfb._canvas);
+                console.log('RFB Canvas size:', rfb._canvas.width, 'x', rfb._canvas.height);
+                
+                // Replace our canvas with RFB's canvas
+                const rfbCanvas = rfb._canvas;
+                const container = canvas.parentNode;
+                container.removeChild(canvas);
+                container.appendChild(rfbCanvas);
+                
+                // Apply our styles to RFB canvas
+                rfbCanvas.style.width = '100vw !important';
+                rfbCanvas.style.height = '100vh !important';
+                rfbCanvas.style.display = 'block';
+                rfbCanvas.style.margin = '0 auto';
+                rfbCanvas.style.background = '#000';
+                rfbCanvas.style.cursor = 'none';
+                rfbCanvas.style.objectFit = 'contain';
+                rfbCanvas.style.maxWidth = '100%';
+                rfbCanvas.style.maxHeight = '100%';
+                
+                console.log('Replaced canvas with RFB canvas');
+            }
+        }
+        
         // Check if canvas is being updated
         setInterval(() => {
             const ctx = canvas.getContext('2d');
@@ -196,6 +226,12 @@
             const hasData = imageData.data.some(pixel => pixel !== 0);
             if (hasData) {
                 console.log('Canvas has image data!');
+            }
+            
+            // Also check RFB display
+            if (rfb && rfb._display) {
+                console.log('RFB Display object:', rfb._display);
+                console.log('RFB Display properties:', Object.getOwnPropertyNames(rfb._display));
             }
         }, 5000);
     </script>
