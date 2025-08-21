@@ -36,8 +36,9 @@ if not exist "node_modules" (
 REM Start the application
 echo Starting application...
 echo.
-echo Frontend will be available at: http://localhost:8081
-echo Backend will be available at: http://localhost:3002
+echo Frontend will be available at: http://10.51.101.49:8081
+echo Backend will be available at: http://10.51.101.49:3002
+echo WebSockify will be available at: http://10.51.101.49:6081
 echo.
 echo Press Ctrl+C to stop all services
 echo.

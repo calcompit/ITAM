@@ -202,7 +202,11 @@ async function killWebsockify(port) {
   try {
     const { exec } = await import('child_process');
     return new Promise((resolve) => {
-      exec(`pkill -f "websockify.*${port}"`, (error) => {
+      const command = process.platform === 'win32' 
+        ? `taskkill /f /im python.exe /fi "WINDOWTITLE eq websockify*${port}*" 2>nul`
+        : `pkill -f "websockify.*${port}"`;
+      
+      exec(command, (error) => {
         if (error) {
           console.log(`No websockify process found on port ${port}`);
         } else {
@@ -1274,7 +1278,7 @@ app.post('/api/vnc/start', async (req, res) => {
     res.json({
       success: true,
       message: 'noVNC started',
-      url: `http://10.51.101.49:6081/vnc-module.html?host=${host}&port=${port}&password=123`,
+      url: `http://10.51.101.49:6081/vnc.html?host=${host}&port=${port}&password=123`,
       target: `${host}:${port}`
     });
     
@@ -1521,12 +1525,17 @@ app.post('/api/vnc/start-session', async (req, res) => {
     // Kill any existing websockify process on this port
     await killWebsockify(websockifyPort);
 
-    // Start websockify process (no password required) - Completely silent mode
-    const websockifyProcess = spawn('bash', [
-      '-c',
-      `websockify ${websockifyPort} ${host}:${port} --web noVNC > /dev/null 2>&1 &`
+    // Start websockify process (no password required) - Cross-platform
+    const websockifyProcess = spawn('python', [
+      '-m', 'websockify',
+      websockifyPort.toString(),
+      `${host}:${port}`,
+      '--web', path.join(process.cwd(), 'noVNC'),
+      '--verbose',
+      '--log-file', `websockify-${host}-${port}.log`
     ], {
-      stdio: ['ignore', 'ignore', 'ignore'],
+      cwd: path.join(process.cwd(), 'noVNC'),
+      stdio: ['ignore', 'pipe', 'pipe'],
       detached: true
     });
 
