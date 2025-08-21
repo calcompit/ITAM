@@ -1198,7 +1198,7 @@ app.post('/api/vnc/start', async (req, res) => {
       res.json({
         success: true,
         message: 'noVNC is already running',
-        url: `http://localhost:${webPort}/vnc.html?host=${host}&port=${port}&password=123`
+        url: `http://10.51.101.49:${webPort}/vnc.html?host=${host}&port=${port}&password=123`
       });
       return;
     }
@@ -1292,7 +1292,7 @@ app.post('/api/vnc/start', async (req, res) => {
 async function checkNovncStatus() {
   try {
     const { default: fetch } = await import('node-fetch');
-              const response = await fetch('http://10.51.101.49:6081', { 
+    const response = await fetch('http://10.51.101.49:6081', { 
       timeout: 2000,
       method: 'HEAD'
     });

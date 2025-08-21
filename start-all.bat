@@ -46,3 +46,4 @@ REM Start the application using npm script
 npm run dev:full
 
 pause
+

@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  // Backend server URL (Windows server)
+  // Backend server URL (production: 10.51.101.49)
   BACKEND_URL: 'http://10.51.101.49:3002',
   
   // API endpoints
@@ -11,10 +11,10 @@ export const API_CONFIG = {
   VNC_START: 'http://10.51.101.49:3002/api/vnc/start',
   VNC_CONNECT: 'http://10.51.101.49:3002/api/vnc/connect',
   
-  // noVNC web interface (Windows server)
+  // noVNC web interface (production: 10.51.101.49)
   NOVNC_URL: 'http://10.51.101.49:6081',
   
-  // Frontend URL (Windows server)
+  // Frontend URL (production: 10.51.101.49)
   FRONTEND_URL: 'http://10.51.101.49:8081',
   
   // Default VNC settings
