@@ -38,8 +38,8 @@
     <canvas id="vnc-canvas"></canvas>
 
     <script type="module">
-        // Import RFB from the ES6 module
-        import { RFB } from './core/rfb.js';
+        // Import RFB from the ES6 module (default export)
+        import RFB from './core/rfb.js';
         
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
