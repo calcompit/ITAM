@@ -9,6 +9,7 @@ import {
   LogOut,
   Home
 } from "lucide-react";
+import { useStatus } from "@/contexts/StatusContext";
 
 interface SidebarNavProps {
   activeTab: string;
@@ -39,6 +40,8 @@ export const sidebarNavItems = [
 ] as const
 
 export function SidebarNav({ activeTab, onTabChange, onLogout, user }: SidebarNavProps) {
+  const { lastUpdate, connectionStatus } = useStatus();
+  
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: Monitor },
     { id: "pinned", label: "Pinned", icon: Pin },
@@ -56,6 +59,28 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user }: SidebarNa
         <h1 className="text-xl font-bold text-foreground">IT Asset Monitor</h1>
         <p className="text-sm text-muted-foreground">Real-time tracking</p>
         <p className="text-xs text-muted-foreground mt-2">User: {user.username}</p>
+        <div className="mt-2 p-2 bg-muted rounded text-xs">
+          <div className="flex items-center gap-1">
+            <div className={`w-2 h-2 rounded-full ${
+              connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' :
+              connectionStatus === 'fallback' ? 'bg-yellow-500 animate-pulse' :
+              'bg-red-500'
+            }`}></div>
+            <span className="text-muted-foreground">Last Update:</span>
+            <span className="font-mono">{lastUpdate.toLocaleTimeString()}</span>
+          </div>
+          <div className="text-muted-foreground mt-1">
+            Status: <span className={
+              connectionStatus === 'connected' ? 'text-green-600' :
+              connectionStatus === 'fallback' ? 'text-yellow-600' :
+              'text-red-600'
+            }>
+              {connectionStatus === 'connected' ? 'Connected' :
+               connectionStatus === 'fallback' ? 'Using Cache' :
+               'Disconnected'}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Navigation */}

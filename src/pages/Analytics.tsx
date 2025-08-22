@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Filter, BarChart3, Cpu, HardDrive, MemoryStick, CheckCircle, AlertTriangle } from "lucide-react";
 import { apiService, type APIComputer } from "@/services/api";
 import { websocketService } from "@/services/websocket";
+import { useStatus } from "@/contexts/StatusContext";
 import { API_CONFIG } from "@/config/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,6 +27,7 @@ export function Analytics() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const { toast } = useToast();
+  const { updateStatus, updateLastUpdate } = useStatus();
 
   // Load pinned computers from localStorage
   const loadPinnedComputers = (): string[] => {
@@ -189,8 +191,11 @@ export function Analytics() {
         setComputers(computersWithPinnedStatus);
         setAnalyticsData(analytics);
         setError(null);
+        updateStatus('connected');
+        updateLastUpdate();
       } catch (err) {
         console.error('Failed to load data:', err);
+        updateStatus('fallback');
         // Don't set error since we're using fallback data
         // setError('Failed to load data from server');
       } finally {

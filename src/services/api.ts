@@ -56,8 +56,53 @@ class ApiService {
       return await response.json();
     } catch (error) {
       console.error('API request failed:', error);
-      // Return fallback data instead of throwing error
-      return this.getFallbackData(endpoint) as T;
+      // Return cached data if available, otherwise fallback data
+      return this.getCachedOrFallbackData(endpoint) as T;
+    }
+  }
+
+  private getCachedOrFallbackData(endpoint: string): any {
+    console.log(`[CACHE] Using cached/fallback data for endpoint: ${endpoint}`);
+    
+    // Try to get cached data first
+    const cachedData = this.getCachedData(endpoint);
+    if (cachedData) {
+      console.log(`[CACHE] Found cached data for ${endpoint}`);
+      return cachedData;
+    }
+    
+    // If no cached data, use fallback
+    console.log(`[FALLBACK] No cached data, using fallback for ${endpoint}`);
+    return this.getFallbackData(endpoint);
+  }
+
+  private getCachedData(endpoint: string): any {
+    try {
+      const cacheKey = `api_cache_${endpoint}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const data = JSON.parse(cached);
+        // Check if cache is not too old (1 hour)
+        if (data.timestamp && (Date.now() - data.timestamp) < 3600000) {
+          return data.data;
+        }
+      }
+    } catch (error) {
+      console.error('Error reading cached data:', error);
+    }
+    return null;
+  }
+
+  private setCachedData(endpoint: string, data: any): void {
+    try {
+      const cacheKey = `api_cache_${endpoint}`;
+      const cacheData = {
+        data: data,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    } catch (error) {
+      console.error('Error setting cached data:', error);
     }
   }
 
@@ -132,7 +177,13 @@ class ApiService {
   }
 
   async getComputers(): Promise<APIComputer[]> {
-    return this.request<APIComputer[]>('/computers');
+    try {
+      const data = await this.request<APIComputer[]>('/computers');
+      this.setCachedData('/computers', data);
+      return data;
+    } catch (error) {
+      return this.getCachedOrFallbackData('/computers');
+    }
   }
 
   async getComputerChangelog(machineID: string): Promise<APIComputer['changelog']> {
@@ -140,7 +191,13 @@ class ApiService {
   }
 
   async getIPGroups(): Promise<IPGroup[]> {
-    return this.request<IPGroup[]>('/ip-groups');
+    try {
+      const data = await this.request<IPGroup[]>('/ip-groups');
+      this.setCachedData('/ip-groups', data);
+      return data;
+    } catch (error) {
+      return this.getCachedOrFallbackData('/ip-groups');
+    }
   }
 
   async getHealth(): Promise<{ status: string; timestamp: string }> {

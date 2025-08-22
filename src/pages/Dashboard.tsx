@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
+import { useStatus } from "@/contexts/StatusContext";
 
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
@@ -44,6 +45,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [updatedMachineIDs, setUpdatedMachineIDs] = useState<Set<string>>(new Set());
 
   const { toast } = useToast();
+  const { updateStatus, updateLastUpdate } = useStatus();
   
   // Load pinned computers from localStorage
   const loadPinnedComputers = (): string[] => {
@@ -88,15 +90,16 @@ export function Dashboard({ activeTab }: DashboardProps) {
         setComputers(computersWithPinnedStatus);
         setIpGroups(ipGroupsData);
         setError(null);
+        updateStatus('connected');
+        updateLastUpdate();
       } catch (err) {
         console.error('Failed to load data:', err);
-        // Don't show error toast since we're using fallback data
-        // setError(errorMessage);
+        updateStatus('fallback');
         
         // Show info toast instead
         toast({
-          title: "Using Fallback Data",
-          description: "Database connection failed, showing fallback data",
+          title: "Using Cached Data",
+          description: "Database connection failed, showing cached data",
           variant: "default",
           duration: 3000,
         });
