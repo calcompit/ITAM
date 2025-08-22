@@ -9,25 +9,26 @@ import { ComputerDetailsModal } from "@/components/computer-details-modal";
 import { Button } from "@/components/ui/button";
 import { Search, Filter, BarChart3, Cpu, HardDrive, MemoryStick, CheckCircle, AlertTriangle } from "lucide-react";
 import { apiService, type APIComputer } from "@/services/api";
+import { websocketService } from "@/services/websocket";
 import { useStatus } from "@/contexts/StatusContext";
 import { API_CONFIG } from "@/config/api";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-interface AnalyticsProps {
-  computers: APIComputer[];
-  onPin: (machineID: string) => void;
-}
-
-export function Analytics({ computers, onPin }: AnalyticsProps) {
+export function Analytics() {
+  const [computers, setComputers] = useState<APIComputer[]>([]);
   const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [cpuFilter, setCpuFilter] = useState<string>("all");
   const [ramFilter, setRamFilter] = useState<string>("all");
   const [storageFilter, setStorageFilter] = useState<string>("all");
   const [activatedFilter, setActivatedFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const { toast } = useToast();
+  const { updateStatus, updateLastUpdate } = useStatus();
   
   // VNC Connection Modal States
   const [showVncModal, setShowVncModal] = useState(false);
@@ -230,22 +231,129 @@ export function Analytics({ computers, onPin }: AnalyticsProps) {
     }
   };
 
-  // Load analytics data only
+  // Load pinned computers from localStorage
+  const loadPinnedComputers = (): string[] => {
+    try {
+      const pinned = localStorage.getItem('pinnedComputers');
+      return pinned ? JSON.parse(pinned) : [];
+    } catch (error) {
+      return [];
+    }
+  };
+
+  // Save pinned computers to localStorage
+  const savePinnedComputers = (pinnedMachineIDs: string[]) => {
+    try {
+      localStorage.setItem('pinnedComputers', JSON.stringify(pinnedMachineIDs));
+    } catch (error) {
+      // Ignore localStorage errors
+    }
+  };
+
+  // Load data from API
   useEffect(() => {
-    const loadAnalytics = async () => {
+    const loadData = async (showLoading = true) => {
       try {
-        const analytics = await apiService.getAnalytics();
+        if (showLoading) {
+          setLoading(true);
+        }
+        const [computersData, analytics] = await Promise.all([
+          apiService.getComputers(),
+          apiService.getAnalytics()
+        ]);
+        
+        // Load pinned computers from localStorage
+        const pinnedMachineIDs = loadPinnedComputers();
+        
+        // Set pinned status for computers
+        const computersWithPinnedStatus = computersData.map(computer => ({
+          ...computer,
+          isPinned: pinnedMachineIDs.includes(computer.machineID)
+        }));
+        
+        setComputers(computersWithPinnedStatus);
         setAnalyticsData(analytics);
+        setError(null);
+        updateStatus('connected');
+        updateLastUpdate();
       } catch (err) {
-        console.error('Failed to load analytics:', err);
+        console.error('Failed to load data:', err);
+        updateStatus('disconnected');
+        // Don't update data, keep existing data
+        // Don't set error since we're keeping existing data
+        // setError('Failed to load data from server');
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+        setIsInitialLoad(false);
       }
     };
 
-    loadAnalytics();
+    loadData();
+
+    // Connect to WebSocket for realtime updates
+    websocketService.connect();
+    
+    // Listen for data changes (legacy - not used anymore)
+    const handleDataChange = (data: any) => {
+      // This is handled by handleDataUpdate now
+    };
+
+    // Listen for data updates (smooth updates without refresh)
+    const handleDataUpdate = (data: any) => {
+      if (data.data?.updatedComputers) {
+        setComputers(prevComputers => {
+          const updatedComputers = [...prevComputers];
+          
+          data.data.updatedComputers.forEach((updatedComputer: APIComputer) => {
+            const existingIndex = updatedComputers.findIndex(c => c.machineID === updatedComputer.machineID);
+            
+            if (existingIndex >= 0) {
+              // Preserve pinned status
+              const wasPinned = updatedComputers[existingIndex].isPinned;
+              updatedComputers[existingIndex] = { ...updatedComputer, isPinned: wasPinned };
+            } else {
+              // New computer
+              updatedComputers.push(updatedComputer);
+            }
+          });
+          
+          return updatedComputers;
+        });
+      }
+    };
+
+    websocketService.on('data_change', handleDataChange);
+    websocketService.on('data_update', handleDataUpdate);
+
+    // Fallback: Set up polling every 30 seconds if WebSocket fails
+    const interval = setInterval(loadData, 30000);
+
+    return () => {
+      clearInterval(interval);
+      websocketService.off('data_change', handleDataChange);
+      websocketService.off('data_update', handleDataUpdate);
+      websocketService.disconnect();
+    };
   }, []);
 
   const handlePin = (machineID: string) => {
-    onPin(machineID);
+    setComputers(prev => {
+      const updatedComputers = prev.map(comp => 
+        comp.machineID === machineID 
+          ? { ...comp, isPinned: !comp.isPinned }
+          : comp
+      );
+      
+      // Save pinned computers to localStorage
+      const pinnedMachineIDs = updatedComputers
+        .filter(comp => comp.isPinned)
+        .map(comp => comp.machineID);
+      savePinnedComputers(pinnedMachineIDs);
+      
+      return updatedComputers;
+    });
   };
 
   // Extract CPU types

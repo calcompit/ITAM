@@ -569,7 +569,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
 
   // Show Analytics page
   if (activeTab === "analytics") {
-    return <Analytics computers={computers} onPin={handlePin} />;
+    return <Analytics />;
   }
 
   // Show Alerts page
