@@ -367,17 +367,36 @@ async function killWebsockify(port) {
   }
 }
 
-function cleanupSession(port) {
+async function cleanupSession(port) {
   console.log(`[VNC Cleanup] Cleaning up session on port ${port}`);
   const session = activeSessions.get(port);
+  
   if (session && session.process) {
     console.log(`[VNC Cleanup] Killing process for session on port ${port}`);
     try {
-      session.process.kill();
+      session.process.kill('SIGTERM');
+      
+      // Wait a bit for graceful shutdown
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Force kill if still alive
+      if (!session.process.killed) {
+        console.log(`[VNC Cleanup] Force killing process on port ${port}`);
+        session.process.kill('SIGKILL');
+      }
     } catch (error) {
       console.log(`[VNC Cleanup] Error killing process: ${error.message}`);
     }
   }
+  
+  // Kill websockify process on this port
+  try {
+    await killWebsockify(port);
+  } catch (error) {
+    console.log(`[VNC Cleanup] Error killing websockify: ${error.message}`);
+  }
+  
+  // Remove from active sessions
   activeSessions.delete(port);
   console.log(`[VNC Cleanup] Removed session from activeSessions. Remaining sessions:`, Array.from(activeSessions.keys()));
 }
@@ -1668,13 +1687,33 @@ app.post('/api/vnc/start-session', async (req, res) => {
       }
     }
     
-    // Kill existing sessions
+    // Kill existing sessions with delay to ensure cleanup
     for (const sessionPort of sessionsToKill) {
       console.log(`[VNC Start Session] Killing existing session on port ${sessionPort} for user: ${username}`);
-      cleanupSession(sessionPort);
+      await cleanupSession(sessionPort);
+      // Wait a bit for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Double-check cleanup by killing any remaining sessions for this user
+    const remainingSessions = [];
+    for (const [sessionPort, session] of activeSessions) {
+      if (session.username === username) {
+        remainingSessions.push(sessionPort);
+      }
+    }
+    
+    if (remainingSessions.length > 0) {
+      console.log(`[VNC Start Session] Force killing remaining sessions:`, remainingSessions);
+      for (const sessionPort of remainingSessions) {
+        await cleanupSession(sessionPort);
+      }
+      // Wait for final cleanup
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     // Find available port
+    console.log(`[VNC Start Session] Current active sessions before port selection:`, Array.from(activeSessions.keys()));
     const websockifyPort = findAvailablePort();
     console.log(`[VNC Start Session] Selected port: ${websockifyPort}`);
     if (!websockifyPort) {
