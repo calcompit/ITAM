@@ -73,7 +73,12 @@ class ApiService {
     
     // If no cached data, use fallback
     console.log(`[FALLBACK] No cached data, using fallback for ${endpoint}`);
-    return this.getFallbackData(endpoint);
+    const fallbackData = this.getFallbackData(endpoint);
+    
+    // Cache the fallback data so it's consistent across requests
+    this.setCachedData(endpoint, fallbackData);
+    
+    return fallbackData;
   }
 
   private getCachedData(endpoint: string): any {

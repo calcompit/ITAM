@@ -105,6 +105,8 @@ const sqlConfig = {
 // Database connection pool with retry logic
 let pool = null;
 let isConnecting = false;
+let connectionAttempts = 0;
+const maxConnectionAttempts = 10;
 
 async function createConnectionPool() {
   if (isConnecting) {
@@ -113,23 +115,31 @@ async function createConnectionPool() {
   }
   
   isConnecting = true;
+  connectionAttempts++;
   
   try {
-    console.log('[DB] Attempting to connect to SQL Server...');
+    console.log(`[DB] Attempting to connect to SQL Server (attempt ${connectionAttempts}/${maxConnectionAttempts})...`);
     pool = await sql.connect(sqlConfig);
     console.log('[DB] Successfully connected to SQL Server');
     setupPoolEvents(pool);
     isConnecting = false;
+    connectionAttempts = 0; // Reset counter on success
     return pool;
   } catch (error) {
     console.error('[DB] Connection failed:', error.message);
     isConnecting = false;
     
-    // Retry after 5 seconds
-    setTimeout(() => {
-      console.log('[DB] Retrying connection...');
-      createConnectionPool();
-    }, 5000);
+    if (connectionAttempts < maxConnectionAttempts) {
+      // Exponential backoff: 2, 4, 8, 16, 32 seconds
+      const retryDelay = Math.min(2000 * Math.pow(2, connectionAttempts - 1), 30000);
+      console.log(`[DB] Retrying connection in ${retryDelay/1000} seconds...`);
+      setTimeout(() => {
+        createConnectionPool();
+      }, retryDelay);
+    } else {
+      console.log('[DB] Max connection attempts reached, will retry later');
+      connectionAttempts = 0; // Reset for next cycle
+    }
     
     throw error;
   }
@@ -173,9 +183,16 @@ async function getDbConnection() {
       await createConnectionPool();
     }
     
-    // Test the connection
+    // Test the connection with timeout
     try {
-      await pool.request().query('SELECT 1 as test');
+      const testRequest = pool.request();
+      const testPromise = testRequest.query('SELECT 1 as test');
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection test timeout')), 5000)
+      );
+      
+      await Promise.race([testPromise, timeoutPromise]);
+      console.log('[DB] Connection test successful');
     } catch (testError) {
       console.log('[DB] Connection test failed, recreating pool...');
       pool = null;
@@ -185,7 +202,7 @@ async function getDbConnection() {
     return pool;
   } catch (error) {
     console.error('[DB] Failed to get connection:', error.message);
-    // Return fallback data instead of throwing error
+    // Return null to trigger fallback data
     return null;
   }
 }
@@ -1011,11 +1028,18 @@ app.get('/api/ip-groups', async (req, res) => {
     res.json(result.recordset);
   } catch (err) {
     console.error('Error fetching IP groups:', err.message);
-    res.status(500).json({ 
-      error: 'Failed to fetch IP groups from database',
-      message: err.message,
-      timestamp: new Date().toISOString()
-    });
+    console.log('[FALLBACK] Using fallback data for IP groups due to error');
+    try {
+      const { fallbackIPGroups } = await import('./src/data/fallback-data.js');
+      return res.json(fallbackIPGroups);
+    } catch (fallbackError) {
+      console.error('Fallback data also failed:', fallbackError.message);
+      res.status(500).json({ 
+        error: 'Failed to fetch IP groups from database',
+        message: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 });
 
@@ -1140,11 +1164,18 @@ app.get('/api/analytics', async (req, res) => {
     res.json(analytics);
   } catch (err) {
     console.error('Error fetching analytics:', err.message);
-    res.status(500).json({ 
-      error: 'Failed to fetch analytics from database',
-      message: err.message,
-      timestamp: new Date().toISOString()
-    });
+    console.log('[FALLBACK] Using fallback data for analytics due to error');
+    try {
+      const { fallbackAnalytics } = await import('./src/data/fallback-data.js');
+      return res.json(fallbackAnalytics);
+    } catch (fallbackError) {
+      console.error('Fallback data also failed:', fallbackError.message);
+      res.status(500).json({ 
+        error: 'Failed to fetch analytics from database',
+        message: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 });
 
