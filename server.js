@@ -1781,12 +1781,12 @@ app.post('/api/vnc/start-session', async (req, res) => {
       }
     }
     
-    // Kill existing sessions with delay to ensure cleanup
+    // Kill existing sessions with proper cleanup
     for (const sessionPort of sessionsToKill) {
       console.log(`[VNC Start Session] Killing existing session on port ${sessionPort} for user: ${username}`);
       await cleanupSession(sessionPort);
-      // Wait a bit for cleanup to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait longer for proper cleanup
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
     
     // Double-check cleanup by killing any remaining sessions for this user
@@ -1837,11 +1837,12 @@ app.post('/api/vnc/start-session', async (req, res) => {
         `${host}:${port}`, 
         '--web', path.join(process.cwd(), 'noVNC'), 
         '--verbose', 
-        '--log-file', `websockify-${host}-${port}.log`
+        '--log-file', `websockify-${host}-${port}.log`,
+        '--idle-timeout', '300'
       ], {
         cwd: path.join(process.cwd(), 'noVNC'),
-        stdio: ['pipe', 'pipe', 'pipe'], // Changed to capture all output
-        detached: false, // Changed to false for better control
+        stdio: ['ignore', 'pipe', 'pipe'], // Changed back to ignore stdin
+        detached: true, // Changed back to true for background process
         env: {
           ...process.env,
           PYTHONWARNINGS: 'ignore',
@@ -1882,7 +1883,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         
         // Try to read the log file for more details
         try {
-          const fs = require('fs');
+          const fs = await import('fs');
+          const path = await import('path');
           const logFile = path.join(process.cwd(), 'noVNC', `websockify-${host}-${port}.log`);
           if (fs.existsSync(logFile)) {
             const logContent = fs.readFileSync(logFile, 'utf8');
@@ -1951,9 +1953,27 @@ app.post('/api/vnc/start-session', async (req, res) => {
 
     console.log(`🎉 [VNC SUCCESS] Started session for ${username}`);
     console.log(`📡 [VNC SUCCESS] Proxy: localhost:${websockifyPort} → Target: ${host}:${port}`);
+    console.log(`🔧 [VNC SUCCESS] Process PID: ${websockifyProcess.pid}`);
 
-    // Wait a moment for websockify to start
-    setTimeout(() => {
+    // Wait a moment for websockify to start and verify it's running
+    setTimeout(async () => {
+      // Verify process is still running
+      try {
+        const { exec } = await import('child_process');
+        const util = await import('util');
+        const execPromise = util.promisify(exec);
+        
+        if (process.platform === 'win32') {
+          const checkProcess = await execPromise(`tasklist /FI "PID eq ${websockifyProcess.pid}"`);
+          if (checkProcess.stdout.includes(websockifyProcess.pid.toString())) {
+            console.log(`✅ [VNC VERIFY] Process ${websockifyProcess.pid} is still running`);
+          } else {
+            console.log(`⚠️ [VNC VERIFY] Process ${websockifyProcess.pid} is not running`);
+          }
+        }
+      } catch (error) {
+        console.log(`⚠️ [VNC VERIFY] Could not verify process status: ${error.message}`);
+      }
       res.json({
         success: true,
         message: 'VNC session started successfully',
