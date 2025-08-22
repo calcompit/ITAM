@@ -334,8 +334,12 @@ wss.on('connection', (ws) => {
 
 // VNC Helper Functions
 function findAvailablePort() {
+  console.log(`[VNC] Finding available port. Current active sessions:`, Array.from(activeSessions.keys()));
+  console.log(`[VNC] Port range: ${PORT_RANGE.start}-${PORT_RANGE.end}`);
+  
   // Start from 6081 and find the next available port
   for (let port = PORT_RANGE.start; port <= PORT_RANGE.end; port++) {
+    console.log(`[VNC] Checking port ${port}: ${activeSessions.has(port) ? 'IN USE' : 'AVAILABLE'}`);
     if (!activeSessions.has(port)) {
       console.log(`[VNC] Found available port: ${port}`);
       return port;
