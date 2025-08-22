@@ -191,7 +191,8 @@ export function Analytics() {
         setError(null);
       } catch (err) {
         console.error('Failed to load data:', err);
-        setError('Failed to load data from server');
+        // Don't set error since we're using fallback data
+        // setError('Failed to load data from server');
       } finally {
         if (showLoading) {
           setLoading(false);

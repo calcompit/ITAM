@@ -90,15 +90,15 @@ export function Dashboard({ activeTab }: DashboardProps) {
         setError(null);
       } catch (err) {
         console.error('Failed to load data:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to load data from server';
-        setError(errorMessage);
+        // Don't show error toast since we're using fallback data
+        // setError(errorMessage);
         
-        // Show error toast
+        // Show info toast instead
         toast({
-          title: "Database Connection Error",
-          description: errorMessage,
-          variant: "destructive",
-          duration: 5000,
+          title: "Using Fallback Data",
+          description: "Database connection failed, showing fallback data",
+          variant: "default",
+          duration: 3000,
         });
       } finally {
         if (showLoading) {
