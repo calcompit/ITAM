@@ -337,12 +337,29 @@ function findAvailablePort() {
   console.log(`[VNC] Finding available port. Current active sessions:`, Array.from(activeSessions.keys()));
   console.log(`[VNC] Port range: ${PORT_RANGE.start}-${PORT_RANGE.end}`);
   
-  // Start from 6081 and find the next available port
-  for (let port = PORT_RANGE.start; port <= PORT_RANGE.end; port++) {
-    console.log(`[VNC] Checking port ${port}: ${activeSessions.has(port) ? 'IN USE' : 'AVAILABLE'}`);
-    if (!activeSessions.has(port)) {
-      console.log(`[VNC] Found available port: ${port}`);
-      return port;
+  // Try to find a random available port to avoid always using 6081
+  const usedPorts = Array.from(activeSessions.keys());
+  console.log(`[VNC] Used ports:`, usedPorts);
+  
+  // Start from a random port in the middle of the range to avoid 6081
+  const startPort = PORT_RANGE.start + Math.floor(Math.random() * 5); // Start from 6081-6085 randomly
+  
+  for (let i = 0; i < PORT_RANGE.end - PORT_RANGE.start + 1; i++) {
+    const port = startPort + i;
+    if (port > PORT_RANGE.end) {
+      // Wrap around to the beginning
+      const wrappedPort = PORT_RANGE.start + (port - PORT_RANGE.end - 1);
+      console.log(`[VNC] Checking wrapped port ${wrappedPort}: ${activeSessions.has(wrappedPort) ? 'IN USE' : 'AVAILABLE'}`);
+      if (!activeSessions.has(wrappedPort)) {
+        console.log(`[VNC] Found available wrapped port: ${wrappedPort}`);
+        return wrappedPort;
+      }
+    } else {
+      console.log(`[VNC] Checking port ${port}: ${activeSessions.has(port) ? 'IN USE' : 'AVAILABLE'}`);
+      if (!activeSessions.has(port)) {
+        console.log(`[VNC] Found available port: ${port}`);
+        return port;
+      }
     }
   }
   console.log(`[VNC] No available ports in range ${PORT_RANGE.start}-${PORT_RANGE.end}`);
