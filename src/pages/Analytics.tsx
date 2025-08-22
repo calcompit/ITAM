@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ComputerCard } from "@/components/computer-card";
 import { ComputerDetailsModal } from "@/components/computer-details-modal";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, BarChart3, Cpu, HardDrive, MemoryStick, CheckCircle, AlertTriangle } from "lucide-react";
+import { Search, Filter, BarChart3, Cpu, HardDrive, MemoryStick, CheckCircle, AlertTriangle, Monitor } from "lucide-react";
 import { apiService, type APIComputer } from "@/services/api";
 import { websocketService } from "@/services/websocket";
 import { useStatus } from "@/contexts/StatusContext";
@@ -41,7 +41,7 @@ export function Analytics() {
   // VNC connection handler
   const handleVNC = async (ip: string, computerName: string) => {
              // Show loading modal immediately when button is clicked
-         setVncModalTitle("🖥️ VNC Connection");
+         setVncModalTitle("VNC Connection");
          setVncModalMessage(`Connecting to ${computerName} (${ip})...`);
     setVncModalType("loading");
     setShowVncModal(true);
@@ -209,7 +209,7 @@ export function Analytics() {
           }, 30000);
         } else {
           // Show success modal and auto-close after 2 seconds
-          setVncModalTitle("✅ VNC Connected");
+          setVncModalTitle("VNC Connected");
           setVncModalMessage(`Successfully connected to ${computerName} (${ip})`);
           setVncModalType("success");
           
@@ -219,13 +219,13 @@ export function Analytics() {
           }, 2000);
         }
       } else {
-        setVncModalTitle("❌ VNC Error");
+        setVncModalTitle("VNC Error");
         setVncModalMessage("Failed to start VNC session");
         setVncModalType("error");
       }
     } catch (error) {
       console.error('Failed to start VNC session', error);
-      setVncModalTitle("❌ VNC Connection Failed");
+      setVncModalTitle("VNC Connection Failed");
       setVncModalMessage("Failed to start VNC session. Please try again.");
       setVncModalType("error");
     }
@@ -694,7 +694,8 @@ export function Analytics() {
                <div className="text-center">
                  <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                   🖥️ VNC Connection
+                   <Monitor className="h-4 w-4" />
+                   VNC Connection
                  </div>
                  <p className="text-xs text-muted-foreground mt-2">
                    Please wait...

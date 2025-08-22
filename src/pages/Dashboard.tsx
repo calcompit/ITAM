@@ -237,7 +237,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
 
   const handleVNC = async (ip: string, computerName: string) => {
              // Show loading modal immediately when button is clicked
-         setVncModalTitle("🖥️ VNC Connection");
+         setVncModalTitle("VNC Connection");
          setVncModalMessage(`Connecting to ${computerName} (${ip})...`);
     setVncModalType("loading");
     setShowVncModal(true);
@@ -394,7 +394,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
           if (!vncWindow || vncWindow.closed) {
             // Method 4: Show manual link if all else fails
             console.log('All window.open methods failed, showing manual link');
-            setVncModalTitle("⚠️ Popup Blocked");
+            setVncModalTitle("Popup Blocked");
             setVncModalMessage("Please click the manual link below to open VNC");
             setVncModalType("error");
             
@@ -427,7 +427,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
         
         if (!vncWindow || vncWindow.closed) {
           // Popup blocked - show alert
-          setVncModalTitle("⚠️ Popup Blocked");
+          setVncModalTitle("Popup Blocked");
           setVncModalMessage("Please allow popups for this site to open VNC connections automatically");
           setVncModalType("error");
           
@@ -463,9 +463,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
           }, 5000);
         }
         
-        // Show success modal and auto-close after 2 seconds
-        setVncModalTitle("✅ VNC Connected");
-        setVncModalMessage(`Successfully connected to ${computerName} (${ip})`);
+                 // Show success modal and auto-close after 2 seconds
+         setVncModalTitle("VNC Connected");
+         setVncModalMessage(`Successfully connected to ${computerName} (${ip})`);
         setVncModalType("success");
         
         // Auto-close success modal after 2 seconds
@@ -474,13 +474,13 @@ export function Dashboard({ activeTab }: DashboardProps) {
         }, 2000);
       } else {
         console.error('Failed to start VNC session');
-        setVncModalTitle("❌ VNC Error");
+        setVncModalTitle("VNC Error");
         setVncModalMessage("Failed to start VNC session");
         setVncModalType("error");
       }
     } catch (error) {
       console.error('Error starting VNC:', error);
-      setVncModalTitle("❌ VNC Error");
+      setVncModalTitle("VNC Error");
       setVncModalMessage("Failed to start VNC connection");
       setVncModalType("error");
     }
@@ -816,7 +816,8 @@ export function Dashboard({ activeTab }: DashboardProps) {
                <div className="text-center">
                  <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                   🖥️ VNC Connection
+                   <Monitor className="h-4 w-4" />
+                   VNC Connection
                  </div>
                  <p className="text-xs text-muted-foreground mt-2">
                    Please wait...
