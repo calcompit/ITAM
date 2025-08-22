@@ -91,12 +91,14 @@ const sqlConfig = {
     enableArithAbort: true,
     enableNumericRoundabort: false,
     multipleActiveResultSets: false,
-    applicationIntent: 'ReadWrite'
+    applicationIntent: 'ReadWrite',
+    connectionRetryInterval: 1000,
+    maxRetriesOnTries: 3
   },
   pool: {
-    max: 5, // ลด pool size เพื่อลดการใช้งาน connection
+    max: 3, // ลด pool size ลงอีก
     min: 0,
-    idleTimeoutMillis: 60000, // เพิ่ม idle timeout เป็น 60 วินาที
+    idleTimeoutMillis: 120000, // เพิ่ม idle timeout เป็น 2 นาที
     acquireTimeoutMillis: 30000,
     createTimeoutMillis: 30000,
     destroyTimeoutMillis: 5000,
@@ -115,7 +117,11 @@ let connectionStatus = 'disconnected'; // 'connected', 'disconnected', 'connecti
 async function createConnectionPool() {
   if (isConnecting) {
     console.log('[DB] Connection already in progress, waiting...');
-    return;
+    // Wait for existing connection to complete
+    while (isConnecting) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return pool; // Return the pool that was created by the other connection attempt
   }
   
   isConnecting = true;
@@ -192,7 +198,7 @@ setInterval(async () => {
     } catch (error) {
       console.log('[DB] Auto-reconnect failed:', error.message);
     }
-  } else {
+  } else if (pool && !pool.closed) {
     // Keep-alive: Send a simple query to keep connection alive
     console.log('[DB] Keep-alive: Sending keep-alive query...');
     try {
@@ -223,7 +229,7 @@ async function getDbConnection() {
     
     // Only test connection if we haven't tested recently (avoid excessive testing)
     const now = Date.now();
-    if (!pool.lastTestTime || (now - pool.lastTestTime) > 30000) { // Test every 30 seconds max
+    if (pool && (!pool.lastTestTime || (now - pool.lastTestTime) > 30000)) { // Test every 30 seconds max
       try {
         const testRequest = pool.request();
         const testPromise = testRequest.query('SELECT 1 as test');
@@ -243,7 +249,7 @@ async function getDbConnection() {
         try {
           await createConnectionPool();
         } catch (reconnectError) {
-          console.log('[DB] Reconnection failed, will use fallback data');
+          console.log('[DB] Reconnection failed, will return null');
           return null;
         }
       }
@@ -776,7 +782,7 @@ function startPollingMonitoring() {
         try {
           await createConnectionPool();
         } catch (reconnectError) {
-          console.log('[Real-time] Reconnection failed, will continue with fallback');
+          console.log('[Real-time] Reconnection failed, will continue polling');
         }
       }
       // Continue polling even if there's an error
