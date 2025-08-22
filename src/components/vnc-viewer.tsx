@@ -37,7 +37,7 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
         onClose();
       }, 1000);
     }
-  }, [isOpen]);
+  }, [isOpen, ip, port]); // Add ip and port as dependencies
 
   // Show VNC URL when dialog opens
   React.useEffect(() => {

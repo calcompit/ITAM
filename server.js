@@ -135,13 +135,27 @@ async function createConnectionPool() {
   }
 }
 
+// Handle pool close events
+if (pool) {
+  pool.on('close', () => {
+    console.log('[DB] Connection pool closed, will reconnect on next request');
+    pool = null;
+  });
+  
+  pool.on('error', (error) => {
+    console.error('[DB] Connection pool error:', error.message);
+    pool = null;
+  });
+}
+
 // Initialize connection pool
 createConnectionPool();
 
 // Function to get database connection with retry
 async function getDbConnection() {
   try {
-    if (!pool) {
+    if (!pool || pool.closed) {
+      console.log('[DB] Pool is null or closed, creating new connection...');
       await createConnectionPool();
     }
     return pool;
@@ -608,6 +622,11 @@ function startPollingMonitoring() {
   const pollForChanges = async () => {
     try {
       const pool = await getDbConnection();
+      if (!pool || pool.closed) {
+        console.log('[Real-time] Database pool is closed, skipping polling...');
+        return;
+      }
+      
       const result = await pool.request()
         .input('lastCheck', sql.DateTime, lastCheck)
         .query(`
@@ -793,7 +812,7 @@ app.get('/api/computers', async (req, res) => {
     
     // Return fallback data when database is unavailable
     console.log('[FALLBACK] Using fallback data for computers');
-    const { fallbackComputers } = await import('./src/data/fallback-data.ts');
+    const { fallbackComputers } = await import('./src/data/fallback-data.js');
     res.json(fallbackComputers);
   }
 });

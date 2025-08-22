@@ -217,6 +217,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
       
       const currentUser = localStorage.getItem('currentUser') || 'default';
       
+      // Close any existing VNC windows
+      if (window.vncWindow && !window.vncWindow.closed) {
+        window.vncWindow.close();
+      }
+      
       // Start VNC session directly (no login required)
       const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
         method: 'POST',
@@ -279,8 +284,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
         try {
           // Method 1: Force new window with specific features to prevent tab opening
           const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no,left=100,top=100';
-          vncWindow = window.open(finalVncUrl, '_blank', windowFeatures);
+          vncWindow = window.open(finalVncUrl, `vnc_${ip}_${Date.now()}`, windowFeatures);
           console.log('Window open result:', vncWindow);
+          
+          // Store reference to close later
+          window.vncWindow = vncWindow;
           
           if (!vncWindow || vncWindow.closed) {
             // Method 2: Try with different window name to force new window

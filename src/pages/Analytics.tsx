@@ -53,6 +53,11 @@ export function Analytics() {
       
       const currentUser = localStorage.getItem('currentUser') || 'default';
       
+      // Close any existing VNC windows
+      if (window.vncWindow && !window.vncWindow.closed) {
+        window.vncWindow.close();
+      }
+      
       // Start VNC session directly (no login required)
       const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
         method: 'POST',
@@ -104,7 +109,10 @@ export function Analytics() {
         
         // Try to open VNC window as new window
         const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no';
-        const vncWindow = window.open(vncUrl, 'vnc_window', windowFeatures);
+        const vncWindow = window.open(vncUrl, `vnc_${ip}_${Date.now()}`, windowFeatures);
+        
+        // Store reference to close later
+        window.vncWindow = vncWindow;
         
         console.log('Window open result:', vncWindow);
         
