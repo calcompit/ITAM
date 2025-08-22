@@ -55,10 +55,32 @@ export function Analytics() {
       
       const currentUser = localStorage.getItem('currentUser') || 'default';
       
-      // Close any existing VNC windows
+      // Close any existing VNC windows and clear references
       if (window.vncWindow && !window.vncWindow.closed) {
-        window.vncWindow.close();
+        try {
+          window.vncWindow.close();
+          console.log('Closed existing VNC window');
+        } catch (error) {
+          console.log('Error closing existing window:', error);
+        }
       }
+      
+      // Clear any existing VNC window references
+      window.vncWindow = null;
+      
+      // Force browser to forget about previous VNC windows
+      if (window.vncWindows) {
+        window.vncWindows.forEach((win: any) => {
+          try {
+            if (win && !win.closed) {
+              win.close();
+            }
+          } catch (error) {
+            console.log('Error closing VNC window:', error);
+          }
+        });
+      }
+      window.vncWindows = [];
       
       // Start VNC session directly (no login required)
       const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
@@ -109,12 +131,21 @@ export function Analytics() {
         
         console.log('Opening VNC URL in new window:', vncUrl);
         
-        // Try to open VNC window as new window
-        const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no';
-        const vncWindow = window.open(vncUrl, `vnc_${ip}_${Date.now()}`, windowFeatures);
+        // Try to open VNC window as new window with unique name
+        const uniqueWindowName = `vnc_${ip.replace(/\./g, '_')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no,left=100,top=100';
+        
+        console.log('Opening VNC with unique window name:', uniqueWindowName);
+        const vncWindow = window.open(vncUrl, uniqueWindowName, windowFeatures);
         
         // Store reference to close later
         window.vncWindow = vncWindow;
+        
+        // Add to window tracking array
+        if (!window.vncWindows) {
+          window.vncWindows = [];
+        }
+        window.vncWindows.push(vncWindow);
         
         console.log('Window open result:', vncWindow);
         

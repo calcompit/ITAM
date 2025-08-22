@@ -234,10 +234,32 @@ export function Dashboard({ activeTab }: DashboardProps) {
       
       const currentUser = localStorage.getItem('currentUser') || 'default';
       
-      // Close any existing VNC windows
+      // Close any existing VNC windows and clear references
       if (window.vncWindow && !window.vncWindow.closed) {
-        window.vncWindow.close();
+        try {
+          window.vncWindow.close();
+          console.log('Closed existing VNC window');
+        } catch (error) {
+          console.log('Error closing existing window:', error);
+        }
       }
+      
+      // Clear any existing VNC window references
+      window.vncWindow = null;
+      
+      // Force browser to forget about previous VNC windows
+      if (window.vncWindows) {
+        window.vncWindows.forEach((win: any) => {
+          try {
+            if (win && !win.closed) {
+              win.close();
+            }
+          } catch (error) {
+            console.log('Error closing VNC window:', error);
+          }
+        });
+      }
+      window.vncWindows = [];
       
       // Start VNC session directly (no login required)
       const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
@@ -299,24 +321,32 @@ export function Dashboard({ activeTab }: DashboardProps) {
         let vncWindow = null;
         
         try {
-          // Method 1: Force new window with specific features to prevent tab opening
+          // Method 1: Force new window with unique name and specific features
+          const uniqueWindowName = `vnc_${ip.replace(/\./g, '_')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no,left=100,top=100';
-          vncWindow = window.open(finalVncUrl, `vnc_${ip}_${Date.now()}`, windowFeatures);
+          
+          console.log('Opening VNC with unique window name:', uniqueWindowName);
+          vncWindow = window.open(finalVncUrl, uniqueWindowName, windowFeatures);
           console.log('Window open result:', vncWindow);
           
           // Store reference to close later
           window.vncWindow = vncWindow;
           
-          if (!vncWindow || vncWindow.closed) {
-            // Method 2: Try with different window name to force new window
-            vncWindow = window.open(finalVncUrl, `vnc_${Date.now()}`, windowFeatures);
-            console.log('Window open with timestamp result:', vncWindow);
+          // Add to window tracking array
+          if (!window.vncWindows) {
+            window.vncWindows = [];
           }
+          window.vncWindows.push(vncWindow);
           
           if (!vncWindow || vncWindow.closed) {
-            // Method 3: Try with minimal features but force window
-            vncWindow = window.open(finalVncUrl, `vnc_window_${Math.random()}`, 'width=1200,height=800,left=100,top=100');
-            console.log('Window open with random name result:', vncWindow);
+            // Method 2: Try with different window name to force new window
+            const fallbackName = `vnc_fallback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            vncWindow = window.open(finalVncUrl, fallbackName, windowFeatures);
+            console.log('Window open with fallback name result:', vncWindow);
+            if (vncWindow) {
+              window.vncWindow = vncWindow;
+              window.vncWindows.push(vncWindow);
+            }
           }
           
           if (!vncWindow || vncWindow.closed) {
