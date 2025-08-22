@@ -73,7 +73,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
       try {
         if (showLoading) {
           setLoading(true);
+          setError(null);
         }
+        
         const [computersData, ipGroupsData] = await Promise.all([
           apiService.getComputers(),
           apiService.getIPGroups()
@@ -97,14 +99,24 @@ export function Dashboard({ activeTab }: DashboardProps) {
         console.error('Failed to load data:', err);
         updateStatus('disconnected');
         
-        // Don't update data, keep existing data
-        // Show warning toast
-        toast({
-          title: "Database Connection Lost",
-          description: "Showing last known data. Attempting to reconnect...",
-          variant: "destructive",
-          duration: 5000,
-        });
+        // If this is the initial load and we have no data, show error
+        if (showLoading && computers.length === 0) {
+          setError('Failed to load data from server');
+          toast({
+            title: "Database Connection Failed",
+            description: "Unable to connect to database. Please refresh the page.",
+            variant: "destructive",
+            duration: 10000,
+          });
+        } else {
+          // Don't update data, keep existing data
+          toast({
+            title: "Database Connection Lost",
+            description: "Showing last known data. Attempting to reconnect...",
+            variant: "destructive",
+            duration: 5000,
+          });
+        }
       } finally {
         if (showLoading) {
           setLoading(false);
@@ -555,6 +567,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
 
   return (
     <div className="space-y-6">
+      {/* Database Status Banner */}
+      <DatabaseStatusBanner />
+      
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

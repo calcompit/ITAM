@@ -189,7 +189,7 @@ function setupPoolEvents(pool) {
 // Initialize connection pool
 createConnectionPool();
 
-// Auto-reconnect and keep-alive every 30 seconds
+// Auto-reconnect and keep-alive every 60 seconds (reduced frequency)
 setInterval(async () => {
   if (!pool || pool.closed) {
     console.log('[DB] Auto-reconnect: Connection lost, attempting to reconnect...');
@@ -199,25 +199,29 @@ setInterval(async () => {
       console.log('[DB] Auto-reconnect failed:', error.message);
     }
   } else if (pool && !pool.closed) {
-    // Keep-alive: Send a simple query to keep connection alive
-    console.log('[DB] Keep-alive: Sending keep-alive query...');
-    try {
-      const testRequest = pool.request();
-      await testRequest.query('SELECT 1 as keepalive');
-      pool.lastTestTime = Date.now();
-      console.log('[DB] Keep-alive: Connection is healthy');
-    } catch (error) {
-      console.log('[DB] Keep-alive: Connection test failed, will reconnect...');
-      pool = null;
-      connectionStatus = 'disconnected';
+    // Keep-alive: Send a simple query to keep connection alive (less frequent)
+    const now = Date.now();
+    if (!pool.lastKeepAlive || (now - pool.lastKeepAlive) > 60000) { // Keep-alive every 60 seconds
+      console.log('[DB] Keep-alive: Sending keep-alive query...');
       try {
-        await createConnectionPool();
-      } catch (reconnectError) {
-        console.log('[DB] Keep-alive reconnection failed');
+        const testRequest = pool.request();
+        await testRequest.query('SELECT 1 as keepalive');
+        pool.lastTestTime = Date.now();
+        pool.lastKeepAlive = Date.now();
+        console.log('[DB] Keep-alive: Connection is healthy');
+      } catch (error) {
+        console.log('[DB] Keep-alive: Connection test failed, will reconnect...');
+        pool = null;
+        connectionStatus = 'disconnected';
+        try {
+          await createConnectionPool();
+        } catch (reconnectError) {
+          console.log('[DB] Keep-alive reconnection failed');
+        }
       }
     }
   }
-}, 30000); // Check every 30 seconds
+}, 60000); // Check every 60 seconds
 
 // Function to get database connection with retry
 async function getDbConnection() {
@@ -229,7 +233,7 @@ async function getDbConnection() {
     
     // Only test connection if we haven't tested recently (avoid excessive testing)
     const now = Date.now();
-    if (pool && (!pool.lastTestTime || (now - pool.lastTestTime) > 30000)) { // Test every 30 seconds max
+    if (pool && (!pool.lastTestTime || (now - pool.lastTestTime) > 60000)) { // Test every 60 seconds max
       try {
         const testRequest = pool.request();
         const testPromise = testRequest.query('SELECT 1 as test');
