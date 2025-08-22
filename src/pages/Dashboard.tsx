@@ -236,9 +236,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
   };
 
   const handleVNC = async (ip: string, computerName: string) => {
-    // Show loading modal immediately when button is clicked
-    setVncModalTitle("🚀 Starting VNC Connection");
-    setVncModalMessage(`Connecting to ${computerName} (${ip})...`);
+             // Show loading modal immediately when button is clicked
+         setVncModalTitle("🖥️ VNC Connection");
+         setVncModalMessage(`Connecting to ${computerName} (${ip})...`);
     setVncModalType("loading");
     setShowVncModal(true);
     
@@ -464,8 +464,8 @@ export function Dashboard({ activeTab }: DashboardProps) {
         }
         
         // Show success modal and auto-close after 2 seconds
-        setVncModalTitle("✅ VNC Session Ready");
-        setVncModalMessage(`Connected to ${computerName} (${ip}) on port ${session.port}`);
+        setVncModalTitle("✅ VNC Connected");
+        setVncModalMessage(`Successfully connected to ${computerName} (${ip})`);
         setVncModalType("success");
         
         // Auto-close success modal after 2 seconds
@@ -812,11 +812,17 @@ export function Dashboard({ activeTab }: DashboardProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center py-4">
-            {vncModalType === "loading" && (
-              <div className="text-center">
-                <span className="text-sm text-muted-foreground">Please wait...</span>
-              </div>
-            )}
+                         {vncModalType === "loading" && (
+               <div className="text-center">
+                 <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
+                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                   🖥️ VNC Connection
+                 </div>
+                 <p className="text-xs text-muted-foreground mt-2">
+                   Please wait...
+                 </p>
+               </div>
+             )}
             {vncModalType === "success" && (
               <div className="flex items-center gap-2 text-green-600">
                 <CheckCircle className="h-6 w-6" />
