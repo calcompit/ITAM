@@ -99,8 +99,8 @@ export function Dashboard({ activeTab }: DashboardProps) {
         console.error('Failed to load data:', err);
         updateStatus('disconnected');
         
-        // If this is the initial load and we have no data, show error
-        if (showLoading && computers.length === 0) {
+        // Always show error on initial load failure
+        if (showLoading) {
           setError('Failed to load data from server');
           toast({
             title: "Database Connection Failed",

@@ -81,29 +81,27 @@ const sqlConfig = {
   options: {
     encrypt: true,
     trustServerCertificate: true,
-    connectTimeout: 30000,
-    requestTimeout: 30000,
-    connectionRetryInterval: 2000,
-    maxRetriesOnTries: 5,
-    cancelTimeout: 10000,
+    connectTimeout: 60000, // เพิ่ม timeout เป็น 60 วินาที
+    requestTimeout: 60000, // เพิ่ม timeout เป็น 60 วินาที
+    connectionRetryInterval: 1000,
+    maxRetriesOnTries: 10, // เพิ่มจำนวน retry
+    cancelTimeout: 30000, // เพิ่ม timeout
     packetSize: 4096,
     useUTC: false,
     enableArithAbort: true,
     enableNumericRoundabort: false,
     multipleActiveResultSets: false,
-    applicationIntent: 'ReadWrite',
-    connectionRetryInterval: 1000,
-    maxRetriesOnTries: 3
+    applicationIntent: 'ReadWrite'
   },
   pool: {
-    max: 2, // ลด pool size ลงอีก
+    max: 1, // ใช้ connection เดียว
     min: 0,
-    idleTimeoutMillis: 300000, // เพิ่ม idle timeout เป็น 5 นาที
-    acquireTimeoutMillis: 30000,
-    createTimeoutMillis: 30000,
-    destroyTimeoutMillis: 5000,
+    idleTimeoutMillis: 600000, // เพิ่ม idle timeout เป็น 10 นาที
+    acquireTimeoutMillis: 60000,
+    createTimeoutMillis: 60000,
+    destroyTimeoutMillis: 10000,
     reapIntervalMillis: 1000,
-    createRetryIntervalMillis: 200
+    createRetryIntervalMillis: 100
   }
 };
 
@@ -111,7 +109,7 @@ const sqlConfig = {
 let pool = null;
 let isConnecting = false;
 let connectionAttempts = 0;
-const maxConnectionAttempts = 10;
+const maxConnectionAttempts = 20; // เพิ่มจำนวน retry
 let connectionStatus = 'disconnected'; // 'connected', 'disconnected', 'connecting', 'failed'
 
 async function createConnectionPool() {
@@ -143,8 +141,8 @@ async function createConnectionPool() {
     connectionStatus = 'failed';
     
     if (connectionAttempts < maxConnectionAttempts) {
-      // Exponential backoff: 2, 4, 8, 16, 32 seconds
-      const retryDelay = Math.min(2000 * Math.pow(2, connectionAttempts - 1), 30000);
+      // Exponential backoff: 1, 2, 4, 8, 16, 32 seconds
+      const retryDelay = Math.min(1000 * Math.pow(2, connectionAttempts - 1), 60000);
       console.log(`[DB] Retrying connection in ${retryDelay/1000} seconds...`);
       setTimeout(() => {
         createConnectionPool();
@@ -757,8 +755,11 @@ app.get('/api/computers', async (req, res) => {
     const pool = await getDbConnection();
     
     if (!pool) {
-      console.log('[DB] Database not available, returning empty data for computers');
-      return res.json([]);
+      console.log('[DB] Database not available, returning error for computers');
+      return res.status(503).json({ 
+        error: 'Database connection unavailable',
+        message: 'Unable to connect to database server'
+      });
     }
     
     // Use the correct column names based on the actual database schema
@@ -859,9 +860,12 @@ app.get('/api/computers', async (req, res) => {
   } catch (err) {
     console.error('Error fetching computers:', err.message);
     
-    // Return empty data when database is unavailable
-    console.log('[DB] Database error, returning empty data for computers');
-    res.json([]);
+    // Return error when database is unavailable
+    console.log('[DB] Database error, returning error for computers');
+    res.status(503).json({ 
+      error: 'Database error',
+      message: err.message
+    });
   }
 });
 
@@ -1005,8 +1009,11 @@ app.get('/api/ip-groups', async (req, res) => {
     const pool = await getDbConnection();
     
     if (!pool) {
-      console.log('[DB] Database not available, returning empty data for IP groups');
-      return res.json([]);
+      console.log('[DB] Database not available, returning error for IP groups');
+      return res.status(503).json({ 
+        error: 'Database connection unavailable',
+        message: 'Unable to connect to database server'
+      });
     }
     const result = await pool.request()
       .query(`
@@ -1075,16 +1082,10 @@ app.get('/api/analytics', async (req, res) => {
     const pool = await getDbConnection();
     
     if (!pool) {
-      console.log('[DB] Database not available, returning empty data for analytics');
-      return res.json({
-        totalComputers: 0,
-        cpuTypes: {},
-        ramDistribution: {},
-        storageDistribution: {},
-        activatedCount: 0,
-        notActivatedCount: 0,
-        onlineCount: 0,
-        offlineCount: 0
+      console.log('[DB] Database not available, returning error for analytics');
+      return res.status(503).json({ 
+        error: 'Database connection unavailable',
+        message: 'Unable to connect to database server'
       });
     }
     const result = await pool.request()

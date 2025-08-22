@@ -71,32 +71,12 @@ class ApiService {
       return cachedData;
     }
     
-    // If no cached data, return empty data instead of fallback
+    // If no cached data, throw error to trigger loading state
     console.log(`[CACHE] No cached data available for ${endpoint}`);
-    return this.getEmptyData(endpoint);
+    throw new Error('No cached data available');
   }
 
-  private getEmptyData(endpoint: string): any {
-    switch (endpoint) {
-      case '/computers':
-        return [];
-      case '/ip-groups':
-        return [];
-      case '/analytics':
-        return {
-          totalComputers: 0,
-          cpuTypes: {},
-          ramDistribution: {},
-          storageDistribution: {},
-          activatedCount: 0,
-          notActivatedCount: 0,
-          onlineCount: 0,
-          offlineCount: 0
-        };
-      default:
-        return [];
-    }
-  }
+
 
   private getCachedData(endpoint: string): any {
     try {
