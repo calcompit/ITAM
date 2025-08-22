@@ -153,6 +153,18 @@ function setupPoolEvents(pool) {
 // Initialize connection pool
 createConnectionPool();
 
+// Auto-reconnect every 30 seconds if connection is lost
+setInterval(async () => {
+  if (!pool || pool.closed) {
+    console.log('[DB] Auto-reconnect: Connection lost, attempting to reconnect...');
+    try {
+      await createConnectionPool();
+    } catch (error) {
+      console.log('[DB] Auto-reconnect failed:', error.message);
+    }
+  }
+}, 30000); // Check every 30 seconds
+
 // Function to get database connection with retry
 async function getDbConnection() {
   try {
@@ -160,10 +172,21 @@ async function getDbConnection() {
       console.log('[DB] Pool is null or closed, creating new connection...');
       await createConnectionPool();
     }
+    
+    // Test the connection
+    try {
+      await pool.request().query('SELECT 1 as test');
+    } catch (testError) {
+      console.log('[DB] Connection test failed, recreating pool...');
+      pool = null;
+      await createConnectionPool();
+    }
+    
     return pool;
   } catch (error) {
     console.error('[DB] Failed to get connection:', error.message);
-    throw error;
+    // Return fallback data instead of throwing error
+    return null;
   }
 }
 
@@ -626,6 +649,8 @@ function startPollingMonitoring() {
       const pool = await getDbConnection();
       if (!pool || pool.closed) {
         console.log('[Real-time] Database pool is closed, skipping polling...');
+        // Continue polling even if database is down
+        setTimeout(pollForChanges, 5000);
         return;
       }
       
@@ -713,6 +738,12 @@ function startPollingMonitoring() {
 app.get('/api/computers', async (req, res) => {
   try {
     const pool = await getDbConnection();
+    
+    if (!pool) {
+      console.log('[FALLBACK] Database not available, using fallback data for computers');
+      const { fallbackComputers } = await import('./src/data/fallback-data.js');
+      return res.json(fallbackComputers);
+    }
     
     // Use the correct column names based on the actual database schema
     const result = await pool.request()
@@ -957,6 +988,12 @@ app.get('/api/computers/:machineID/changelog', async (req, res) => {
 app.get('/api/ip-groups', async (req, res) => {
   try {
     const pool = await getDbConnection();
+    
+    if (!pool) {
+      console.log('[FALLBACK] Database not available, using fallback data for IP groups');
+      const { fallbackIPGroups } = await import('./src/data/fallback-data.js');
+      return res.json(fallbackIPGroups);
+    }
     const result = await pool.request()
       .query(`
         SELECT 
@@ -1025,6 +1062,12 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/analytics', async (req, res) => {
   try {
     const pool = await getDbConnection();
+    
+    if (!pool) {
+      console.log('[FALLBACK] Database not available, using fallback data for analytics');
+      const { fallbackAnalytics } = await import('./src/data/fallback-data.js');
+      return res.json(fallbackAnalytics);
+    }
     const result = await pool.request()
       .query(`
         SELECT 
