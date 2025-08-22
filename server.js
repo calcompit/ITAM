@@ -1690,30 +1690,38 @@ app.post('/api/vnc/start-session', async (req, res) => {
     // Start websockify process (no password required) - Cross-platform
     let websockifyProcess;
     
-    // Detect platform and use appropriate Python command
-    const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-    console.log(`[VNC] Using Python command: ${pythonCommand} on platform: ${process.platform}`);
+        // Detect platform and use appropriate command to run in background
     
-    // Use python -m websockify for all platforms
-    websockifyProcess = spawn(pythonCommand, [
-      '-W', 'ignore',  // Suppress Python warnings
-      '-m', 'websockify',
-      websockifyPort.toString(),
-      `${host}:${port}`,
-      '--web', path.join(process.cwd(), 'noVNC'),
-      '--verbose',
-      '--log-file', `websockify-${host}-${port}.log`,
-      '--idle-timeout', '300'
-      // Removed --daemon flag as it causes issues on Windows
-    ], {
-      cwd: path.join(process.cwd(), 'noVNC'),
-      stdio: ['ignore', 'pipe', 'pipe'],
-      detached: true,  // Keep detached to prevent immediate exit
-      env: {
-        ...process.env,
-        PYTHONWARNINGS: 'ignore'  // Suppress Python warnings
-      }
-    });
+    if (process.platform === 'win32') {
+      // Windows: Use start command to run in background
+      const pythonCommand = 'python';
+      console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
+      
+      websockifyProcess = spawn('cmd', ['/c', 'start', '/min', pythonCommand, '-W', 'ignore', '-m', 'websockify', websockifyPort.toString(), `${host}:${port}`, '--web', path.join(process.cwd(), 'noVNC'), '--verbose', '--log-file', `websockify-${host}-${port}.log`, '--idle-timeout', '300'], {
+        cwd: path.join(process.cwd(), 'noVNC'),
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true,
+        windowsHide: true,
+        env: {
+          ...process.env,
+          PYTHONWARNINGS: 'ignore'
+        }
+      });
+    } else {
+      // Linux/Mac: Use nohup to run in background
+      const pythonCommand = 'python3';
+      console.log(`[VNC] Using Python command: ${pythonCommand} on ${process.platform}`);
+      
+      websockifyProcess = spawn('nohup', [pythonCommand, '-W', 'ignore', '-m', 'websockify', websockifyPort.toString(), `${host}:${port}`, '--web', path.join(process.cwd(), 'noVNC'), '--verbose', '--log-file', `websockify-${host}-${port}.log`, '--idle-timeout', '300'], {
+        cwd: path.join(process.cwd(), 'noVNC'),
+        stdio: ['ignore', 'pipe', 'pipe'],
+        detached: true,
+        env: {
+          ...process.env,
+          PYTHONWARNINGS: 'ignore'
+        }
+      });
+    }
 
     // Handle process events
     websockifyProcess.on('error', (error) => {
