@@ -24,6 +24,7 @@ import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
 import { useStatus } from "@/contexts/StatusContext";
 import { DatabaseStatusBanner } from "@/components/database-status-banner";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
@@ -44,6 +45,12 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [showComputerDetails, setShowComputerDetails] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updatedMachineIDs, setUpdatedMachineIDs] = useState<Set<string>>(new Set());
+  
+  // VNC Connection Modal States
+  const [showVncModal, setShowVncModal] = useState(false);
+  const [vncModalTitle, setVncModalTitle] = useState("");
+  const [vncModalMessage, setVncModalMessage] = useState("");
+  const [vncModalType, setVncModalType] = useState<"loading" | "error" | "success">("loading");
 
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();
@@ -297,10 +304,12 @@ export function Dashboard({ activeTab }: DashboardProps) {
       if (session) {
         console.log('Starting VNC Connection...');
         console.log('Session details:', session);
-        toast({
-          title: "Starting VNC Connection",
-          description: `Connecting to ${computerName} (${ip})...`,
-        });
+        
+        // Show loading modal
+        setVncModalTitle("🚀 Starting VNC Connection");
+        setVncModalMessage(`Connecting to ${computerName} (${ip})...`);
+        setVncModalType("loading");
+        setShowVncModal(true);
         
         // Fast port checking - optimized for speed
         console.log(`Quick port check for ${session.port}...`);
@@ -385,11 +394,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
           if (!vncWindow || vncWindow.closed) {
             // Method 4: Show manual link if all else fails
             console.log('All window.open methods failed, showing manual link');
-            toast({
-              title: "Popup Blocked",
-              description: "Please click the manual link below to open VNC",
-              duration: 10000,
-            });
+            setVncModalTitle("⚠️ Popup Blocked");
+            setVncModalMessage("Please click the manual link below to open VNC");
+            setVncModalType("error");
             
             // Show manual link container
             const container = document.getElementById('vnc-container');
@@ -420,11 +427,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
         
         if (!vncWindow || vncWindow.closed) {
           // Popup blocked - show alert
-          toast({
-            title: "Popup Blocked",
-            description: "Please allow popups for this site to open VNC connections automatically",
-            variant: "destructive",
-          });
+          setVncModalTitle("⚠️ Popup Blocked");
+          setVncModalMessage("Please allow popups for this site to open VNC connections automatically");
+          setVncModalType("error");
           
           // Show manual link container
           const container = document.getElementById('vnc-container');
@@ -458,25 +463,26 @@ export function Dashboard({ activeTab }: DashboardProps) {
           }, 5000);
         }
         
-        toast({
-          title: "VNC Session Ready",
-          description: `Connected to ${computerName} (${ip}) on port ${session.port}`,
-        });
+        // Show success modal and auto-close after 2 seconds
+        setVncModalTitle("✅ VNC Session Ready");
+        setVncModalMessage(`Connected to ${computerName} (${ip}) on port ${session.port}`);
+        setVncModalType("success");
+        
+        // Auto-close success modal after 2 seconds
+        setTimeout(() => {
+          setShowVncModal(false);
+        }, 2000);
       } else {
         console.error('Failed to start VNC session');
-        toast({
-          title: "VNC Error",
-          description: "Failed to start VNC session",
-          variant: "destructive",
-        });
+        setVncModalTitle("❌ VNC Error");
+        setVncModalMessage("Failed to start VNC session");
+        setVncModalType("error");
       }
     } catch (error) {
       console.error('Error starting VNC:', error);
-      toast({
-        title: "VNC Error",
-        description: "Failed to start VNC connection",
-        variant: "destructive",
-      });
+      setVncModalTitle("❌ VNC Error");
+      setVncModalMessage("Failed to start VNC connection");
+      setVncModalType("error");
     }
   };
 
@@ -795,6 +801,48 @@ export function Dashboard({ activeTab }: DashboardProps) {
           setSelectedComputer(null);
         }}
       />
+
+      {/* VNC Connection Modal */}
+      <Dialog open={showVncModal} onOpenChange={setShowVncModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{vncModalTitle}</DialogTitle>
+            <DialogDescription>
+              {vncModalMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-4">
+            {vncModalType === "loading" && (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                <span className="text-sm text-muted-foreground">Please wait...</span>
+              </div>
+            )}
+            {vncModalType === "success" && (
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-6 w-6" />
+                <span className="text-sm">VNC window opened successfully!</span>
+              </div>
+            )}
+            {vncModalType === "error" && (
+              <div className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="h-6 w-6" />
+                <span className="text-sm">Please check browser popup settings</span>
+              </div>
+            )}
+          </div>
+          {vncModalType === "error" && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowVncModal(false)}
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
