@@ -87,9 +87,8 @@ const sqlConfig = {
     maxRetriesOnTries: 5, // เพิ่มจำนวน retry
     cancelTimeout: 10000,
     packetSize: 4096,
-    useUTC: false,
-    // Fix TLS warning by setting proper server name
-    serverName: process.env.DB_SERVER || '10.53.64.205'
+    useUTC: false
+    // Removed serverName to fix TLS warning
   },
   pool: {
     max: 10, // เพิ่ม pool size
@@ -119,6 +118,7 @@ async function createConnectionPool() {
     console.log('[DB] Attempting to connect to SQL Server...');
     pool = await sql.connect(sqlConfig);
     console.log('[DB] Successfully connected to SQL Server');
+    setupPoolEvents(pool);
     isConnecting = false;
     return pool;
   } catch (error) {
@@ -136,16 +136,18 @@ async function createConnectionPool() {
 }
 
 // Handle pool close events
-if (pool) {
-  pool.on('close', () => {
-    console.log('[DB] Connection pool closed, will reconnect on next request');
-    pool = null;
-  });
-  
-  pool.on('error', (error) => {
-    console.error('[DB] Connection pool error:', error.message);
-    pool = null;
-  });
+function setupPoolEvents(pool) {
+  if (pool) {
+    pool.on('close', () => {
+      console.log('[DB] Connection pool closed, will reconnect on next request');
+      pool = null;
+    });
+    
+    pool.on('error', (error) => {
+      console.error('[DB] Connection pool error:', error.message);
+      pool = null;
+    });
+  }
 }
 
 // Initialize connection pool
@@ -1632,12 +1634,12 @@ app.post('/api/vnc/start-session', async (req, res) => {
       '--web', path.join(process.cwd(), 'noVNC'),
       '--verbose',
       '--log-file', `websockify-${host}-${port}.log`,
-      '--idle-timeout', '300',
-      '--daemon'  // Run as daemon to prevent immediate exit
+      '--idle-timeout', '300'
+      // Removed --daemon flag as it causes issues on Windows
     ], {
       cwd: path.join(process.cwd(), 'noVNC'),
       stdio: ['ignore', 'pipe', 'pipe'],
-      detached: false,  // Change to false to keep process alive
+      detached: true,  // Keep detached to prevent immediate exit
       env: {
         ...process.env,
         PYTHONWARNINGS: 'ignore'  // Suppress Python warnings
@@ -1652,8 +1654,35 @@ app.post('/api/vnc/start-session', async (req, res) => {
 
     websockifyProcess.on('exit', (code) => {
       console.log(`Websockify process exited on port ${websockifyPort} with code ${code}`);
+      if (code !== 0) {
+        console.error(`Websockify process failed with exit code ${code}`);
+        // Try to read the log file for more details
+        try {
+          const fs = require('fs');
+          const logFile = path.join(process.cwd(), 'noVNC', `websockify-${host}-${port}.log`);
+          if (fs.existsSync(logFile)) {
+            const logContent = fs.readFileSync(logFile, 'utf8');
+            console.error('Websockify log:', logContent);
+          }
+        } catch (logError) {
+          console.error('Could not read websockify log:', logError.message);
+        }
+      }
       cleanupSession(websockifyPort);
     });
+
+    // Add stdout and stderr handlers for better debugging
+    if (websockifyProcess.stdout) {
+      websockifyProcess.stdout.on('data', (data) => {
+        console.log(`[Websockify ${websockifyPort}] stdout:`, data.toString().trim());
+      });
+    }
+
+    if (websockifyProcess.stderr) {
+      websockifyProcess.stderr.on('data', (data) => {
+        console.error(`[Websockify ${websockifyPort}] stderr:`, data.toString().trim());
+      });
+    }
 
     // Store session information
     const sessionInfo = {
@@ -1689,7 +1718,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
           host,
           targetPort: port,
           sessionId: sessionInfo.sessionId,
-          vncUrl: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`.replace(':6081', `:${websockifyPort}`)
+          vncUrl: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`.replace(':6081', `:${websockifyPort}`),
+          fallbackUrl: `vnc://:123@${host}:${port}` // Fallback for direct VNC connection
         }
       });
     }, 1000);
