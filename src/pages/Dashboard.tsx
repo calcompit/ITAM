@@ -23,6 +23,7 @@ import {
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
 import { useStatus } from "@/contexts/StatusContext";
+import { DatabaseStatusBanner } from "@/components/database-status-banner";
 
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
@@ -94,14 +95,15 @@ export function Dashboard({ activeTab }: DashboardProps) {
         updateLastUpdate();
       } catch (err) {
         console.error('Failed to load data:', err);
-        updateStatus('fallback');
+        updateStatus('disconnected');
         
-        // Show info toast instead
+        // Don't update data, keep existing data
+        // Show warning toast
         toast({
-          title: "Using Cached Data",
-          description: "Database connection failed, showing cached data",
-          variant: "default",
-          duration: 3000,
+          title: "Database Connection Lost",
+          description: "Showing last known data. Attempting to reconnect...",
+          variant: "destructive",
+          duration: 5000,
         });
       } finally {
         if (showLoading) {

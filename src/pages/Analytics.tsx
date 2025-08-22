@@ -195,8 +195,9 @@ export function Analytics() {
         updateLastUpdate();
       } catch (err) {
         console.error('Failed to load data:', err);
-        updateStatus('fallback');
-        // Don't set error since we're using fallback data
+        updateStatus('disconnected');
+        // Don't update data, keep existing data
+        // Don't set error since we're keeping existing data
         // setError('Failed to load data from server');
       } finally {
         if (showLoading) {

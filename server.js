@@ -796,9 +796,8 @@ app.get('/api/computers', async (req, res) => {
     const pool = await getDbConnection();
     
     if (!pool) {
-      console.log('[FALLBACK] Database not available, using fallback data for computers');
-      const { fallbackComputers } = await import('./src/data/fallback-data.js');
-      return res.json(fallbackComputers);
+      console.log('[DB] Database not available, returning empty data for computers');
+      return res.json([]);
     }
     
     // Use the correct column names based on the actual database schema
@@ -899,10 +898,9 @@ app.get('/api/computers', async (req, res) => {
   } catch (err) {
     console.error('Error fetching computers:', err.message);
     
-    // Return fallback data when database is unavailable
-    console.log('[FALLBACK] Using fallback data for computers');
-    const { fallbackComputers } = await import('./src/data/fallback-data.js');
-    res.json(fallbackComputers);
+    // Return empty data when database is unavailable
+    console.log('[DB] Database error, returning empty data for computers');
+    res.json([]);
   }
 });
 
@@ -1046,9 +1044,8 @@ app.get('/api/ip-groups', async (req, res) => {
     const pool = await getDbConnection();
     
     if (!pool) {
-      console.log('[FALLBACK] Database not available, using fallback data for IP groups');
-      const { fallbackIPGroups } = await import('./src/data/fallback-data.js');
-      return res.json(fallbackIPGroups);
+      console.log('[DB] Database not available, returning empty data for IP groups');
+      return res.json([]);
     }
     const result = await pool.request()
       .query(`
@@ -1067,18 +1064,8 @@ app.get('/api/ip-groups', async (req, res) => {
     res.json(result.recordset);
   } catch (err) {
     console.error('Error fetching IP groups:', err.message);
-    console.log('[FALLBACK] Using fallback data for IP groups due to error');
-    try {
-      const { fallbackIPGroups } = await import('./src/data/fallback-data.js');
-      return res.json(fallbackIPGroups);
-    } catch (fallbackError) {
-      console.error('Fallback data also failed:', fallbackError.message);
-      res.status(500).json({ 
-        error: 'Failed to fetch IP groups from database',
-        message: err.message,
-        timestamp: new Date().toISOString()
-      });
-    }
+    console.log('[DB] Database error, returning empty data for IP groups');
+    return res.json([]);
   }
 });
 
@@ -1127,9 +1114,17 @@ app.get('/api/analytics', async (req, res) => {
     const pool = await getDbConnection();
     
     if (!pool) {
-      console.log('[FALLBACK] Database not available, using fallback data for analytics');
-      const { fallbackAnalytics } = await import('./src/data/fallback-data.js');
-      return res.json(fallbackAnalytics);
+      console.log('[DB] Database not available, returning empty data for analytics');
+      return res.json({
+        totalComputers: 0,
+        cpuTypes: {},
+        ramDistribution: {},
+        storageDistribution: {},
+        activatedCount: 0,
+        notActivatedCount: 0,
+        onlineCount: 0,
+        offlineCount: 0
+      });
     }
     const result = await pool.request()
       .query(`
@@ -1203,18 +1198,17 @@ app.get('/api/analytics', async (req, res) => {
     res.json(analytics);
   } catch (err) {
     console.error('Error fetching analytics:', err.message);
-    console.log('[FALLBACK] Using fallback data for analytics due to error');
-    try {
-      const { fallbackAnalytics } = await import('./src/data/fallback-data.js');
-      return res.json(fallbackAnalytics);
-    } catch (fallbackError) {
-      console.error('Fallback data also failed:', fallbackError.message);
-      res.status(500).json({ 
-        error: 'Failed to fetch analytics from database',
-        message: err.message,
-        timestamp: new Date().toISOString()
-      });
-    }
+    console.log('[DB] Database error, returning empty data for analytics');
+    return res.json({
+      totalComputers: 0,
+      cpuTypes: {},
+      ramDistribution: {},
+      storageDistribution: {},
+      activatedCount: 0,
+      notActivatedCount: 0,
+      onlineCount: 0,
+      offlineCount: 0
+    });
   }
 });
 
