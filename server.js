@@ -1883,8 +1883,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         
         // Try to read the log file for more details
         try {
-          const fs = await import('fs');
-          const path = await import('path');
+          const fs = require('fs');
+          const path = require('path');
           const logFile = path.join(process.cwd(), 'noVNC', `websockify-${host}-${port}.log`);
           if (fs.existsSync(logFile)) {
             const logContent = fs.readFileSync(logFile, 'utf8');
