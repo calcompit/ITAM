@@ -96,9 +96,9 @@ const sqlConfig = {
     maxRetriesOnTries: 3
   },
   pool: {
-    max: 3, // ลด pool size ลงอีก
+    max: 2, // ลด pool size ลงอีก
     min: 0,
-    idleTimeoutMillis: 120000, // เพิ่ม idle timeout เป็น 2 นาที
+    idleTimeoutMillis: 300000, // เพิ่ม idle timeout เป็น 5 นาที
     acquireTimeoutMillis: 30000,
     createTimeoutMillis: 30000,
     destroyTimeoutMillis: 5000,
@@ -189,7 +189,7 @@ function setupPoolEvents(pool) {
 // Initialize connection pool
 createConnectionPool();
 
-// Auto-reconnect and keep-alive every 60 seconds (reduced frequency)
+// Only reconnect when connection is lost (no keep-alive)
 setInterval(async () => {
   if (!pool || pool.closed) {
     console.log('[DB] Auto-reconnect: Connection lost, attempting to reconnect...');
@@ -198,30 +198,8 @@ setInterval(async () => {
     } catch (error) {
       console.log('[DB] Auto-reconnect failed:', error.message);
     }
-  } else if (pool && !pool.closed) {
-    // Keep-alive: Send a simple query to keep connection alive (less frequent)
-    const now = Date.now();
-    if (!pool.lastKeepAlive || (now - pool.lastKeepAlive) > 60000) { // Keep-alive every 60 seconds
-      console.log('[DB] Keep-alive: Sending keep-alive query...');
-      try {
-        const testRequest = pool.request();
-        await testRequest.query('SELECT 1 as keepalive');
-        pool.lastTestTime = Date.now();
-        pool.lastKeepAlive = Date.now();
-        console.log('[DB] Keep-alive: Connection is healthy');
-      } catch (error) {
-        console.log('[DB] Keep-alive: Connection test failed, will reconnect...');
-        pool = null;
-        connectionStatus = 'disconnected';
-        try {
-          await createConnectionPool();
-        } catch (reconnectError) {
-          console.log('[DB] Keep-alive reconnection failed');
-        }
-      }
-    }
   }
-}, 60000); // Check every 60 seconds
+}, 30000); // Check every 30 seconds
 
 // Function to get database connection with retry
 async function getDbConnection() {
@@ -231,38 +209,11 @@ async function getDbConnection() {
       await createConnectionPool();
     }
     
-    // Only test connection if we haven't tested recently (avoid excessive testing)
-    const now = Date.now();
-    if (pool && (!pool.lastTestTime || (now - pool.lastTestTime) > 60000)) { // Test every 60 seconds max
-      try {
-        const testRequest = pool.request();
-        const testPromise = testRequest.query('SELECT 1 as test');
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Connection test timeout')), 3000) // Reduced timeout
-        );
-        
-        await Promise.race([testPromise, timeoutPromise]);
-        pool.lastTestTime = now;
-        console.log('[DB] Connection test successful');
-      } catch (testError) {
-        console.log(`[DB] Connection test failed: ${testError.message}`);
-        console.log('[DB] Connection is closed, resetting pool and reconnecting...');
-        pool = null;
-        connectionStatus = 'disconnected';
-        // Try to create new connection
-        try {
-          await createConnectionPool();
-        } catch (reconnectError) {
-          console.log('[DB] Reconnection failed, will return null');
-          return null;
-        }
-      }
-    }
-    
+    // Don't test connection every time, just return the pool
+    // Connection will be tested when actually used
     return pool;
   } catch (error) {
     console.error('[DB] Failed to get connection:', error.message);
-    // Return null to trigger fallback data
     return null;
   }
 }
@@ -776,7 +727,7 @@ function startPollingMonitoring() {
         const latestUpdate = Math.max(...result.recordset.map(r => new Date(r.UpdatedAt).getTime()));
         lastCheck = new Date(latestUpdate);
       }
-      pool.close();
+      // Don't close the pool, keep it for reuse
       
     } catch (err) {
       console.error('[Real-time] Database polling error:', err.message);
@@ -792,8 +743,8 @@ function startPollingMonitoring() {
       // Continue polling even if there's an error
     }
     
-    // Poll every 5 seconds
-    setTimeout(pollForChanges, 5000);
+    // Poll every 2 seconds for faster updates
+    setTimeout(pollForChanges, 2000);
   };
   
   console.log('[Real-time] Starting polling monitoring...');
@@ -902,7 +853,7 @@ app.get('/api/computers', async (req, res) => {
       };
     });
     
-    pool.close();
+    // Don't close the pool, keep it for reuse
     res.json(computers);
     
   } catch (err) {
