@@ -107,6 +107,7 @@ let pool = null;
 let isConnecting = false;
 let connectionAttempts = 0;
 const maxConnectionAttempts = 10;
+let connectionStatus = 'disconnected'; // 'connected', 'disconnected', 'connecting', 'failed'
 
 async function createConnectionPool() {
   if (isConnecting) {
@@ -116,6 +117,7 @@ async function createConnectionPool() {
   
   isConnecting = true;
   connectionAttempts++;
+  connectionStatus = 'connecting';
   
   try {
     console.log(`[DB] Attempting to connect to SQL Server (attempt ${connectionAttempts}/${maxConnectionAttempts})...`);
@@ -124,10 +126,12 @@ async function createConnectionPool() {
     setupPoolEvents(pool);
     isConnecting = false;
     connectionAttempts = 0; // Reset counter on success
+    connectionStatus = 'connected';
     return pool;
   } catch (error) {
     console.error('[DB] Connection failed:', error.message);
     isConnecting = false;
+    connectionStatus = 'failed';
     
     if (connectionAttempts < maxConnectionAttempts) {
       // Exponential backoff: 2, 4, 8, 16, 32 seconds
@@ -139,6 +143,7 @@ async function createConnectionPool() {
     } else {
       console.log('[DB] Max connection attempts reached, will retry later');
       connectionAttempts = 0; // Reset for next cycle
+      connectionStatus = 'disconnected';
     }
     
     throw error;
@@ -163,7 +168,7 @@ function setupPoolEvents(pool) {
 // Initialize connection pool
 createConnectionPool();
 
-// Auto-reconnect every 30 seconds if connection is lost
+// Auto-reconnect every 60 seconds if connection is lost
 setInterval(async () => {
   if (!pool || pool.closed) {
     console.log('[DB] Auto-reconnect: Connection lost, attempting to reconnect...');
@@ -172,8 +177,20 @@ setInterval(async () => {
     } catch (error) {
       console.log('[DB] Auto-reconnect failed:', error.message);
     }
+  } else if (pool.lastTestTime && (Date.now() - pool.lastTestTime) > 60000) {
+    // If we haven't tested the connection in over a minute, test it
+    console.log('[DB] Auto-test: Testing connection health...');
+    try {
+      const testRequest = pool.request();
+      await testRequest.query('SELECT 1 as test');
+      pool.lastTestTime = Date.now();
+      console.log('[DB] Auto-test: Connection is healthy');
+    } catch (error) {
+      console.log('[DB] Auto-test: Connection test failed, will reconnect on next request');
+      pool.lastTestTime = Date.now();
+    }
   }
-}, 30000); // Check every 30 seconds
+}, 60000); // Check every 60 seconds
 
 // Function to get database connection with retry
 async function getDbConnection() {
@@ -183,20 +200,25 @@ async function getDbConnection() {
       await createConnectionPool();
     }
     
-    // Test the connection with timeout
-    try {
-      const testRequest = pool.request();
-      const testPromise = testRequest.query('SELECT 1 as test');
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection test timeout')), 5000)
-      );
-      
-      await Promise.race([testPromise, timeoutPromise]);
-      console.log('[DB] Connection test successful');
-    } catch (testError) {
-      console.log('[DB] Connection test failed, recreating pool...');
-      pool = null;
-      await createConnectionPool();
+    // Only test connection if we haven't tested recently (avoid excessive testing)
+    const now = Date.now();
+    if (!pool.lastTestTime || (now - pool.lastTestTime) > 30000) { // Test every 30 seconds max
+      try {
+        const testRequest = pool.request();
+        const testPromise = testRequest.query('SELECT 1 as test');
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Connection test timeout')), 3000) // Reduced timeout
+        );
+        
+        await Promise.race([testPromise, timeoutPromise]);
+        pool.lastTestTime = now;
+        console.log('[DB] Connection test successful');
+      } catch (testError) {
+        console.log(`[DB] Connection test failed: ${testError.message}`);
+        console.log('[DB] Will use existing pool for now, will retry on next request');
+        // Don't recreate pool immediately, just mark it as potentially problematic
+        pool.lastTestTime = now;
+      }
     }
     
     return pool;
@@ -373,35 +395,15 @@ function cleanupSession(port) {
   console.log(`[VNC Cleanup] Removed session from activeSessions. Remaining sessions:`, Array.from(activeSessions.keys()));
 }
 
-// Database connection status tracking
-let dbConnectionStatus = 'disconnected';
-let lastDbError = null;
-let connectionRetryCount = 0;
-const maxRetryCount = 10; // เพิ่มจาก 5
-
-// Test database connection
+// Test database connection (legacy function - now handled by createConnectionPool)
 async function testConnection() {
   try {
     const pool = await getDbConnection();
-    dbConnectionStatus = 'connected';
-    connectionRetryCount = 0; // Reset retry count on success
     
     // Setup realtime monitoring
     await setupRealtimeMonitoring(pool);
   } catch (err) {
-    dbConnectionStatus = 'disconnected';
-    connectionRetryCount++;
-    
-    // Auto-retry connection every 5 seconds (ลดจาก 10)
-    if (connectionRetryCount < maxRetryCount) {
-      setTimeout(() => {
-        console.log(`Retrying database connection... (${connectionRetryCount}/${maxRetryCount})`);
-        testConnection();
-      }, 5000); // 5 seconds (ลดจาก 10)
-    } else {
-      console.log('Max retry attempts reached. Using fallback data.');
-    }
-    
+    console.log('Database connection failed, using fallback data');
     // Fallback to polling when database is unavailable
     startPollingMonitoring();
   }
@@ -1480,7 +1482,7 @@ app.get('/api/vnc/health', (req, res) => {
     authenticatedUsers: authenticatedUsers.size,
     portRange: PORT_RANGE,
     maxSessions: PORT_RANGE.end - PORT_RANGE.start + 1,
-    database: dbConnectionStatus
+          database: connectionStatus
   });
 });
 
@@ -1986,29 +1988,35 @@ app.post('/api/vnc/connect', async (req, res) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const now = Date.now();
+  const lastTestTime = pool?.lastTestTime || 0;
+  const timeSinceLastTest = now - lastTestTime;
+  
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     database: {
-      status: dbConnectionStatus,
+      status: connectionStatus,
       server: sqlConfig.server,
       database: sqlConfig.database,
-      retryCount: connectionRetryCount,
-      maxRetries: maxRetryCount
+      connectionAttempts: connectionAttempts,
+      maxAttempts: maxConnectionAttempts,
+      lastTestTime: lastTestTime ? new Date(lastTestTime).toISOString() : null,
+      timeSinceLastTest: timeSinceLastTest > 0 ? `${Math.floor(timeSinceLastTest / 1000)}s ago` : 'Never'
     },
-    fallback: dbConnectionStatus === 'disconnected' ? 'Using fallback data' : 'Connected to database',
-    nextRetry: dbConnectionStatus === 'disconnected' && connectionRetryCount < maxRetryCount ? 
-      `Retrying in ${Math.max(0, 5 - (Date.now() % 5000) / 1000).toFixed(1)}s` : null
+    fallback: connectionStatus === 'disconnected' || connectionStatus === 'failed' ? 'Using fallback data' : 'Connected to database',
+    nextRetry: connectionStatus === 'failed' && connectionAttempts < maxConnectionAttempts ? 
+      `Retrying in ${Math.max(0, 30 - (Date.now() % 30000) / 1000).toFixed(1)}s` : null
   });
 });
 
 // Manual retry endpoint
 app.post('/api/retry-connection', (req, res) => {
-  connectionRetryCount = 0; // Reset retry count
-  testConnection();
+  connectionAttempts = 0; // Reset retry count
+  createConnectionPool();
   res.json({ 
     message: 'Connection retry initiated',
-    retryCount: connectionRetryCount
+    status: connectionStatus
   });
 });
 
