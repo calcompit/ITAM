@@ -29,14 +29,14 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
     window.open(webVncUrl, `vnc_${Date.now()}`, windowFeatures);
   };
 
-  // Auto-open Web VNC when dialog opens
+  // Auto-open Web VNC when dialog opens - FAST
   React.useEffect(() => {
     if (isOpen) {
-      // Auto-open Web VNC using the Windows proxy server
+      // Immediate VNC opening for fastest connection
       setTimeout(() => {
         handleWebVNC();
         onClose();
-      }, 1000);
+      }, 300); // Reduced from 1000ms to 300ms
     }
   }, [isOpen, ip, port]); // Add ip and port as dependencies
 
@@ -83,10 +83,10 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-              Opening Web VNC (Windows Proxy Server)...
+              🚀 Fast VNC Connection (Optimized)
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Dialog will close automatically...
+              Opening in 0.3 seconds...
             </p>
           </div>
 

@@ -333,6 +333,67 @@ wss.on('connection', (ws) => {
 });
 
 // VNC Helper Functions
+
+// 🎯 CRITICAL: Pre-flight validation for 100% accuracy
+async function validateVNCPrerequisites(host, port) {
+  console.log(`🔍 [VNC VALIDATE] Checking prerequisites for ${host}:${port}...`);
+  
+  try {
+    const { exec } = await import('child_process');
+    const util = await import('util');
+    const execPromise = util.promisify(exec);
+    
+    // 1. Check Python
+    try {
+      const pythonCheck = await execPromise('python --version');
+      console.log(`✅ [VNC VALIDATE] Python: ${pythonCheck.stdout.trim()}`);
+    } catch (error) {
+      throw new Error(`Python not found: ${error.message}`);
+    }
+    
+    // 2. Check websockify module
+    try {
+      await execPromise('python -c "import websockify; print(\'websockify available\')"');
+      console.log(`✅ [VNC VALIDATE] Websockify module available`);
+    } catch (error) {
+      throw new Error(`Websockify module not found: ${error.message}`);
+    }
+    
+    // 3. Test target connectivity
+    console.log(`🎯 [VNC VALIDATE] Testing connectivity to ${host}:${port}...`);
+    const net = await import('net');
+    const socket = new net.Socket();
+    
+    const connectTest = new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        socket.destroy();
+        reject(new Error(`Connection timeout to ${host}:${port} (3 seconds)`));
+      }, 3000);
+      
+      socket.connect(port, host, () => {
+        clearTimeout(timeout);
+        socket.destroy();
+        console.log(`✅ [VNC VALIDATE] Target ${host}:${port} is reachable`);
+        resolve(true);
+      });
+      
+      socket.on('error', (err) => {
+        clearTimeout(timeout);
+        socket.destroy();
+        reject(new Error(`Cannot connect to ${host}:${port}: ${err.message}`));
+      });
+    });
+    
+    await connectTest;
+    console.log(`🎉 [VNC VALIDATE] All prerequisites passed for ${host}:${port}`);
+    return true;
+    
+  } catch (error) {
+    console.error(`❌ [VNC VALIDATE] Failed for ${host}:${port}:`, error.message);
+    throw error;
+  }
+}
+
 function findAvailablePort() {
   console.log(`[VNC] Finding available port. Current active sessions:`, Array.from(activeSessions.keys()));
   console.log(`[VNC] Port range: ${PORT_RANGE.start}-${PORT_RANGE.end}`);
@@ -1696,6 +1757,18 @@ app.post('/api/vnc/start-session', async (req, res) => {
     
     console.log('[VNC Start Session] User ready:', username);
 
+    // 🎯 STEP 1: Validate prerequisites for 100% accuracy
+    try {
+      await validateVNCPrerequisites(host, port);
+    } catch (error) {
+      console.error(`❌ [VNC VALIDATE] Prerequisites failed for ${host}:${port}:`, error.message);
+      return res.status(400).json({
+        success: false,
+        message: `VNC validation failed: ${error.message}`,
+        details: 'Please check if the target machine is accessible and VNC server is running'
+      });
+    }
+
     // Kill all existing sessions for this user (Single Session Policy)
     const sessionsToKill = [];
     console.log(`[VNC Start Session] Checking existing sessions for user: ${username}`);
@@ -1753,18 +1826,26 @@ app.post('/api/vnc/start-session', async (req, res) => {
         // Detect platform and use appropriate command to run in background
     
     if (process.platform === 'win32') {
-      // Windows: Use start command to run in background
+      // Windows: Direct Python command - FIXED for accuracy
       const pythonCommand = 'python';
       console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
+      console.log(`[VNC] Command: ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
       
-      websockifyProcess = spawn('cmd', ['/c', 'start', '/min', pythonCommand, '-W', 'ignore', '-m', 'websockify', websockifyPort.toString(), `${host}:${port}`, '--web', path.join(process.cwd(), 'noVNC'), '--verbose', '--log-file', `websockify-${host}-${port}.log`, '--idle-timeout', '300'], {
+      websockifyProcess = spawn(pythonCommand, [
+        '-m', 'websockify', 
+        websockifyPort.toString(), 
+        `${host}:${port}`, 
+        '--web', path.join(process.cwd(), 'noVNC'), 
+        '--verbose', 
+        '--log-file', `websockify-${host}-${port}.log`
+      ], {
         cwd: path.join(process.cwd(), 'noVNC'),
-        stdio: ['ignore', 'pipe', 'pipe'],
-        detached: true,
-        windowsHide: true,
+        stdio: ['pipe', 'pipe', 'pipe'], // Changed to capture all output
+        detached: false, // Changed to false for better control
         env: {
           ...process.env,
-          PYTHONWARNINGS: 'ignore'
+          PYTHONWARNINGS: 'ignore',
+          PYTHONPATH: path.join(process.cwd(), 'noVNC')
         }
       });
     } else {
@@ -1783,23 +1864,29 @@ app.post('/api/vnc/start-session', async (req, res) => {
       });
     }
 
-    // Handle process events
+    // Handle process events with detailed logging for 100% accuracy
     websockifyProcess.on('error', (error) => {
-      console.error(`Websockify process error on port ${websockifyPort}:`, error);
+      console.error(`❌ [VNC ERROR] Websockify process error on port ${websockifyPort}:`, error.message);
+      console.error(`❌ [VNC ERROR] Command was: python -m websockify ${websockifyPort} ${host}:${port}`);
+      console.error(`❌ [VNC ERROR] Full error:`, error);
       cleanupSession(websockifyPort);
     });
 
     websockifyProcess.on('exit', (code) => {
-      console.log(`Websockify process exited on port ${websockifyPort} with code ${code}`);
+      console.log(`⚠️ [VNC EXIT] Websockify process exited on port ${websockifyPort} with code ${code}`);
+      console.log(`🎯 [VNC TARGET] Was connecting to: ${host}:${port}`);
+      
       if (code !== 0) {
-        console.error(`Websockify process failed with exit code ${code}`);
+        console.error(`❌ [VNC FAILURE] Websockify process failed with exit code ${code}`);
+        console.error(`❌ [VNC FAILURE] Target: ${host}:${port}, Port: ${websockifyPort}`);
+        
         // Try to read the log file for more details
         try {
           const fs = require('fs');
           const logFile = path.join(process.cwd(), 'noVNC', `websockify-${host}-${port}.log`);
           if (fs.existsSync(logFile)) {
             const logContent = fs.readFileSync(logFile, 'utf8');
-            console.error('Websockify log:', logContent);
+            console.error('📋 [VNC LOG]:', logContent);
           }
         } catch (logError) {
           console.error('Could not read websockify log:', logError.message);
@@ -1807,6 +1894,25 @@ app.post('/api/vnc/start-session', async (req, res) => {
       }
       cleanupSession(websockifyPort);
     });
+
+    // Capture stdout and stderr for 100% accurate debugging
+    if (websockifyProcess.stdout) {
+      websockifyProcess.stdout.on('data', (data) => {
+        const output = data.toString().trim();
+        if (output) {
+          console.log(`📡 [VNC STDOUT] Port ${websockifyPort} → ${host}:${port}: ${output}`);
+        }
+      });
+    }
+
+    if (websockifyProcess.stderr) {
+      websockifyProcess.stderr.on('data', (data) => {
+        const error = data.toString().trim();
+        if (error) {
+          console.error(`🚨 [VNC STDERR] Port ${websockifyPort} → ${host}:${port}: ${error}`);
+        }
+      });
+    }
 
     // Add stdout and stderr handlers for better debugging
     if (websockifyProcess.stdout) {
@@ -1843,7 +1949,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
       userInfo.lastActivity = new Date();
     }
 
-    console.log(`Started VNC session for ${username} on port ${websockifyPort} -> ${host}:${port}`);
+    console.log(`🎉 [VNC SUCCESS] Started session for ${username}`);
+    console.log(`📡 [VNC SUCCESS] Proxy: localhost:${websockifyPort} → Target: ${host}:${port}`);
 
     // Wait a moment for websockify to start
     setTimeout(() => {

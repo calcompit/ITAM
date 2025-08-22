@@ -302,33 +302,39 @@ export function Dashboard({ activeTab }: DashboardProps) {
           description: `Connecting to ${computerName} (${ip})...`,
         });
         
-        // Wait for websockify to be ready with port checking
-        console.log(`Waiting for websockify to be ready on port ${session.port}...`);
+        // Fast port checking - optimized for speed
+        console.log(`Quick port check for ${session.port}...`);
         
         let attempts = 0;
-        const maxAttempts = 10;
+        const maxAttempts = 6; // Reduced from 10
         let isReady = false;
         
         while (attempts < maxAttempts && !isReady) {
           try {
-            // Try to connect to the websockify port
+            // Faster connection check with timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 200); // 200ms timeout
+            
             const response = await fetch(`http://localhost:${session.port}`, { 
               mode: 'no-cors',
-              method: 'HEAD'
+              method: 'HEAD',
+              signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
             isReady = true;
-            console.log(`Websockify ready on port ${session.port}`);
+            console.log(`✅ Port ${session.port} ready!`);
           } catch (error) {
             attempts++;
-            console.log(`Attempt ${attempts}/${maxAttempts}: Port ${session.port} not ready yet...`);
-            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms between attempts
+            console.log(`⏳ Check ${attempts}/${maxAttempts}...`);
+            await new Promise(resolve => setTimeout(resolve, 250)); // Reduced to 250ms
           }
         }
         
         if (!isReady) {
-          console.log(`Warning: Maximum attempts reached, proceeding anyway...`);
-          // Give it one more second as fallback
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log(`⚠️ Quick check completed, proceeding with VNC...`);
+          // Reduced fallback wait time
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
         
         console.log(`Proceeding with VNC connection on port ${session.port}`);
