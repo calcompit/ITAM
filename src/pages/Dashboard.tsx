@@ -574,11 +574,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
               ← Back to Groups
             </Button>
           )}
-          {computers.length > 0 && (
-            <Badge variant="secondary" className="text-xs">
-              {computers.length} computer{computers.length !== 1 ? 's' : ''} loaded
-            </Badge>
-          )}
+
         </div>
         <div className="flex items-center gap-4">
           <div className="relative">
