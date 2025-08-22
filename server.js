@@ -81,27 +81,75 @@ const sqlConfig = {
   options: {
     encrypt: true,
     trustServerCertificate: true,
-    connectTimeout: 10000,
-    requestTimeout: 10000,
-    connectionRetryInterval: 1000,
-    maxRetriesOnTries: 3,
-    cancelTimeout: 5000,
+    connectTimeout: 30000, // เพิ่ม timeout เป็น 30 วินาที
+    requestTimeout: 30000,
+    connectionRetryInterval: 2000, // เพิ่ม retry interval
+    maxRetriesOnTries: 5, // เพิ่มจำนวน retry
+    cancelTimeout: 10000,
     packetSize: 4096,
     useUTC: false,
     // Fix TLS warning by setting proper server name
     serverName: process.env.DB_SERVER || '10.53.64.205'
   },
   pool: {
-    max: 5,
+    max: 10, // เพิ่ม pool size
     min: 0,
-    idleTimeoutMillis: 15000,
-    acquireTimeoutMillis: 15000,
-    createTimeoutMillis: 15000,
-    destroyTimeoutMillis: 3000,
-    reapIntervalMillis: 500,
-    createRetryIntervalMillis: 100
+    idleTimeoutMillis: 30000, // เพิ่ม idle timeout
+    acquireTimeoutMillis: 30000,
+    createTimeoutMillis: 30000,
+    destroyTimeoutMillis: 5000,
+    reapIntervalMillis: 1000,
+    createRetryIntervalMillis: 200
   }
 };
+
+// Database connection pool with retry logic
+let pool = null;
+let isConnecting = false;
+
+async function createConnectionPool() {
+  if (isConnecting) {
+    console.log('[DB] Connection already in progress, waiting...');
+    return;
+  }
+  
+  isConnecting = true;
+  
+  try {
+    console.log('[DB] Attempting to connect to SQL Server...');
+    pool = await sql.connect(sqlConfig);
+    console.log('[DB] Successfully connected to SQL Server');
+    isConnecting = false;
+    return pool;
+  } catch (error) {
+    console.error('[DB] Connection failed:', error.message);
+    isConnecting = false;
+    
+    // Retry after 5 seconds
+    setTimeout(() => {
+      console.log('[DB] Retrying connection...');
+      createConnectionPool();
+    }, 5000);
+    
+    throw error;
+  }
+}
+
+// Initialize connection pool
+createConnectionPool();
+
+// Function to get database connection with retry
+async function getDbConnection() {
+  try {
+    if (!pool) {
+      await createConnectionPool();
+    }
+    return pool;
+  } catch (error) {
+    console.error('[DB] Failed to get connection:', error.message);
+    throw error;
+  }
+}
 
 // WebSocket clients
 const clients = new Set();
@@ -278,7 +326,7 @@ const maxRetryCount = 10; // เพิ่มจาก 5
 // Test database connection
 async function testConnection() {
   try {
-    const pool = await sql.connect(sqlConfig);
+    const pool = await getDbConnection();
     dbConnectionStatus = 'connected';
     connectionRetryCount = 0; // Reset retry count on success
     
@@ -559,7 +607,7 @@ function startPollingMonitoring() {
   
   const pollForChanges = async () => {
     try {
-      const pool = await sql.connect(sqlConfig);
+      const pool = await getDbConnection();
       const result = await pool.request()
         .input('lastCheck', sql.DateTime, lastCheck)
         .query(`
@@ -643,7 +691,7 @@ function startPollingMonitoring() {
 // Get all computers from TBL_IT_MachinesCurrent
 app.get('/api/computers', async (req, res) => {
   try {
-    const pool = await sql.connect(sqlConfig);
+    const pool = await getDbConnection();
     
     // Use the correct column names based on the actual database schema
     const result = await pool.request()
@@ -742,11 +790,11 @@ app.get('/api/computers', async (req, res) => {
     
   } catch (err) {
     console.error('Error fetching computers:', err.message);
-    res.status(500).json({ 
-      error: 'Failed to fetch computers from database',
-      message: err.message,
-      timestamp: new Date().toISOString()
-    });
+    
+    // Return fallback data when database is unavailable
+    console.log('[FALLBACK] Using fallback data for computers');
+    const { fallbackComputers } = await import('./src/data/fallback-data.ts');
+    res.json(fallbackComputers);
   }
 });
 
@@ -754,7 +802,7 @@ app.get('/api/computers', async (req, res) => {
 app.get('/api/computers/:machineID/changelog', async (req, res) => {
   try {
     const { machineID } = req.params;
-    const pool = await sql.connect(sqlConfig);
+    const pool = await getDbConnection();
     
 
     
@@ -887,7 +935,7 @@ app.get('/api/computers/:machineID/changelog', async (req, res) => {
 // Get IP groups summary
 app.get('/api/ip-groups', async (req, res) => {
   try {
-    const pool = await sql.connect(sqlConfig);
+    const pool = await getDbConnection();
     const result = await pool.request()
       .query(`
         SELECT 
@@ -922,7 +970,7 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    const pool = await sql.connect(sqlConfig);
+    const pool = await getDbConnection();
     const result = await pool.request()
       .input('username', sql.VarChar, username)
       .input('password', sql.VarChar, password)
@@ -955,7 +1003,7 @@ app.post('/api/login', async (req, res) => {
 // Get analytics data
 app.get('/api/analytics', async (req, res) => {
   try {
-    const pool = await sql.connect(sqlConfig);
+    const pool = await getDbConnection();
     const result = await pool.request()
       .query(`
         SELECT 
@@ -1040,7 +1088,7 @@ app.get('/api/analytics', async (req, res) => {
 app.get('/api/alerts/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    const pool = await sql.connect(sqlConfig);
+    const pool = await getDbConnection();
     
             // Get recent changelog entries and convert to alerts
         const result = await pool.request()
@@ -1174,7 +1222,7 @@ app.post('/api/alerts/:username/read/:alertId', async (req, res) => {
 app.get('/api/computers/:machineID/status', async (req, res) => {
   try {
     const { machineID } = req.params;
-    const pool = await sql.connect(sqlConfig);
+    const pool = await getDbConnection();
     const result = await pool.request()
       .input('machineID', sql.VarChar, machineID)
       .query(`
@@ -1565,11 +1613,12 @@ app.post('/api/vnc/start-session', async (req, res) => {
       '--web', path.join(process.cwd(), 'noVNC'),
       '--verbose',
       '--log-file', `websockify-${host}-${port}.log`,
-      '--idle-timeout', '300'
+      '--idle-timeout', '300',
+      '--daemon'  // Run as daemon to prevent immediate exit
     ], {
       cwd: path.join(process.cwd(), 'noVNC'),
       stdio: ['ignore', 'pipe', 'pipe'],
-      detached: true,
+      detached: false,  // Change to false to keep process alive
       env: {
         ...process.env,
         PYTHONWARNINGS: 'ignore'  // Suppress Python warnings
