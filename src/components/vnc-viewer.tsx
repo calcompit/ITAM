@@ -23,7 +23,8 @@ export function VNCViewer({ isOpen, onClose, ip, port = 5900, computerName }: VN
 
   const handleWebVNC = () => {
     // Open in new window for web VNC using the Windows proxy server - Force new window, not tab
-    const webVncUrl = `${API_CONFIG.NOVNC_URL}/vnc.html?ip=${ip}&port=${port}&password=123`;
+    // Add Thai keyboard layout parameters
+    const webVncUrl = `${API_CONFIG.NOVNC_URL}/vnc.html?ip=${ip}&port=${port}&password=123&keyboardLayout=th&language=th&encoding=UTF-8`;
     const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no,left=100,top=100';
     window.open(webVncUrl, `vnc_${Date.now()}`, windowFeatures);
   };
