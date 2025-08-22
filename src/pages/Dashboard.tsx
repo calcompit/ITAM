@@ -236,6 +236,12 @@ export function Dashboard({ activeTab }: DashboardProps) {
   };
 
   const handleVNC = async (ip: string, computerName: string) => {
+    // Show loading modal immediately when button is clicked
+    setVncModalTitle("🚀 Starting VNC Connection");
+    setVncModalMessage(`Connecting to ${computerName} (${ip})...`);
+    setVncModalType("loading");
+    setShowVncModal(true);
+    
     try {
       console.log(`Starting VNC for IP: ${ip} (${computerName})`);
       
@@ -304,12 +310,6 @@ export function Dashboard({ activeTab }: DashboardProps) {
       if (session) {
         console.log('Starting VNC Connection...');
         console.log('Session details:', session);
-        
-        // Show loading modal
-        setVncModalTitle("🚀 Starting VNC Connection");
-        setVncModalMessage(`Connecting to ${computerName} (${ip})...`);
-        setVncModalType("loading");
-        setShowVncModal(true);
         
         // Fast port checking - optimized for speed
         console.log(`Quick port check for ${session.port}...`);
@@ -569,7 +569,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
 
   // Show Analytics page
   if (activeTab === "analytics") {
-    return <Analytics />;
+    return <Analytics computers={computers} onPin={handlePin} />;
   }
 
   // Show Alerts page
@@ -813,8 +813,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
           </DialogHeader>
           <div className="flex items-center justify-center py-4">
             {vncModalType === "loading" && (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              <div className="text-center">
                 <span className="text-sm text-muted-foreground">Please wait...</span>
               </div>
             )}
