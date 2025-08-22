@@ -81,19 +81,22 @@ const sqlConfig = {
   options: {
     encrypt: true,
     trustServerCertificate: true,
-    connectTimeout: 30000, // เพิ่ม timeout เป็น 30 วินาที
+    connectTimeout: 30000,
     requestTimeout: 30000,
-    connectionRetryInterval: 2000, // เพิ่ม retry interval
-    maxRetriesOnTries: 5, // เพิ่มจำนวน retry
+    connectionRetryInterval: 2000,
+    maxRetriesOnTries: 5,
     cancelTimeout: 10000,
     packetSize: 4096,
-    useUTC: false
-    // Removed serverName to fix TLS warning
+    useUTC: false,
+    enableArithAbort: true,
+    enableNumericRoundabort: false,
+    multipleActiveResultSets: false,
+    applicationIntent: 'ReadWrite'
   },
   pool: {
-    max: 10, // เพิ่ม pool size
+    max: 5, // ลด pool size เพื่อลดการใช้งาน connection
     min: 0,
-    idleTimeoutMillis: 30000, // เพิ่ม idle timeout
+    idleTimeoutMillis: 60000, // เพิ่ม idle timeout เป็น 60 วินาที
     acquireTimeoutMillis: 30000,
     createTimeoutMillis: 30000,
     destroyTimeoutMillis: 5000,
@@ -154,13 +157,25 @@ async function createConnectionPool() {
 function setupPoolEvents(pool) {
   if (pool) {
     pool.on('close', () => {
-      console.log('[DB] Connection pool closed, will reconnect on next request');
+      console.log('[DB] Connection pool closed, resetting pool and status');
       pool = null;
+      connectionStatus = 'disconnected';
+      // Trigger immediate reconnection
+      setTimeout(() => {
+        console.log('[DB] Triggering reconnection after pool close');
+        createConnectionPool();
+      }, 1000);
     });
     
     pool.on('error', (error) => {
       console.error('[DB] Connection pool error:', error.message);
       pool = null;
+      connectionStatus = 'failed';
+      // Trigger immediate reconnection
+      setTimeout(() => {
+        console.log('[DB] Triggering reconnection after pool error');
+        createConnectionPool();
+      }, 1000);
     });
   }
 }
@@ -168,7 +183,7 @@ function setupPoolEvents(pool) {
 // Initialize connection pool
 createConnectionPool();
 
-// Auto-reconnect every 60 seconds if connection is lost
+// Auto-reconnect and keep-alive every 30 seconds
 setInterval(async () => {
   if (!pool || pool.closed) {
     console.log('[DB] Auto-reconnect: Connection lost, attempting to reconnect...');
@@ -177,20 +192,26 @@ setInterval(async () => {
     } catch (error) {
       console.log('[DB] Auto-reconnect failed:', error.message);
     }
-  } else if (pool.lastTestTime && (Date.now() - pool.lastTestTime) > 60000) {
-    // If we haven't tested the connection in over a minute, test it
-    console.log('[DB] Auto-test: Testing connection health...');
+  } else {
+    // Keep-alive: Send a simple query to keep connection alive
+    console.log('[DB] Keep-alive: Sending keep-alive query...');
     try {
       const testRequest = pool.request();
-      await testRequest.query('SELECT 1 as test');
+      await testRequest.query('SELECT 1 as keepalive');
       pool.lastTestTime = Date.now();
-      console.log('[DB] Auto-test: Connection is healthy');
+      console.log('[DB] Keep-alive: Connection is healthy');
     } catch (error) {
-      console.log('[DB] Auto-test: Connection test failed, will reconnect on next request');
-      pool.lastTestTime = Date.now();
+      console.log('[DB] Keep-alive: Connection test failed, will reconnect...');
+      pool = null;
+      connectionStatus = 'disconnected';
+      try {
+        await createConnectionPool();
+      } catch (reconnectError) {
+        console.log('[DB] Keep-alive reconnection failed');
+      }
     }
   }
-}, 60000); // Check every 60 seconds
+}, 30000); // Check every 30 seconds
 
 // Function to get database connection with retry
 async function getDbConnection() {
@@ -215,9 +236,16 @@ async function getDbConnection() {
         console.log('[DB] Connection test successful');
       } catch (testError) {
         console.log(`[DB] Connection test failed: ${testError.message}`);
-        console.log('[DB] Will use existing pool for now, will retry on next request');
-        // Don't recreate pool immediately, just mark it as potentially problematic
-        pool.lastTestTime = now;
+        console.log('[DB] Connection is closed, resetting pool and reconnecting...');
+        pool = null;
+        connectionStatus = 'disconnected';
+        // Try to create new connection
+        try {
+          await createConnectionPool();
+        } catch (reconnectError) {
+          console.log('[DB] Reconnection failed, will use fallback data');
+          return null;
+        }
       }
     }
     
@@ -742,6 +770,15 @@ function startPollingMonitoring() {
       
     } catch (err) {
       console.error('[Real-time] Database polling error:', err.message);
+      // If connection is closed, try to reconnect
+      if (err.message.includes('Connection is closed') || err.message.includes('Connection lost')) {
+        console.log('[Real-time] Connection lost, attempting to reconnect...');
+        try {
+          await createConnectionPool();
+        } catch (reconnectError) {
+          console.log('[Real-time] Reconnection failed, will continue with fallback');
+        }
+      }
       // Continue polling even if there's an error
     }
     
