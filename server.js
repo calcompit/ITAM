@@ -1514,7 +1514,7 @@ app.post('/api/vnc/start', async (req, res) => {
     ], {
       cwd: novncDir,
       detached: true,
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: 'ignore' // Changed to ignore all stdio to prevent terminal window
     });
     
     console.log(`Websockify started with PID: ${websockifyProcess.pid}`);
@@ -1841,8 +1841,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         '--idle-timeout', '300'
       ], {
         cwd: path.join(process.cwd(), 'noVNC'),
-        stdio: ['ignore', 'pipe', 'pipe'], // Changed back to ignore stdin
-        detached: true, // Changed back to true for background process
+        stdio: 'ignore', // Changed to ignore all stdio to prevent terminal window
+        detached: true, // Run in background
         env: {
           ...process.env,
           PYTHONWARNINGS: 'ignore',
@@ -1856,7 +1856,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
       
       websockifyProcess = spawn('nohup', [pythonCommand, '-W', 'ignore', '-m', 'websockify', websockifyPort.toString(), `${host}:${port}`, '--web', path.join(process.cwd(), 'noVNC'), '--verbose', '--log-file', `websockify-${host}-${port}.log`, '--idle-timeout', '300'], {
         cwd: path.join(process.cwd(), 'noVNC'),
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: 'ignore', // Changed to ignore all stdio to prevent terminal window
         detached: true,
         env: {
           ...process.env,
