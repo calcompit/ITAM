@@ -1513,7 +1513,8 @@ app.post('/api/vnc/start', async (req, res) => {
         target,
         '--web', '.',
         '--verbose',
-        '--log-file', `websockify-${host}-${port}.log`
+        '--log-file', `websockify-${host}-${port}.log`,
+        '--run-once' // Run once and exit to prevent terminal window
       ], {
         cwd: novncDir,
         detached: true,
@@ -1842,7 +1843,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
         // Detect platform and use appropriate command to run in background
     
     if (process.platform === 'win32') {
-      // Windows: Use pythonw.exe to run without terminal window
+      // Windows: Use pythonw.exe with --daemon=no to prevent daemonizing
       const pythonCommand = 'pythonw';
       console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
       console.log(`[VNC] Command: ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
@@ -1854,7 +1855,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         '--web', path.join(process.cwd(), 'noVNC'), 
         '--verbose', 
         '--log-file', `websockify-${host}-${port}.log`,
-        '--idle-timeout', '300'
+        '--idle-timeout', '300',
+        '--run-once' // Run once and exit to prevent terminal window
       ], {
         cwd: path.join(process.cwd(), 'noVNC'),
         stdio: 'ignore', // Ignore all stdio to prevent terminal window
