@@ -1507,8 +1507,8 @@ app.post('/api/vnc/start', async (req, res) => {
     // Use platform-specific command to prevent terminal window
     let websockifyProcess;
     if (process.platform === 'win32') {
-      websockifyProcess = spawn('cmd', [
-        '/c', 'start', '/min', '/b', 'python', '-m', 'websockify',
+      websockifyProcess = spawn('python', [
+        '-m', 'websockify',
         webPort.toString(),
         target,
         '--web', '.',
@@ -1517,7 +1517,8 @@ app.post('/api/vnc/start', async (req, res) => {
       ], {
         cwd: novncDir,
         detached: true,
-        stdio: 'ignore' // Ignore all stdio to prevent terminal window
+        stdio: 'ignore', // Ignore all stdio to prevent terminal window
+        windowsHide: true // Hide the terminal window on Windows
       });
     } else {
       websockifyProcess = spawn('nohup', ['python3', '-m', 'websockify',
@@ -1842,13 +1843,13 @@ app.post('/api/vnc/start-session', async (req, res) => {
         // Detect platform and use appropriate command to run in background
     
     if (process.platform === 'win32') {
-      // Windows: Use start command to run Python in background without terminal window
+      // Windows: Direct Python command with hidden window
       const pythonCommand = 'python';
       console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
       console.log(`[VNC] Command: ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
       
-      websockifyProcess = spawn('cmd', [
-        '/c', 'start', '/min', '/b', pythonCommand, '-m', 'websockify', 
+      websockifyProcess = spawn(pythonCommand, [
+        '-m', 'websockify', 
         websockifyPort.toString(), 
         `${host}:${port}`, 
         '--web', path.join(process.cwd(), 'noVNC'), 
@@ -1863,7 +1864,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
           ...process.env,
           PYTHONWARNINGS: 'ignore',
           PYTHONPATH: path.join(process.cwd(), 'noVNC')
-        }
+        },
+        windowsHide: true // Hide the terminal window on Windows
       });
     } else {
       // Linux/Mac: Use nohup to run in background
