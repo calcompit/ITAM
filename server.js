@@ -1504,18 +1504,34 @@ app.post('/api/vnc/start', async (req, res) => {
     const target = `${host}:${port}`;
     console.log(`Starting websockify with target: ${target}`);
     
-    const websockifyProcess = spawn('python', [
-      '-m', 'websockify',
-      webPort.toString(),
-      target,
-      '--web', '.',
-      '--verbose',
-      '--log-file', `websockify-${host}-${port}.log`
-    ], {
-      cwd: novncDir,
-      detached: true,
-      stdio: 'ignore' // Changed to ignore all stdio to prevent terminal window
-    });
+    // Use platform-specific command to prevent terminal window
+    let websockifyProcess;
+    if (process.platform === 'win32') {
+      websockifyProcess = spawn('cmd', [
+        '/c', 'start', '/min', '/b', 'python', '-m', 'websockify',
+        webPort.toString(),
+        target,
+        '--web', '.',
+        '--verbose',
+        '--log-file', `websockify-${host}-${port}.log`
+      ], {
+        cwd: novncDir,
+        detached: true,
+        stdio: 'ignore' // Ignore all stdio to prevent terminal window
+      });
+    } else {
+      websockifyProcess = spawn('nohup', ['python3', '-m', 'websockify',
+        webPort.toString(),
+        target,
+        '--web', '.',
+        '--verbose',
+        '--log-file', `websockify-${host}-${port}.log`
+      ], {
+        cwd: novncDir,
+        detached: true,
+        stdio: 'ignore' // Ignore all stdio to prevent terminal window
+      });
+    }
     
     console.log(`Websockify started with PID: ${websockifyProcess.pid}`);
     
@@ -1826,13 +1842,13 @@ app.post('/api/vnc/start-session', async (req, res) => {
         // Detect platform and use appropriate command to run in background
     
     if (process.platform === 'win32') {
-      // Windows: Direct Python command - FIXED for accuracy
+      // Windows: Use start command to run Python in background without terminal window
       const pythonCommand = 'python';
       console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
       console.log(`[VNC] Command: ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
       
-      websockifyProcess = spawn(pythonCommand, [
-        '-m', 'websockify', 
+      websockifyProcess = spawn('cmd', [
+        '/c', 'start', '/min', '/b', pythonCommand, '-m', 'websockify', 
         websockifyPort.toString(), 
         `${host}:${port}`, 
         '--web', path.join(process.cwd(), 'noVNC'), 
@@ -1841,7 +1857,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
         '--idle-timeout', '300'
       ], {
         cwd: path.join(process.cwd(), 'noVNC'),
-        stdio: 'ignore', // Changed to ignore all stdio to prevent terminal window
+        stdio: 'ignore', // Ignore all stdio to prevent terminal window
         detached: true, // Run in background
         env: {
           ...process.env,
@@ -1897,37 +1913,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
       cleanupSession(websockifyPort);
     });
 
-    // Capture stdout and stderr for 100% accurate debugging
-    if (websockifyProcess.stdout) {
-      websockifyProcess.stdout.on('data', (data) => {
-        const output = data.toString().trim();
-        if (output) {
-          console.log(`📡 [VNC STDOUT] Port ${websockifyPort} → ${host}:${port}: ${output}`);
-        }
-      });
-    }
-
-    if (websockifyProcess.stderr) {
-      websockifyProcess.stderr.on('data', (data) => {
-        const error = data.toString().trim();
-        if (error) {
-          console.error(`🚨 [VNC STDERR] Port ${websockifyPort} → ${host}:${port}: ${error}`);
-        }
-      });
-    }
-
-    // Add stdout and stderr handlers for better debugging
-    if (websockifyProcess.stdout) {
-      websockifyProcess.stdout.on('data', (data) => {
-        console.log(`[Websockify ${websockifyPort}] stdout:`, data.toString().trim());
-      });
-    }
-
-    if (websockifyProcess.stderr) {
-      websockifyProcess.stderr.on('data', (data) => {
-        console.error(`[Websockify ${websockifyPort}] stderr:`, data.toString().trim());
-      });
-    }
+    // Note: stdout and stderr are ignored due to stdio: 'ignore' setting
+    // All output will be logged to the log file instead
 
     // Store session information
     const sessionInfo = {
