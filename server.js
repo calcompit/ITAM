@@ -1507,7 +1507,7 @@ app.post('/api/vnc/start', async (req, res) => {
     // Use platform-specific command to prevent terminal window
     let websockifyProcess;
     if (process.platform === 'win32') {
-      websockifyProcess = spawn('python', [
+      websockifyProcess = spawn('pythonw', [
         '-m', 'websockify',
         webPort.toString(),
         target,
@@ -1517,8 +1517,7 @@ app.post('/api/vnc/start', async (req, res) => {
       ], {
         cwd: novncDir,
         detached: true,
-        stdio: 'ignore', // Ignore all stdio to prevent terminal window
-        windowsHide: true // Hide the terminal window on Windows
+        stdio: 'ignore' // Ignore all stdio to prevent terminal window
       });
     } else {
       websockifyProcess = spawn('nohup', ['python3', '-m', 'websockify',
@@ -1843,8 +1842,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         // Detect platform and use appropriate command to run in background
     
     if (process.platform === 'win32') {
-      // Windows: Direct Python command with hidden window
-      const pythonCommand = 'python';
+      // Windows: Use pythonw.exe to run without terminal window
+      const pythonCommand = 'pythonw';
       console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
       console.log(`[VNC] Command: ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
       
@@ -1864,8 +1863,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
           ...process.env,
           PYTHONWARNINGS: 'ignore',
           PYTHONPATH: path.join(process.cwd(), 'noVNC')
-        },
-        windowsHide: true // Hide the terminal window on Windows
+        }
       });
     } else {
       // Linux/Mac: Use nohup to run in background
