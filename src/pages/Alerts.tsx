@@ -135,14 +135,8 @@ export function Alerts() {
       
       const allAlerts = await apiService.getAlerts(currentUser);
       
-      // Load read status from localStorage
-      const readAlerts = JSON.parse(localStorage.getItem('readAlerts') || '[]');
-      const alertsWithReadStatus = allAlerts.map(alert => ({
-        ...alert,
-        isRead: readAlerts.includes(alert.id)
-      }));
-      
-      setAlerts(alertsWithReadStatus);
+      // Backend already includes isRead status from database
+      setAlerts(allAlerts);
       
       // Calculate total pages (assuming 50 items per page)
       setTotalPages(Math.ceil(allAlerts.length / 50));
@@ -180,27 +174,19 @@ export function Alerts() {
 
   const handleMarkAsRead = async (alert: AlertItem) => {
     try {
-      // Save to localStorage
-      const readAlerts = JSON.parse(localStorage.getItem('readAlerts') || '[]');
-      if (!readAlerts.includes(alert.id)) {
-        readAlerts.push(alert.id);
-        localStorage.setItem('readAlerts', JSON.stringify(readAlerts));
-      }
+      // Get current user
+      const currentUser = localStorage.getItem('currentUser') 
+        ? JSON.parse(localStorage.getItem('currentUser')!).username 
+        : 'admin';
       
-      // Update state
+      // Call backend API to mark as read
+      await apiService.markAlertAsRead(currentUser, alert.id);
+      
+      // Update state immediately for better UX
       setAlerts(prev => prev.map(a => 
         a.id === alert.id ? { ...a, isRead: true } : a
       ));
       
-      // Also try to save to backend
-      try {
-        const currentUser = localStorage.getItem('currentUser') 
-          ? JSON.parse(localStorage.getItem('currentUser')!).username 
-          : 'admin';
-        await apiService.markAlertAsRead(currentUser, alert.id);
-      } catch (backendError) {
-        console.log('Backend save failed, but local save succeeded');
-      }
     } catch (error) {
       console.error('Error marking alert as read:', error);
     }
@@ -208,14 +194,18 @@ export function Alerts() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      // Save all alert IDs to localStorage
-      const allAlertIds = alerts.map(alert => alert.id);
-      localStorage.setItem('readAlerts', JSON.stringify(allAlertIds));
+      // Get current user
+      const currentUser = localStorage.getItem('currentUser') 
+        ? JSON.parse(localStorage.getItem('currentUser')!).username 
+        : 'admin';
       
-      // Update state
+      // Call backend API to mark all as read
+      await apiService.markAllAlertsAsRead(currentUser);
+      
+      // Update state immediately for better UX
       setAlerts(prev => prev.map(a => ({ ...a, isRead: true })));
       
-      console.log('All alerts marked as read and saved to localStorage');
+      console.log('All alerts marked as read');
     } catch (error) {
       console.error('Error marking all alerts as read:', error);
     }

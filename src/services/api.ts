@@ -322,6 +322,26 @@ class ApiService {
       throw error;
     }
   }
+
+  async markAllAlertsAsRead(username: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/alerts/${username}/read-all`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Mark all alerts as read request failed:', error);
+      throw error;
+    }
+  }
 }
 
 export const apiService = new ApiService();
