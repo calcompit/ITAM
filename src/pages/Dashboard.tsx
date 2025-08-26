@@ -19,7 +19,8 @@ import {
   Bell, 
   RefreshCw,
   Circle,
-  X
+  X,
+  Activity
 } from "lucide-react";
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
@@ -30,12 +31,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
 import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
+import { addChangeRecord, getChangeRecords, clearOldChangeRecords, formatChangeTimestamp, getChangeTypeIcon, getChangeTypeColor } from "@/lib/change-history";
+import { ChangeHistoryModal } from "@/components/change-history-modal";
 
 interface DashboardProps {
   activeTab: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export function Dashboard({ activeTab }: DashboardProps) {
+export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
   const [computers, setComputers] = useState<APIComputer[]>([]);
   const [ipGroups, setIpGroups] = useState<IPGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +58,8 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [vncModalMessage, setVncModalMessage] = useState("");
   const [vncModalType, setVncModalType] = useState<"loading" | "error" | "success">("loading");
   const [vncLinks, setVncLinks] = useState<any[]>([]);
+  const [changeHistory, setChangeHistory] = useState<any[]>([]);
+  const [showChangeHistory, setShowChangeHistory] = useState(false);
 
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();
@@ -82,6 +88,13 @@ export function Dashboard({ activeTab }: DashboardProps) {
     clearOldVNCLinks();
     const links = getStoredVNCLinks();
     setVncLinks(links);
+  }, []);
+
+  // Load change history and clear old ones
+  useEffect(() => {
+    clearOldChangeRecords();
+    const history = getChangeRecords();
+    setChangeHistory(history);
   }, []);
 
   // Load data from API
@@ -224,6 +237,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
 
 
   const handlePin = (machineID: string) => {
+    const computer = computers.find(c => c.machineID === machineID);
+    const isCurrentlyPinned = computer?.isPinned || false;
+    
     const updatedComputers = computers.map(computer => {
       if (computer.machineID === machineID) {
         return { ...computer, isPinned: !computer.isPinned };
@@ -238,6 +254,23 @@ export function Dashboard({ activeTab }: DashboardProps) {
       .filter(computer => computer.isPinned)
       .map(computer => computer.machineID);
     savePinnedComputers(pinnedMachineIDs);
+
+    // Record change history
+    if (computer) {
+      addChangeRecord({
+        type: isCurrentlyPinned ? 'unpin' : 'pin',
+        description: `${isCurrentlyPinned ? 'Unpinned' : 'Pinned'} computer`,
+        computerName: computer.computerName,
+        ipAddress: computer.ipAddresses[0],
+        oldValue: isCurrentlyPinned ? 'Pinned' : 'Unpinned',
+        newValue: isCurrentlyPinned ? 'Unpinned' : 'Pinned',
+        user: localStorage.getItem('currentUser') || 'unknown'
+      });
+      
+      // Update change history state
+      const history = getChangeRecords();
+      setChangeHistory(history);
+    }
   };
 
   const handleComputerClick = (computer: APIComputer) => {
@@ -390,6 +423,19 @@ export function Dashboard({ activeTab }: DashboardProps) {
           const links = getStoredVNCLinks();
           setVncLinks(links);
         } else {
+          // Record VNC connection
+          addChangeRecord({
+            type: 'vnc',
+            description: 'VNC connection initiated',
+            computerName: computerName,
+            ipAddress: ip,
+            user: localStorage.getItem('currentUser') || 'unknown'
+          });
+          
+          // Update change history state
+          const history = getChangeRecords();
+          setChangeHistory(history);
+          
           // Success - show success modal and auto-close after 2 seconds
           setVncModalTitle("VNC Connected");
           setVncModalMessage(`Successfully connected to ${computerName} (${ip})`);
@@ -567,6 +613,23 @@ export function Dashboard({ activeTab }: DashboardProps) {
       {/* Database Status Banner */}
       <DatabaseStatusBanner />
       
+      {/* Pin Menu - Top Priority */}
+      <div className="flex items-center gap-2 mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <Pin className="h-5 w-5 text-blue-600" />
+        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Pinned Computers</span>
+        <Button
+          variant={activeTab === "pinned" ? "default" : "outline"}
+          size="sm"
+          onClick={() => onTabChange?.("pinned")}
+          className={activeTab === "pinned" ? "bg-blue-600 hover:bg-blue-700" : "hover:bg-blue-100 dark:hover:bg-blue-900/20"}
+        >
+          {activeTab === "pinned" ? "Active" : "Show Pinned"}
+        </Button>
+        <span className="text-xs text-blue-600 dark:text-blue-400">
+          ({pinnedComputersList.length} computers)
+        </span>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -598,6 +661,15 @@ export function Dashboard({ activeTab }: DashboardProps) {
               className="pl-10 w-64"
             />
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowChangeHistory(true)}
+            className="flex items-center gap-2"
+          >
+            <Activity className="h-4 w-4" />
+            History ({changeHistory.length})
+          </Button>
         </div>
       </div>
 
@@ -815,6 +887,13 @@ export function Dashboard({ activeTab }: DashboardProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Change History Modal */}
+      <ChangeHistoryModal
+        open={showChangeHistory}
+        onClose={() => setShowChangeHistory(false)}
+        changeHistory={changeHistory}
+      />
     </div>
   );
 }

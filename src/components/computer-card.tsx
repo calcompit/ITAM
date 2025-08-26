@@ -42,16 +42,17 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
         </div>
         <div className="flex items-center gap-1">
           <Button
-            variant="ghost"
+            variant={computer.isPinned ? "default" : "ghost"}
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
               onPin(computer.machineID);
             }}
-            className="h-8 w-8 p-0"
+            className={`h-8 w-8 p-0 ${computer.isPinned ? "bg-blue-600 hover:bg-blue-700" : "hover:bg-blue-100 dark:hover:bg-blue-900/20"}`}
+            title={computer.isPinned ? "Unpin Computer" : "Pin Computer"}
           >
             {computer.isPinned ? (
-              <Pin className="h-4 w-4 text-primary" />
+              <Pin className="h-4 w-4 text-white" />
             ) : (
               <PinOff className="h-4 w-4 text-muted-foreground" />
             )}
