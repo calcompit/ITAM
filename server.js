@@ -1270,6 +1270,7 @@ app.get('/api/alerts/:username', async (req, res) => {
     const pool = await getDbConnection();
     
     // Get recent changelog entries and convert to alerts
+    console.log(`[DEBUG] Fetching alerts for user: ${username}`);
     const result = await pool.request()
       .query(`
         SELECT TOP 100
@@ -1284,6 +1285,8 @@ app.get('/api/alerts/:username', async (req, res) => {
         LEFT JOIN [mes].[dbo].[TBL_IT_MachinesCurrent] mc ON mc.MachineID = c.MachineID
         ORDER BY c.ChangeDate DESC, c.ChangeID DESC
       `);
+    
+    console.log(`[DEBUG] Found ${result.recordset.length} changelog records`);
     
     // Convert to alert format
     const alerts = result.recordset.map(row => {
