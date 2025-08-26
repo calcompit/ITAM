@@ -41,7 +41,9 @@ class AlertService {
       }
 
       const data = await response.json();
-      return data.alerts || [];
+      
+      // Transform SQL data to AlertRecord format
+      return data.alerts?.map((alert: any) => this.transformSqlAlert(alert)) || [];
     } catch (error) {
       console.error('Error fetching alerts:', error);
       
@@ -65,7 +67,14 @@ class AlertService {
       }
 
       const data = await response.json();
-      return data;
+      
+      // Transform summary data
+      return {
+        totalAlerts: data.totalAlerts || 0,
+        unreadAlerts: data.unreadAlerts || 0,
+        highPriorityAlerts: data.highPriorityAlerts || 0,
+        recentAlerts: data.recentAlerts?.map((alert: any) => this.transformSqlAlert(alert)) || []
+      };
     } catch (error) {
       console.error('Error fetching alert summary:', error);
       
@@ -159,11 +168,21 @@ class AlertService {
     }
     
     if (changes.ipAddresses) {
-      return `IP addresses updated`;
+      const oldIPs = Array.isArray(changes.ipAddresses.old) ? changes.ipAddresses.old.join(', ') : changes.ipAddresses.old;
+      const newIPs = Array.isArray(changes.ipAddresses.new) ? changes.ipAddresses.new.join(', ') : changes.ipAddresses.new;
+      return `IP addresses changed from ${oldIPs} to ${newIPs}`;
     }
     
     if (changes.domain) {
       return `Domain changed from "${changes.domain.old}" to "${changes.domain.new}"`;
+    }
+    
+    if (changes.winActivated) {
+      return `Windows activation changed from ${changes.winActivated.old ? 'Activated' : 'Not Activated'} to ${changes.winActivated.new ? 'Activated' : 'Not Activated'}`;
+    }
+    
+    if (changes.lastUpdate) {
+      return `Last update changed from ${changes.lastUpdate.old} to ${changes.lastUpdate.new}`;
     }
     
     return 'Configuration updated';
@@ -204,6 +223,116 @@ class AlertService {
     }
     
     return 'system_change';
+  }
+
+  // Transform SQL alert data to AlertRecord format
+  private transformSqlAlert(sqlAlert: any): AlertRecord {
+    const snapshotOld = sqlAlert.SnapshotJson_Old ? JSON.parse(sqlAlert.SnapshotJson_Old) : {};
+    const snapshotNew = sqlAlert.SnapshotJson_New ? JSON.parse(sqlAlert.SnapshotJson_New) : {};
+    
+    // Analyze changes between old and new snapshots
+    const changes = this.analyzeChanges(snapshotOld, snapshotNew);
+    
+    return {
+      changeID: sqlAlert.ChangeID,
+      machineID: sqlAlert.MachineID,
+      changeDate: sqlAlert.ChangeDate,
+      changedUser: sqlAlert.ChangedSUser,
+      snapshotOld,
+      snapshotNew,
+      changes: JSON.stringify(changes),
+      isRead: false, // Default to unread
+      severity: this.determineSeverity(changes),
+      type: this.determineType(changes)
+    };
+  }
+
+  // Analyze changes between old and new snapshots
+  private analyzeChanges(oldSnapshot: any, newSnapshot: any): any {
+    const changes: any = {};
+    
+    // Check status changes
+    if (oldSnapshot.status !== newSnapshot.status) {
+      changes.status = {
+        old: oldSnapshot.status,
+        new: newSnapshot.status
+      };
+    }
+    
+    // Check computer name changes
+    if (oldSnapshot.computerName !== newSnapshot.computerName) {
+      changes.computerName = {
+        old: oldSnapshot.computerName,
+        new: newSnapshot.computerName
+      };
+    }
+    
+    // Check IP address changes
+    if (JSON.stringify(oldSnapshot.ipAddresses) !== JSON.stringify(newSnapshot.ipAddresses)) {
+      changes.ipAddresses = {
+        old: oldSnapshot.ipAddresses,
+        new: newSnapshot.ipAddresses
+      };
+    }
+    
+    // Check domain changes
+    if (oldSnapshot.domain !== newSnapshot.domain) {
+      changes.domain = {
+        old: oldSnapshot.domain,
+        new: newSnapshot.domain
+      };
+    }
+    
+    // Check Windows activation changes
+    if (oldSnapshot.winActivated !== newSnapshot.winActivated) {
+      changes.winActivated = {
+        old: oldSnapshot.winActivated,
+        new: newSnapshot.winActivated
+      };
+    }
+    
+    // Check last update changes
+    if (oldSnapshot.lastUpdate !== newSnapshot.lastUpdate) {
+      changes.lastUpdate = {
+        old: oldSnapshot.lastUpdate,
+        new: newSnapshot.lastUpdate
+      };
+    }
+    
+    return changes;
+  }
+
+  // Determine severity based on changes
+  private determineSeverity(changes: any): 'low' | 'medium' | 'high' {
+    // High priority: status changes to offline
+    if (changes.status && changes.status.new === 'offline') {
+      return 'high';
+    }
+    
+    // Medium priority: status changes, IP changes, computer name changes
+    if (changes.status || changes.ipAddresses || changes.computerName) {
+      return 'medium';
+    }
+    
+    // Low priority: other changes
+    return 'low';
+  }
+
+  // Determine type based on changes
+  private determineType(changes: any): 'status_change' | 'config_change' | 'user_change' | 'system_change' {
+    if (changes.status) {
+      return 'status_change';
+    }
+    
+    if (changes.computerName || changes.ipAddresses || changes.domain) {
+      return 'config_change';
+    }
+    
+    if (changes.winActivated || changes.lastUpdate) {
+      return 'system_change';
+    }
+    
+    return 'config_change';
   }
 
   // Mock data for testing

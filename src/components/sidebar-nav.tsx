@@ -42,9 +42,9 @@ export const sidebarNavItems = [
 export function SidebarNav({ activeTab, onTabChange, onLogout, user }: SidebarNavProps) {
   const { lastUpdate, connectionStatus } = useStatus();
   
-  const navItems = [
+    const navItems = [
     { id: "dashboard", label: "Dashboard", icon: Monitor },
-  
+    { id: "pinned", label: "Pinned", icon: Pin },
     { id: "groups", label: "IP Groups", icon: Network },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "alerts", label: "Alerts", icon: Bell },

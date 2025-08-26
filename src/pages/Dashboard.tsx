@@ -579,37 +579,6 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Fixed Top Pin Filter */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container mx-auto px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Pin className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Pinned Computers Filter</span>
-              <Button
-                variant={showPinnedOnly ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowPinnedOnly(!showPinnedOnly)}
-                className={showPinnedOnly ? "bg-blue-600 hover:bg-blue-700" : "hover:bg-blue-100 dark:hover:bg-blue-900/20"}
-              >
-                {showPinnedOnly ? "Active" : "Show All"}
-              </Button>
-              <span className="text-xs text-blue-600 dark:text-blue-400">
-                ({pinnedComputersList.length} computers pinned)
-              </span>
-              {showPinnedOnly && (
-                <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                  • Showing pinned computers only
-                </span>
-              )}
-            </div>
-            <AlertNotification />
-          </div>
-        </div>
-      </div>
-
-      {/* Spacer for fixed top bar */}
-      <div className="h-16"></div>
 
       {/* Database Status Banner */}
       <DatabaseStatusBanner />
@@ -647,6 +616,7 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
               className="pl-10 w-64"
             />
           </div>
+          <AlertNotification />
         </div>
       </div>
 
