@@ -185,11 +185,29 @@ export function openVNCPopup(url: string, computerName: string, ip: string): Pop
   return result;
 }
 
-// Try to open VNC in native app
+// Try to open VNC in native app with better error handling
 export function openVNCNativeApp(ip: string, port: number = 5900): void {
+  // Method 1: Try vnc:// protocol first
   const vncUrl = `vnc://:123@${ip}:${port}`;
   console.log('Opening VNC in native app:', vncUrl);
-  window.open(vncUrl, '_blank');
+  
+  try {
+    // Try vnc:// protocol
+    window.open(vncUrl, '_blank');
+  } catch (error) {
+    console.log('vnc:// protocol failed, trying alternative methods');
+    
+    // Method 2: Try with different format
+    try {
+      const altVncUrl = `vnc://${ip}:${port}`;
+      window.open(altVncUrl, '_blank');
+    } catch (error2) {
+      console.log('Alternative vnc:// format failed');
+      
+      // Method 3: Show instructions to user
+      alert(`TightVNC Connection Info:\n\nIP: ${ip}\nPort: ${port}\nPassword: 123\n\nPlease open TightVNC manually and enter these details.`);
+    }
+  }
 }
 
 // Copy VNC URL to clipboard
