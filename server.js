@@ -1316,13 +1316,55 @@ app.get('/api/alerts/:username', async (req, res) => {
           return;
         }
         
-        // Check if values are different
-        if (oldValue !== newValue) {
-          changes.push({
-            field: field,
-            old: oldValue || 'ไม่มีค่า',
-            new: newValue || 'ไม่มีค่า'
-          });
+        // Handle JSON array fields specially
+        if (field.endsWith('_Json') || field.endsWith('Json')) {
+          let oldArray = [];
+          let newArray = [];
+          
+          try {
+            if (oldValue && typeof oldValue === 'string') {
+              oldArray = JSON.parse(oldValue);
+            } else if (Array.isArray(oldValue)) {
+              oldArray = oldValue;
+            }
+            
+            if (newValue && typeof newValue === 'string') {
+              newArray = JSON.parse(newValue);
+            } else if (Array.isArray(newValue)) {
+              newArray = newValue;
+            }
+          } catch (e) {
+            console.error(`Error parsing JSON for field ${field}:`, e);
+          }
+          
+          // Compare arrays by length and content
+          if (oldArray.length !== newArray.length) {
+            changes.push({
+              field: field,
+              old: `${oldArray.length} items`,
+              new: `${newArray.length} items`
+            });
+          } else {
+            // Compare each item in the array
+            const oldStr = JSON.stringify(oldArray);
+            const newStr = JSON.stringify(newArray);
+            if (oldStr !== newStr) {
+              changes.push({
+                field: field,
+                old: `${oldArray.length} items (changed)`,
+                new: `${newArray.length} items (changed)`
+              });
+            }
+          }
+        } else {
+          // Regular field comparison
+          if (oldValue !== newValue) {
+            changes.push({
+              field: field,
+              old: oldValue || 'ไม่มีค่า',
+              new: newValue || 'ไม่มีค่า'
+            });
+          }
         }
       });
       
