@@ -1,4 +1,4 @@
-import { API_CONFIG } from './api-config';
+import { API_CONFIG } from '../config/api';
 
 export interface AlertRecord {
   changeID: number;
