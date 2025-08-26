@@ -1409,7 +1409,7 @@ app.get('/api/alerts/:username', async (req, res) => {
       const hoursDiff = (now - alertDate) / (1000 * 60 * 60);
       const isOldAlert = hoursDiff > 24;
       
-      return {
+      const alertData = {
         id: row.id.toString(),
         machineID: row.MachineID, // Add actual MachineID
         type,
@@ -1429,6 +1429,10 @@ app.get('/api/alerts/:username', async (req, res) => {
           newValue: firstChange.new
         } : undefined
       };
+      
+      console.log(`[DEBUG] Alert data for ${row.id}:`, { machineID: row.MachineID, computerName: row.ComputerName });
+      
+      return alertData;
     });
     
     res.json(alerts);
