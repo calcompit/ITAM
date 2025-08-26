@@ -1434,6 +1434,25 @@ app.get('/api/alerts/:username', async (req, res) => {
 app.get('/api/debug/changelog', async (req, res) => {
   try {
     const pool = await getDbConnection();
+    
+    // First check if table exists and has data
+    const countResult = await pool.request()
+      .query(`
+        SELECT COUNT(*) as total
+        FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+      `);
+    
+    const totalCount = countResult.recordset[0].total;
+    
+    if (totalCount === 0) {
+      return res.json({ 
+        message: 'No data in TBL_IT_MachineChangeLog',
+        totalCount: 0,
+        data: []
+      });
+    }
+    
+    // Get sample data
     const result = await pool.request()
       .query(`
         SELECT TOP 10
@@ -1447,9 +1466,17 @@ app.get('/api/debug/changelog', async (req, res) => {
         ORDER BY ChangeDate DESC
       `);
     
-    res.json(result.recordset);
+    res.json({
+      message: 'Data found in TBL_IT_MachineChangeLog',
+      totalCount: totalCount,
+      data: result.recordset
+    });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch changelog data', details: err.message });
+    res.status(500).json({ 
+      error: 'Failed to fetch changelog data', 
+      details: err.message,
+      stack: err.stack
+    });
   }
 });
 
