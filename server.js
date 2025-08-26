@@ -1269,77 +1269,83 @@ app.get('/api/alerts/:username', async (req, res) => {
     const { username } = req.params;
     const pool = await getDbConnection();
     
-            // Get recent changelog entries and convert to alerts
-        const result = await pool.request()
-          .input('username', sql.NVarChar, username)
-          .query(`
-            ;WITH B AS (
-              SELECT TOP 200
-                b.ChangeID, b.MachineID, b.ChangeDate, b.ChangedSUser,
-                EventType = CASE 
-                  WHEN b.SnapshotJson_Old IS NULL OR b.SnapshotJson_Old = '' THEN N'INSERT'
-                  WHEN b.SnapshotJson_New IS NULL OR b.SnapshotJson_New = '' THEN N'DELETE'
-                  ELSE N'UPDATE'
-                END,
-                ISNULL(da.ChangedCount, 0) AS ChangedCount,
-                ISNULL(da.ChangedFields, N'') AS ChangedFields,
-                ISNULL(da.ChangedDetailJson, N'[]') AS ChangedDetailJson
-              FROM [mes].[dbo].[TBL_IT_MachineChangeLog] b
-              LEFT JOIN (
-                SELECT 
-                  ChangeID,
-                  COUNT(*) as ChangedCount,
-                  STRING_AGG(FieldName, ', ') as ChangedFields,
-                  '[' + STRING_AGG(
-                    '{"field":"' + FieldName + '","oldValue":"' + ISNULL(OldValue, '') + '","newValue":"' + ISNULL(NewValue, '') + '"}',
-                    ','
-                  ) + ']' as ChangedDetailJson
-                FROM (
-                  SELECT 
-                    c.ChangeID,
-                    JSON_VALUE(c.SnapshotJson_Old, '$.key') as FieldName,
-                    JSON_VALUE(c.SnapshotJson_Old, '$.value') as OldValue,
-                    JSON_VALUE(c.SnapshotJson_New, '$.value') as NewValue
-                  FROM [mes].[dbo].[TBL_IT_MachineChangeLog] c
-                  CROSS APPLY OPENJSON(c.SnapshotJson_Old) as old
-                  CROSS APPLY OPENJSON(c.SnapshotJson_New) as new
-                  WHERE old.[key] = new.[key]
-                  AND (old.[value] != new.[value] OR old.[value] IS NULL AND new.[value] IS NOT NULL OR old.[value] IS NOT NULL AND new.[value] IS NULL)
-                  AND old.[key] NOT IN ('LastBoot', 'UpdatedAt', 'HUD_Mode', 'HUD_ColorARGB')
-                ) changes
-                GROUP BY ChangeID
-              ) da ON da.ChangeID = b.ChangeID
-              WHERE b.ChangedSUser = @username
-              ORDER BY b.ChangeDate DESC, b.ChangeID DESC
-            )
-            SELECT 
-              b.ChangeID as id,
-              b.MachineID,
-              b.ChangeDate as timestamp,
-              b.ChangedSUser as username,
-              b.EventType,
-              b.ChangedCount,
-              b.ChangedFields,
-              b.ChangedDetailJson,
-              mc.ComputerName
-            FROM B b
-            LEFT JOIN [mes].[dbo].[TBL_IT_MachinesCurrent] mc ON mc.MachineID = b.MachineID
-          `);
+    // Get recent changelog entries and convert to alerts
+    const result = await pool.request()
+      .input('username', sql.NVarChar, username)
+      .query(`
+        SELECT TOP 100
+          c.ChangeID as id,
+          c.MachineID,
+          c.ChangeDate as timestamp,
+          c.ChangedSUser as username,
+          c.SnapshotJson_Old,
+          c.SnapshotJson_New,
+          mc.ComputerName
+        FROM [mes].[dbo].[TBL_IT_MachineChangeLog] c
+        LEFT JOIN [mes].[dbo].[TBL_IT_MachinesCurrent] mc ON mc.MachineID = c.MachineID
+        WHERE c.ChangedSUser = @username
+        ORDER BY c.ChangeDate DESC, c.ChangeID DESC
+      `);
     
     // Convert to alert format
     const alerts = result.recordset.map(row => {
-      const changeDetails = row.ChangedDetailJson ? JSON.parse(row.ChangedDetailJson) : [];
-      const firstChange = changeDetails[0] || {};
+      let oldData = {};
+      let newData = {};
+      
+      try {
+        if (row.SnapshotJson_Old && row.SnapshotJson_Old !== '{}') {
+          oldData = JSON.parse(row.SnapshotJson_Old);
+        }
+        if (row.SnapshotJson_New && row.SnapshotJson_New !== '{}') {
+          newData = JSON.parse(row.SnapshotJson_New);
+        }
+      } catch (e) {
+        console.error('Error parsing JSON:', e);
+      }
+      
+      // Compare old vs new data to find changes
+      const changes = [];
+      const allFields = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
+      
+      allFields.forEach(field => {
+        const oldValue = oldData[field];
+        const newValue = newData[field];
+        
+        // Skip certain fields that change frequently
+        if (['LastBoot', 'UpdatedAt', 'HUD_Mode', 'HUD_ColorARGB'].includes(field)) {
+          return;
+        }
+        
+        // Check if values are different
+        if (oldValue !== newValue) {
+          changes.push({
+            field: field,
+            old: oldValue || 'ไม่มีค่า',
+            new: newValue || 'ไม่มีค่า'
+          });
+        }
+      });
+      
+      // Determine event type
+      let eventType = 'UPDATE';
+      if (!oldData || Object.keys(oldData).length === 0) {
+        eventType = 'INSERT';
+      } else if (!newData || Object.keys(newData).length === 0) {
+        eventType = 'DELETE';
+      }
+      
+      // Get first change for alert details
+      const firstChange = changes[0];
       
       // Determine alert type and severity based on field changes
       let type = 'system';
       let severity = 'medium';
       
-      if (firstChange.field) {
+      if (firstChange?.field) {
         if (firstChange.field.includes('RAM') || firstChange.field.includes('Storage') || firstChange.field.includes('CPU')) {
           type = 'hardware';
           severity = 'medium';
-        } else if (firstChange.field.includes('IP') || firstChange.field.includes('Network')) {
+        } else if (firstChange.field.includes('IP') || firstChange.field.includes('Network') || firstChange.field.includes('NICs')) {
           type = 'network';
           severity = 'low';
         } else if (firstChange.field.includes('Win_Activated')) {
@@ -1361,19 +1367,19 @@ app.get('/api/alerts/:username', async (req, res) => {
         id: row.id.toString(),
         type,
         severity,
-        title: `${firstChange.field || 'System'} Changed`,
+        title: firstChange ? `${firstChange.field} Changed` : `${eventType} Event`,
         description: isOldAlert 
-          ? `📖 ${row.EventType} event on ${row.ComputerName || 'Unknown Computer'} - Click to view details`
-          : `${row.EventType} event on ${row.ComputerName || 'Unknown Computer'}`,
+          ? `📖 ${eventType} event on ${row.ComputerName || 'Unknown Computer'} - ${changes.length} field(s) changed`
+          : `${eventType} event on ${row.ComputerName || 'Unknown Computer'} - ${changes.length} field(s) changed`,
         computerName: row.ComputerName || 'Unknown Computer',
         timestamp: row.timestamp,
         username: row.username,
         isRead: false, // Will be managed by frontend localStorage
         isOldAlert, // Flag to indicate this is an old alert
-        changeDetails: firstChange.field ? {
+        changeDetails: firstChange ? {
           field: firstChange.field,
-          oldValue: firstChange.oldValue || 'N/A',
-          newValue: firstChange.newValue || 'N/A'
+          oldValue: firstChange.old,
+          newValue: firstChange.new
         } : undefined
       };
     });
