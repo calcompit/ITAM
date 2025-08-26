@@ -133,7 +133,12 @@ export function Alerts() {
         ? JSON.parse(localStorage.getItem('currentUser')!).username 
         : 'admin';
       
+      console.log('Loading alerts for user:', currentUser);
       const allAlerts = await apiService.getAlerts(currentUser);
+      
+      console.log('Received alerts:', allAlerts.length);
+      console.log('First alert isRead:', allAlerts[0]?.isRead);
+      console.log('Unread count:', allAlerts.filter(a => !a.isRead).length);
       
       // Backend already includes isRead status from database
       setAlerts(allAlerts);
