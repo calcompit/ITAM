@@ -348,7 +348,14 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
   };
 
   const filteredComputers = useMemo(() => {
-    const filtered = computers.filter(computer => {
+    let computersToFilter = computers;
+    
+    // Apply pinned filter first (global filter)
+    if (showPinnedOnly) {
+      computersToFilter = computers.filter(c => c.isPinned);
+    }
+    
+    const filtered = computersToFilter.filter(computer => {
       // Search filter
       const matchesSearch = computer.computerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         computer.machineID.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -405,7 +412,7 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
       // If IPs are equal or both empty, sort by computer name
       return (a.computerName || "").localeCompare(b.computerName || "");
     });
-  }, [computers, searchTerm, cpuFilter, ramFilter, storageFilter, activatedFilter]);
+  }, [computers, searchTerm, cpuFilter, ramFilter, storageFilter, activatedFilter, showPinnedOnly]);
 
 
 

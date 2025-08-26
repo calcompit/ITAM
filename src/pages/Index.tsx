@@ -12,21 +12,26 @@ interface IndexProps {
 const Index = ({ onLogout, user }: IndexProps) => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showPinnedOnly, setShowPinnedOnly] = useState(false);
+  const [pinnedCount, setPinnedCount] = useState(0);
 
   const handlePinnedToggle = () => {
     setShowPinnedOnly(!showPinnedOnly);
   };
 
+  const handlePinnedCountChange = (count: number) => {
+    setPinnedCount(count);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard activeTab={activeTab} showPinnedOnly={showPinnedOnly} />;
+        return <Dashboard activeTab={activeTab} showPinnedOnly={showPinnedOnly} onPinnedCountChange={handlePinnedCountChange} />;
       case "analytics":
         return <Analytics showPinnedOnly={showPinnedOnly} />;
       case "alerts":
         return <Alerts />;
       default:
-        return <Dashboard activeTab={activeTab} showPinnedOnly={showPinnedOnly} />;
+        return <Dashboard activeTab={activeTab} showPinnedOnly={showPinnedOnly} onPinnedCountChange={handlePinnedCountChange} />;
     }
   };
 
@@ -39,7 +44,7 @@ const Index = ({ onLogout, user }: IndexProps) => {
         user={user}
         showPinnedOnly={showPinnedOnly}
         onPinnedToggle={handlePinnedToggle}
-        pinnedCount={0} // This will be updated by Dashboard
+        pinnedCount={pinnedCount}
       />
       <main className="flex-1 overflow-auto">
         <div className="p-6">

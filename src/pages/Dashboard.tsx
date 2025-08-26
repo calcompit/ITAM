@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ interface DashboardProps {
   showPinnedOnly?: boolean;
 }
 
-export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false }: DashboardProps) {
+export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPinnedCountChange }: DashboardProps & { onPinnedCountChange?: (count: number) => void }) {
   const [computers, setComputers] = useState<APIComputer[]>([]);
   const [ipGroups, setIpGroups] = useState<IPGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -441,6 +441,11 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false }: Da
   const notActivatedComputers = computers.filter(c => !c.winActivated).length;
   const pinnedComputersList = computers.filter(c => c.isPinned);
   
+  // Update pinned count when it changes
+  useEffect(() => {
+    onPinnedCountChange?.(pinnedComputersList.length);
+  }, [pinnedComputersList.length, onPinnedCountChange]);
+  
   // Calculate stats for selected subnet
   const subnetComputers = selectedSubnet ? computers.filter(computer => {
     const primaryIP = computer.ipAddresses[0] || "";
@@ -448,6 +453,38 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false }: Da
     const computerSubnet = primaryIP.substring(0, primaryIP.lastIndexOf('.')) + '.x';
     return computerSubnet === selectedSubnet;
   }) : [];
+
+  // Filter IP groups based on pinned filter
+  const filteredIpGroups = useMemo(() => {
+    if (showPinnedOnly) {
+      // Filter computers by pinned status first
+      const pinnedComputers = computers.filter(c => c.isPinned);
+      
+      // Group pinned computers by subnet
+      const pinnedGroups = new Map<string, { subnet: string; computers: APIComputer[] }>();
+      
+      pinnedComputers.forEach(computer => {
+        const primaryIP = computer.ipAddresses[0] || "";
+        if (primaryIP) {
+          const subnet = primaryIP.substring(0, primaryIP.lastIndexOf('.')) + '.x';
+          if (!pinnedGroups.has(subnet)) {
+            pinnedGroups.set(subnet, { subnet, computers: [] });
+          }
+          pinnedGroups.get(subnet)!.computers.push(computer);
+        }
+      });
+      
+      // Convert to IPGroup format
+      return Array.from(pinnedGroups.values()).map(group => ({
+        subnet: group.subnet,
+        totalComputers: group.computers.length,
+        onlineCount: group.computers.filter(c => c.status === "online").length,
+        offlineCount: group.computers.filter(c => c.status === "offline").length,
+        alertCount: group.computers.filter(c => c.status === "alert").length
+      }));
+    }
+    return ipGroups;
+  }, [ipGroups, showPinnedOnly, computers]);
   
   const subnetTotal = subnetComputers.length;
   const subnetOnline = subnetComputers.filter(c => c.status === "online").length;
@@ -536,7 +573,7 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false }: Da
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {ipGroups.map((group) => (
+          {filteredIpGroups.map((group) => (
             <IPGroupCard
               key={group.subnet}
               group={group}
