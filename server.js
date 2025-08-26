@@ -1325,84 +1325,13 @@ app.get('/api/alerts/:username', async (req, res) => {
           return;
         }
         
-        // Handle JSON array fields specially
-        if (field.endsWith('_Json') || field.endsWith('Json')) {
-          let oldArray = [];
-          let newArray = [];
-          
-          try {
-            if (oldValue && typeof oldValue === 'string') {
-              oldArray = JSON.parse(oldValue);
-            } else if (Array.isArray(oldValue)) {
-              oldArray = oldValue;
-            }
-            
-            if (newValue && typeof newValue === 'string') {
-              newArray = JSON.parse(newValue);
-            } else if (Array.isArray(newValue)) {
-              newArray = newValue;
-            }
-          } catch (e) {
-            console.error(`Error parsing JSON for field ${field}:`, e);
-          }
-          
-          // Compare arrays by length and content
-          if (oldArray.length !== newArray.length) {
-            // Show detailed array changes
-            const oldDetails = oldArray.map(item => {
-              if (item.name) return item.name;
-              if (item.sn) return `SN:${item.sn}`;
-              if (item.model) return item.model;
-              return JSON.stringify(item);
-            }).join(', ');
-            
-            const newDetails = newArray.map(item => {
-              if (item.name) return item.name;
-              if (item.sn) return `SN:${item.sn}`;
-              if (item.model) return item.model;
-              return JSON.stringify(item);
-            }).join(', ');
-            
-            changes.push({
-              field: field,
-              old: oldArray.length > 0 ? `${oldArray.length} items: ${oldDetails}` : 'ไม่มีข้อมูล',
-              new: newArray.length > 0 ? `${newArray.length} items: ${newDetails}` : 'ไม่มีข้อมูล'
-            });
-          } else {
-            // Compare each item in the array
-            const oldStr = JSON.stringify(oldArray);
-            const newStr = JSON.stringify(newArray);
-            if (oldStr !== newStr) {
-              const oldDetails = oldArray.map(item => {
-                if (item.name) return item.name;
-                if (item.sn) return `SN:${item.sn}`;
-                if (item.model) return item.model;
-                return JSON.stringify(item);
-              }).join(', ');
-              
-              const newDetails = newArray.map(item => {
-                if (item.name) return item.name;
-                if (item.sn) return `SN:${item.sn}`;
-                if (item.model) return item.model;
-                return JSON.stringify(item);
-              }).join(', ');
-              
-              changes.push({
-                field: field,
-                old: `${oldArray.length} items: ${oldDetails}`,
-                new: `${newArray.length} items: ${newDetails}`
-              });
-            }
-          }
-        } else {
-          // Regular field comparison
-          if (oldValue !== newValue) {
-            changes.push({
-              field: field,
-              old: oldValue || 'ไม่มีค่า',
-              new: newValue || 'ไม่มีค่า'
-            });
-          }
+        // Check if values are different
+        if (oldValue !== newValue) {
+          changes.push({
+            field: field,
+            old: oldValue || 'ไม่มีค่า',
+            new: newValue || 'ไม่มีค่า'
+          });
         }
       });
       
@@ -1444,7 +1373,7 @@ app.get('/api/alerts/:username', async (req, res) => {
       const hoursDiff = (now - alertDate) / (1000 * 60 * 60);
       const isOldAlert = hoursDiff > 24;
       
-      const alertData = {
+      return {
         id: row.id.toString(),
         machineID: row.MachineID, // Add actual MachineID
         type,
@@ -1467,107 +1396,11 @@ app.get('/api/alerts/:username', async (req, res) => {
           }))
         } : undefined
       };
-      
-      console.log(`[DEBUG] Alert data for ${row.id}:`, { machineID: row.MachineID, computerName: row.ComputerName });
-      
-      return alertData;
     });
     
     res.json(alerts);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch alerts data' });
-  }
-});
-
-// Debug endpoint to check changelog data
-app.get('/api/debug/changelog', async (req, res) => {
-  try {
-    const pool = await getDbConnection();
-    
-    // First check if table exists and has data
-    const countResult = await pool.request()
-      .query(`
-        SELECT COUNT(*) as total
-        FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
-      `);
-    
-    const totalCount = countResult.recordset[0].total;
-    
-    if (totalCount === 0) {
-      return res.json({ 
-        message: 'No data in TBL_IT_MachineChangeLog',
-        totalCount: 0,
-        data: []
-      });
-    }
-    
-    // Get sample data
-    const result = await pool.request()
-      .query(`
-        SELECT TOP 10
-          ChangeID,
-          MachineID,
-          ChangeDate,
-          ChangedSUser,
-          LEN(SnapshotJson_Old) as OldLength,
-          LEN(SnapshotJson_New) as NewLength
-        FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
-        ORDER BY ChangeDate DESC
-      `);
-    
-    res.json({
-      message: 'Data found in TBL_IT_MachineChangeLog',
-      totalCount: totalCount,
-      data: result.recordset
-    });
-  } catch (err) {
-    res.status(500).json({ 
-      error: 'Failed to fetch changelog data', 
-      details: err.message,
-      stack: err.stack
-    });
-  }
-});
-
-// Simple alerts endpoint for testing
-app.get('/api/alerts-simple', async (req, res) => {
-  try {
-    const pool = await getDbConnection();
-    
-    const result = await pool.request()
-      .query(`
-        SELECT TOP 10
-          ChangeID as id,
-          MachineID,
-          ChangeDate as timestamp,
-          ChangedSUser as username,
-          SnapshotJson_Old,
-          SnapshotJson_New
-        FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
-        ORDER BY ChangeDate DESC
-      `);
-    
-    const alerts = result.recordset.map(row => ({
-      id: row.id.toString(),
-      type: 'system',
-      severity: 'medium',
-      title: 'System Change',
-      description: `Change on ${row.MachineID}`,
-      computerName: row.MachineID,
-      timestamp: row.timestamp,
-      username: row.username,
-      isRead: false,
-      isOldAlert: false,
-      changeDetails: {
-        field: 'System',
-        oldValue: 'Old',
-        newValue: 'New'
-      }
-    }));
-    
-    res.json(alerts);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch alerts', details: err.message });
   }
 });
 
@@ -2564,6 +2397,58 @@ app.get('/api/alerts/realtime', async (req, res) => {
   } catch (error) {
     console.error('Error fetching realtime alerts:', error);
     res.status(500).json({ error: 'Failed to fetch realtime alerts' });
+  }
+});
+
+// Test endpoint to add sample alerts
+app.post('/api/test/add-sample-alerts', async (req, res) => {
+  try {
+    const pool = await getDbConnection();
+    
+    // Add sample test data
+    const testData = [
+      {
+        machineID: 'TEST-MACHINE-001',
+        changedSUser: 'TEST_USER',
+        oldJson: '{"ComputerName":"TEST-PC-OLD","IPv4":"192.168.1.100"}',
+        newJson: '{"ComputerName":"TEST-PC-NEW","IPv4":"192.168.1.101"}'
+      },
+      {
+        machineID: 'TEST-MACHINE-002',
+        changedSUser: 'ADMIN_USER',
+        oldJson: '{"RAM_TotalGB":"8","Storage_TotalGB":"500"}',
+        newJson: '{"RAM_TotalGB":"16","Storage_TotalGB":"1000"}'
+      },
+      {
+        machineID: 'TEST-MACHINE-003',
+        changedSUser: 'SYSTEM',
+        oldJson: '{"NICs_Json":"[{\\"name\\":\\"Ethernet\\",\\"mac\\":\\"00:11:22:33:44:55\\"}]"}',
+        newJson: '{"NICs_Json":"[{\\"name\\":\\"Ethernet\\",\\"mac\\":\\"00:11:22:33:44:55\\"},{\\"name\\":\\"WiFi\\",\\"mac\\":\\"AA:BB:CC:DD:EE:FF\\"}]"}'
+      }
+    ];
+    
+    for (const data of testData) {
+      await pool.request()
+        .input('machineID', sql.VarChar, data.machineID)
+        .input('changedSUser', sql.VarChar, data.changedSUser)
+        .input('oldJson', sql.Text, data.oldJson)
+        .input('newJson', sql.Text, data.newJson)
+        .query(`
+          INSERT INTO TBL_IT_MachineChangeLog (MachineID, ChangeDate, ChangedSUser, SnapshotJson_Old, SnapshotJson_New)
+          VALUES (@machineID, GETDATE(), @changedSUser, @oldJson, @newJson)
+        `);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: 'Added 3 test alerts',
+      testData: testData
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      error: 'Failed to add test alerts', 
+      details: err.message 
+    });
   }
 });
 
