@@ -1086,8 +1086,6 @@ app.get('/api/computers/:machineID/changelog', async (req, res) => {
     }
     
     res.json(changelog);
-
-    res.json(changelog);
   } catch (err) {
     console.error('Error fetching changelog:', err.message);
     res.json([]); // Return empty array instead of error
