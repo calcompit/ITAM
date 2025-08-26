@@ -322,57 +322,95 @@ export function Alerts() {
                 {filteredAlerts.map((alert) => (
                   <Card 
                     key={alert.id} 
-                    className={`${getSeverityColor(alert.severity)} hover:shadow-md transition-shadow cursor-pointer ${
-                      !alert.isRead ? 'ring-2 ring-blue-500' : ''
+                    className={`bg-gradient-to-r from-white to-gray-50 hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4 ${
+                      !alert.isRead ? 'border-l-blue-500 ring-2 ring-blue-100' : 'border-l-gray-200'
+                    } ${
+                      alert.severity === 'high' ? 'hover:border-l-red-500' :
+                      alert.severity === 'medium' ? 'hover:border-l-yellow-500' :
+                      'hover:border-l-blue-500'
                     }`}
                     onClick={() => {
                       setSelectedAlert(alert);
                       setShowDetails(true);
                     }}
                   >
-                    <CardContent className="p-4">
+                    <CardContent className="p-6">
                       <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3 flex-1">
+                        <div className="flex items-start gap-4 flex-1">
                           <div className="flex-shrink-0 mt-1">
-                            {getSeverityIcon(alert.severity)}
+                            <div className={`p-2 rounded-full ${
+                              alert.severity === 'high' ? 'bg-red-100 text-red-600' :
+                              alert.severity === 'medium' ? 'bg-yellow-100 text-yellow-600' :
+                              'bg-blue-100 text-blue-600'
+                            }`}>
+                              {getSeverityIcon(alert.severity)}
+                            </div>
                           </div>
                           
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-sm">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h3 className="font-semibold text-gray-900">
                                 {alert.title}
-                              </span>
+                              </h3>
                               <Badge 
                                 variant="secondary" 
-                                className={`text-xs ${
-                                  alert.severity === 'high' ? 'text-red-600' :
-                                  alert.severity === 'medium' ? 'text-yellow-600' :
-                                  'text-blue-600'
+                                className={`text-xs font-medium ${
+                                  alert.severity === 'high' ? 'text-red-600 bg-red-50 border-red-200' :
+                                  alert.severity === 'medium' ? 'text-yellow-600 bg-yellow-50 border-yellow-200' :
+                                  'text-blue-600 bg-blue-50 border-blue-200'
                                 }`}
                               >
                                 {alert.severity.toUpperCase()}
                               </Badge>
                               {!alert.isRead && (
-                                <Badge variant="default" className="text-xs bg-blue-500">
+                                <Badge variant="default" className="text-xs bg-blue-500 text-white animate-pulse">
                                   NEW
                                 </Badge>
                               )}
                             </div>
                             
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <p className="text-sm text-gray-600 mb-3">
+                              {alert.description}
+                            </p>
+                            
+                            <div className="flex items-center gap-6 text-xs text-gray-500">
                               <div className="flex items-center gap-1">
                                 <Computer className="h-3 w-3" />
-                                <span>{alert.computerName}</span>
+                                <span className="font-medium">{alert.computerName}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <User className="h-3 w-3" />
-                                <span>{alert.username}</span>
+                                <span className="font-mono text-xs">{alert.username}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                <span>{new Date(alert.timestamp).toLocaleString('th-TH')}</span>
+                                <span>{new Date(alert.timestamp).toLocaleString('th-TH', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}</span>
                               </div>
                             </div>
+                            
+                            {alert.changeDetails && (
+                              <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+                                <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                                  <span className="font-medium">Change:</span>
+                                  <span className="font-mono">{alert.changeDetails.field}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-red-600 bg-red-50 px-2 py-1 rounded">
+                                    {alert.changeDetails.oldValue}
+                                  </span>
+                                  <span className="text-gray-400">→</span>
+                                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded">
+                                    {alert.changeDetails.newValue}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                         
@@ -383,9 +421,9 @@ export function Alerts() {
                             e.stopPropagation();
                             handleMarkAsRead(alert);
                           }}
-                          className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
+                          className="h-8 w-8 p-0 opacity-60 hover:opacity-100 hover:bg-gray-100 rounded-full"
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
                     </CardContent>
@@ -441,24 +479,37 @@ export function Alerts() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Machine ID</label>
-                    <p className="text-sm">{selectedAlert.id}</p>
+                    <p className="text-sm font-mono text-xs bg-muted px-2 py-1 rounded">
+                      {selectedAlert.machineID || selectedAlert.id}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Changed By</label>
-                    <p className="text-sm">{selectedAlert.username}</p>
+                    <p className="text-sm font-mono text-xs bg-muted px-2 py-1 rounded">
+                      {selectedAlert.username}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Date & Time</label>
-                    <p className="text-sm">{new Date(selectedAlert.timestamp).toLocaleString('th-TH')}</p>
+                    <p className="text-sm">
+                      {new Date(selectedAlert.timestamp).toLocaleString('th-TH', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Severity</label>
                     <Badge 
                       variant="secondary" 
                       className={`text-xs ${
-                        selectedAlert.severity === 'high' ? 'text-red-600' :
-                        selectedAlert.severity === 'medium' ? 'text-yellow-600' :
-                        'text-blue-600'
+                        selectedAlert.severity === 'high' ? 'text-red-600 bg-red-50 border-red-200' :
+                        selectedAlert.severity === 'medium' ? 'text-yellow-600 bg-yellow-50 border-yellow-200' :
+                        'text-blue-600 bg-blue-50 border-blue-200'
                       }`}
                     >
                       {selectedAlert.severity.toUpperCase()}
@@ -473,9 +524,38 @@ export function Alerts() {
                 
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Changes</label>
-                  <pre className="text-xs bg-muted p-3 rounded-md mt-1 overflow-auto">
-                    {selectedAlert.changeDetails ? JSON.stringify(selectedAlert.changeDetails, null, 2) : '{}'}
-                  </pre>
+                  {selectedAlert.changeDetails ? (
+                    <div className="mt-2 space-y-2">
+                      <div className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-semibold text-gray-700">
+                            {selectedAlert.changeDetails.field}
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            Changed
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-xs font-medium text-red-600">Previous Value</label>
+                            <p className="text-sm bg-red-50 border border-red-200 rounded px-2 py-1 text-red-700">
+                              {selectedAlert.changeDetails.oldValue}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-green-600">New Value</label>
+                            <p className="text-sm bg-green-50 border border-green-200 rounded px-2 py-1 text-green-700">
+                              {selectedAlert.changeDetails.newValue}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-2 text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                      No detailed changes available
+                    </div>
+                  )}
                 </div>
               </div>
             </ScrollArea>
