@@ -981,7 +981,7 @@ app.get('/api/computers/:machineID/changelog', async (req, res) => {
       .input('machineID', sql.VarChar, machineID)
       .query(`
         SELECT TOP 1 *
-        FROM mes.dbo.TBL_IT_Machine
+        FROM mes.dbo.TBL_IT_MachinesCurrent
         WHERE MachineID = @machineID
         ORDER BY UpdatedAt DESC
       `);
