@@ -19,8 +19,7 @@ import {
   Bell, 
   RefreshCw,
   Circle,
-  X,
-  Activity
+  X
 } from "lucide-react";
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
@@ -31,8 +30,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
 import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
-import { addChangeRecord, getChangeRecords, clearOldChangeRecords, formatChangeTimestamp, getChangeTypeIcon, getChangeTypeColor } from "@/lib/change-history";
-import { ChangeHistoryModal } from "@/components/change-history-modal";
 
 interface DashboardProps {
   activeTab: string;
@@ -58,8 +55,7 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
   const [vncModalMessage, setVncModalMessage] = useState("");
   const [vncModalType, setVncModalType] = useState<"loading" | "error" | "success">("loading");
   const [vncLinks, setVncLinks] = useState<any[]>([]);
-  const [changeHistory, setChangeHistory] = useState<any[]>([]);
-  const [showChangeHistory, setShowChangeHistory] = useState(false);
+  const [showPinnedOnly, setShowPinnedOnly] = useState(false);
 
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();
@@ -90,12 +86,7 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
     setVncLinks(links);
   }, []);
 
-  // Load change history and clear old ones
-  useEffect(() => {
-    clearOldChangeRecords();
-    const history = getChangeRecords();
-    setChangeHistory(history);
-  }, []);
+
 
   // Load data from API
   useEffect(() => {
@@ -255,22 +246,7 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
       .map(computer => computer.machineID);
     savePinnedComputers(pinnedMachineIDs);
 
-    // Record change history
-    if (computer) {
-      addChangeRecord({
-        type: isCurrentlyPinned ? 'unpin' : 'pin',
-        description: `${isCurrentlyPinned ? 'Unpinned' : 'Pinned'} computer`,
-        computerName: computer.computerName,
-        ipAddress: computer.ipAddresses[0],
-        oldValue: isCurrentlyPinned ? 'Pinned' : 'Unpinned',
-        newValue: isCurrentlyPinned ? 'Unpinned' : 'Pinned',
-        user: localStorage.getItem('currentUser') || 'unknown'
-      });
-      
-      // Update change history state
-      const history = getChangeRecords();
-      setChangeHistory(history);
-    }
+
   };
 
   const handleComputerClick = (computer: APIComputer) => {
@@ -423,18 +399,7 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
           const links = getStoredVNCLinks();
           setVncLinks(links);
         } else {
-          // Record VNC connection
-          addChangeRecord({
-            type: 'vnc',
-            description: 'VNC connection initiated',
-            computerName: computerName,
-            ipAddress: ip,
-            user: localStorage.getItem('currentUser') || 'unknown'
-          });
-          
-          // Update change history state
-          const history = getChangeRecords();
-          setChangeHistory(history);
+
           
           // Success - show success modal and auto-close after 2 seconds
           setVncModalTitle("VNC Connected");
@@ -492,7 +457,10 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
   const getDisplayComputers = () => {
     let computersToDisplay = [];
     
-    if (activeTab === "pinned") {
+    // Apply pinned filter first (global filter)
+    if (showPinnedOnly) {
+      computersToDisplay = pinnedComputersList;
+    } else if (activeTab === "pinned") {
       computersToDisplay = pinnedComputersList;
     } else if (selectedSubnet) {
       computersToDisplay = computers.filter(computer => {
@@ -613,21 +581,26 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
       {/* Database Status Banner */}
       <DatabaseStatusBanner />
       
-      {/* Pin Menu - Top Priority */}
+      {/* Pin Menu - Global Filter */}
       <div className="flex items-center gap-2 mb-4 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
         <Pin className="h-5 w-5 text-blue-600" />
-        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Pinned Computers</span>
+        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Pinned Computers Filter</span>
         <Button
-          variant={activeTab === "pinned" ? "default" : "outline"}
+          variant={showPinnedOnly ? "default" : "outline"}
           size="sm"
-          onClick={() => onTabChange?.("pinned")}
-          className={activeTab === "pinned" ? "bg-blue-600 hover:bg-blue-700" : "hover:bg-blue-100 dark:hover:bg-blue-900/20"}
+          onClick={() => setShowPinnedOnly(!showPinnedOnly)}
+          className={showPinnedOnly ? "bg-blue-600 hover:bg-blue-700" : "hover:bg-blue-100 dark:hover:bg-blue-900/20"}
         >
-          {activeTab === "pinned" ? "Active" : "Show Pinned"}
+          {showPinnedOnly ? "Active" : "Show All"}
         </Button>
         <span className="text-xs text-blue-600 dark:text-blue-400">
-          ({pinnedComputersList.length} computers)
+          ({pinnedComputersList.length} computers pinned)
         </span>
+        {showPinnedOnly && (
+          <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+            • Showing pinned computers only
+          </span>
+        )}
       </div>
 
       {/* Header */}
@@ -661,34 +634,28 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
               className="pl-10 w-64"
             />
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowChangeHistory(true)}
-            className="flex items-center gap-2"
-          >
-            <Activity className="h-4 w-4" />
-            History ({changeHistory.length})
-          </Button>
+
         </div>
       </div>
 
       {/* Stats Overview */}
-      {(activeTab === "dashboard" || activeTab === "pinned" || selectedSubnet) && (
+      {(activeTab === "dashboard" || activeTab === "pinned" || selectedSubnet || showPinnedOnly) && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="bg-gradient-card border-border">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                {activeTab === "pinned" ? "Pinned Computers" : selectedSubnet ? `${selectedSubnet} Computers` : "Total Computers"}
+                {showPinnedOnly ? "Pinned Computers" : activeTab === "pinned" ? "Pinned Computers" : selectedSubnet ? `${selectedSubnet} Computers` : "Total Computers"}
               </CardTitle>
               <Monitor className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">
-                {activeTab === "pinned" ? pinnedComputersList.length : selectedSubnet ? subnetTotal : totalComputers}
+                {showPinnedOnly ? pinnedComputersList.length : activeTab === "pinned" ? pinnedComputersList.length : selectedSubnet ? subnetTotal : totalComputers}
               </div>
               <p className="text-xs text-muted-foreground">
-                {activeTab === "pinned"
+                {showPinnedOnly
+                  ? `${pinnedComputersList.filter(c => c.winActivated).length} activated`
+                  : activeTab === "pinned"
                   ? `${pinnedComputersList.filter(c => c.winActivated).length} activated`
                   : selectedSubnet
                   ? `${subnetActivated} activated`
@@ -706,14 +673,18 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-status-online">
-                {activeTab === "pinned" 
+                {showPinnedOnly
+                  ? pinnedComputersList.filter(c => c.status === "online").length
+                  : activeTab === "pinned" 
                   ? pinnedComputersList.filter(c => c.status === "online").length 
                   : selectedSubnet
                   ? subnetOnline
                   : onlineComputers}
               </div>
               <p className="text-xs text-muted-foreground">
-                {activeTab === "pinned"
+                {showPinnedOnly
+                  ? `${((pinnedComputersList.filter(c => c.status === "online").length / Math.max(pinnedComputersList.length, 1)) * 100).toFixed(1)}% online`
+                  : activeTab === "pinned"
                   ? `${((pinnedComputersList.filter(c => c.status === "online").length / Math.max(pinnedComputersList.length, 1)) * 100).toFixed(1)}% online`
                   : selectedSubnet
                   ? `${((subnetOnline / Math.max(subnetTotal, 1)) * 100).toFixed(1)}% online`
@@ -731,7 +702,9 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-status-offline">
-                {activeTab === "pinned" 
+                {showPinnedOnly
+                  ? pinnedComputersList.filter(c => c.status === "offline").length
+                  : activeTab === "pinned" 
                   ? pinnedComputersList.filter(c => c.status === "offline").length 
                   : selectedSubnet
                   ? subnetOffline
@@ -752,7 +725,9 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-status-warning">
-                {activeTab === "pinned" 
+                {showPinnedOnly
+                  ? pinnedComputersList.filter(c => c.status === "alert").length
+                  : activeTab === "pinned" 
                   ? pinnedComputersList.filter(c => c.status === "alert").length 
                   : selectedSubnet
                   ? subnetAlert
@@ -888,12 +863,7 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Change History Modal */}
-      <ChangeHistoryModal
-        open={showChangeHistory}
-        onClose={() => setShowChangeHistory(false)}
-        changeHistory={changeHistory}
-      />
+
     </div>
   );
 }

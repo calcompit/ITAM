@@ -190,8 +190,6 @@ export function openVNCPopup(url: string, computerName: string, ip: string): Pop
   return result;
 }
 
-
-
 // Copy VNC URL to clipboard
 export async function copyVNCUrlToClipboard(url: string): Promise<boolean> {
   try {
