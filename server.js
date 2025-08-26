@@ -2230,6 +2230,10 @@ app.get('/api/alerts', async (req, res) => {
         [SnapshotJson_New],
         [Changes]
       FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+      WHERE [SnapshotJson_Old] IS NOT NULL 
+        AND [SnapshotJson_Old] != '{}' 
+        AND [SnapshotJson_Old] != 'null'
+        AND [SnapshotJson_New] IS NOT NULL
       ORDER BY [ChangeDate] DESC
     `;
     
@@ -2246,6 +2250,10 @@ app.get('/api/alerts', async (req, res) => {
           [Changes]
         FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
         WHERE [ChangeDate] >= DATEADD(hour, -24, GETDATE())
+          AND [SnapshotJson_Old] IS NOT NULL 
+          AND [SnapshotJson_Old] != '{}' 
+          AND [SnapshotJson_Old] != 'null'
+          AND [SnapshotJson_New] IS NOT NULL
         ORDER BY [ChangeDate] DESC
       `;
     }
@@ -2266,29 +2274,41 @@ app.get('/api/alerts', async (req, res) => {
 
 app.get('/api/alerts/summary', async (req, res) => {
   try {
-    // Get total alerts count
+    // Get total alerts count (excluding insert records)
     const totalResult = await pool.request().query(`
       SELECT COUNT(*) as totalAlerts
       FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+      WHERE [SnapshotJson_Old] IS NOT NULL 
+        AND [SnapshotJson_Old] != '{}' 
+        AND [SnapshotJson_Old] != 'null'
+        AND [SnapshotJson_New] IS NOT NULL
     `);
     
-    // Get unread alerts count (last 24 hours)
+    // Get unread alerts count (last 24 hours, excluding insert records)
     const unreadResult = await pool.request().query(`
       SELECT COUNT(*) as unreadAlerts
       FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
       WHERE [ChangeDate] >= DATEADD(hour, -24, GETDATE())
+        AND [SnapshotJson_Old] IS NOT NULL 
+        AND [SnapshotJson_Old] != '{}' 
+        AND [SnapshotJson_Old] != 'null'
+        AND [SnapshotJson_New] IS NOT NULL
     `);
     
-    // Get high priority alerts (status changes to offline)
+    // Get high priority alerts (status changes to offline, excluding insert records)
     const highPriorityResult = await pool.request().query(`
       SELECT COUNT(*) as highPriorityAlerts
       FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
       WHERE [Changes] LIKE '%"status"%' 
       AND [Changes] LIKE '%"offline"%'
       AND [ChangeDate] >= DATEADD(hour, -24, GETDATE())
+      AND [SnapshotJson_Old] IS NOT NULL 
+      AND [SnapshotJson_Old] != '{}' 
+      AND [SnapshotJson_Old] != 'null'
+      AND [SnapshotJson_New] IS NOT NULL
     `);
     
-    // Get recent alerts
+    // Get recent alerts (excluding insert records)
     const recentResult = await pool.request().query(`
       SELECT TOP (5)
         [ChangeID],
@@ -2299,6 +2319,10 @@ app.get('/api/alerts/summary', async (req, res) => {
         [SnapshotJson_New],
         [Changes]
       FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+      WHERE [SnapshotJson_Old] IS NOT NULL 
+        AND [SnapshotJson_Old] != '{}' 
+        AND [SnapshotJson_Old] != 'null'
+        AND [SnapshotJson_New] IS NOT NULL
       ORDER BY [ChangeDate] DESC
     `);
     
@@ -2340,7 +2364,7 @@ app.put('/api/alerts/read-all', async (req, res) => {
 
 app.get('/api/alerts/realtime', async (req, res) => {
   try {
-    // Get alerts from the last 5 minutes for real-time updates
+    // Get alerts from the last 5 minutes for real-time updates (excluding insert records)
     const result = await pool.request().query(`
       SELECT TOP (10)
         [ChangeID],
@@ -2352,6 +2376,10 @@ app.get('/api/alerts/realtime', async (req, res) => {
         [Changes]
       FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
       WHERE [ChangeDate] >= DATEADD(minute, -5, GETDATE())
+        AND [SnapshotJson_Old] IS NOT NULL 
+        AND [SnapshotJson_Old] != '{}' 
+        AND [SnapshotJson_Old] != 'null'
+        AND [SnapshotJson_New] IS NOT NULL
       ORDER BY [ChangeDate] DESC
     `);
     

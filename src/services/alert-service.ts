@@ -42,8 +42,9 @@ class AlertService {
 
       const data = await response.json();
       
-      // Transform SQL data to AlertRecord format
-      return data.alerts?.map((alert: any) => this.transformSqlAlert(alert)) || [];
+      // Transform SQL data to AlertRecord format and filter out insert records
+      return data.alerts?.map((alert: any) => this.transformSqlAlert(alert))
+        .filter((alert: AlertRecord | null) => alert !== null) || [];
     } catch (error) {
       console.error('Error fetching alerts:', error);
       
@@ -68,12 +69,15 @@ class AlertService {
 
       const data = await response.json();
       
-      // Transform summary data
+      // Transform summary data and filter out insert records
+      const transformedRecentAlerts = data.recentAlerts?.map((alert: any) => this.transformSqlAlert(alert))
+        .filter((alert: AlertRecord | null) => alert !== null) || [];
+      
       return {
         totalAlerts: data.totalAlerts || 0,
         unreadAlerts: data.unreadAlerts || 0,
         highPriorityAlerts: data.highPriorityAlerts || 0,
-        recentAlerts: data.recentAlerts?.map((alert: any) => this.transformSqlAlert(alert)) || []
+        recentAlerts: transformedRecentAlerts
       };
     } catch (error) {
       console.error('Error fetching alert summary:', error);
@@ -226,9 +230,14 @@ class AlertService {
   }
 
   // Transform SQL alert data to AlertRecord format
-  private transformSqlAlert(sqlAlert: any): AlertRecord {
+  private transformSqlAlert(sqlAlert: any): AlertRecord | null {
     const snapshotOld = sqlAlert.SnapshotJson_Old ? JSON.parse(sqlAlert.SnapshotJson_Old) : {};
     const snapshotNew = sqlAlert.SnapshotJson_New ? JSON.parse(sqlAlert.SnapshotJson_New) : {};
+    
+    // Skip insert records (first time records)
+    if (this.isInsertRecord(snapshotOld, snapshotNew)) {
+      return null;
+    }
     
     // Analyze changes between old and new snapshots
     const changes = this.analyzeChanges(snapshotOld, snapshotNew);
@@ -245,6 +254,22 @@ class AlertService {
       severity: this.determineSeverity(changes),
       type: this.determineType(changes)
     };
+  }
+
+  // Check if this is an insert record (first time record)
+  private isInsertRecord(snapshotOld: any, snapshotNew: any): boolean {
+    // Check if old snapshot is empty/null and new snapshot has data
+    const isOldEmpty = !snapshotOld || 
+                      Object.keys(snapshotOld).length === 0 || 
+                      snapshotOld === null || 
+                      snapshotOld === undefined;
+    
+    const isNewHasData = snapshotNew && 
+                        Object.keys(snapshotNew).length > 0 && 
+                        snapshotNew !== null && 
+                        snapshotNew !== undefined;
+    
+    return isOldEmpty && isNewHasData;
   }
 
   // Analyze changes between old and new snapshots
