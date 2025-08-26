@@ -1430,6 +1430,29 @@ app.get('/api/alerts/:username', async (req, res) => {
   }
 });
 
+// Debug endpoint to check changelog data
+app.get('/api/debug/changelog', async (req, res) => {
+  try {
+    const pool = await getDbConnection();
+    const result = await pool.request()
+      .query(`
+        SELECT TOP 10
+          ChangeID,
+          MachineID,
+          ChangeDate,
+          ChangedSUser,
+          LEN(SnapshotJson_Old) as OldLength,
+          LEN(SnapshotJson_New) as NewLength
+        FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+        ORDER BY ChangeDate DESC
+      `);
+    
+    res.json(result.recordset);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch changelog data', details: err.message });
+  }
+});
+
 // Mark alert as read
 app.post('/api/alerts/:username/read/:alertId', async (req, res) => {
   try {
