@@ -300,7 +300,9 @@ class ApiService {
   }
 
   async getAlerts(username: string): Promise<AlertItem[]> {
-    return this.request<AlertItem[]>(`/alerts/${username}`);
+    // Add cache busting parameter to force fresh data
+    const timestamp = Date.now();
+    return this.request<AlertItem[]>(`/alerts/${username}?t=${timestamp}`);
   }
 
   async markAlertAsRead(username: string, alertId: string): Promise<{ success: boolean; message: string }> {
