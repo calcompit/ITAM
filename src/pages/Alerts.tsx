@@ -397,18 +397,25 @@ export function Alerts() {
                             {alert.changeDetails && (
                               <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
                                 <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                                  <span className="font-medium">Change:</span>
-                                  <span className="font-mono">{alert.changeDetails.field}</span>
+                                  <span className="font-medium">Changes:</span>
+                                  <span className="font-mono">{alert.changeDetails.fields?.join(', ')}</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs">
-                                  <span className="text-red-600 bg-red-50 px-2 py-1 rounded">
-                                    {alert.changeDetails.oldValue}
-                                  </span>
-                                  <span className="text-gray-400">→</span>
-                                  <span className="text-green-600 bg-green-50 px-2 py-1 rounded">
-                                    {alert.changeDetails.newValue}
-                                  </span>
-                                </div>
+                                {alert.changeDetails.changes?.slice(0, 2).map((change, index) => (
+                                  <div key={index} className="flex items-center gap-2 text-xs mb-1">
+                                    <span className="text-red-600 bg-red-50 px-2 py-1 rounded truncate max-w-20">
+                                      {change.oldValue}
+                                    </span>
+                                    <span className="text-gray-400">→</span>
+                                    <span className="text-green-600 bg-green-50 px-2 py-1 rounded truncate max-w-20">
+                                      {change.newValue}
+                                    </span>
+                                  </div>
+                                ))}
+                                {alert.changeDetails.changes?.length > 2 && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    +{alert.changeDetails.changes.length - 2} more changes
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -525,31 +532,33 @@ export function Alerts() {
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Changes</label>
                   {selectedAlert.changeDetails ? (
-                    <div className="mt-2 space-y-2">
-                      <div className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-semibold text-gray-700">
-                            {selectedAlert.changeDetails.field}
-                          </span>
-                          <Badge variant="outline" className="text-xs">
-                            Changed
-                          </Badge>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-xs font-medium text-red-600">Previous Value</label>
-                            <p className="text-sm bg-red-50 border border-red-200 rounded px-2 py-1 text-red-700">
-                              {selectedAlert.changeDetails.oldValue}
-                            </p>
+                    <div className="mt-2 space-y-3">
+                      {selectedAlert.changeDetails.changes.map((change, index) => (
+                        <div key={index} className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm font-semibold text-gray-700 font-mono">
+                              {change.field}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              Changed
+                            </Badge>
                           </div>
-                          <div>
-                            <label className="text-xs font-medium text-green-600">New Value</label>
-                            <p className="text-sm bg-green-50 border border-green-200 rounded px-2 py-1 text-green-700">
-                              {selectedAlert.changeDetails.newValue}
-                            </p>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-xs font-medium text-red-600">Previous Value</label>
+                              <p className="text-sm bg-red-50 border border-red-200 rounded px-2 py-1 text-red-700 break-words">
+                                {change.oldValue}
+                              </p>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-green-600">New Value</label>
+                              <p className="text-sm bg-green-50 border border-green-200 rounded px-2 py-1 text-green-700 break-words">
+                                {change.newValue}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="mt-2 text-sm text-muted-foreground bg-muted p-3 rounded-md">

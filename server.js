@@ -1348,20 +1348,49 @@ app.get('/api/alerts/:username', async (req, res) => {
           
           // Compare arrays by length and content
           if (oldArray.length !== newArray.length) {
+            // Show detailed array changes
+            const oldDetails = oldArray.map(item => {
+              if (item.name) return item.name;
+              if (item.sn) return `SN:${item.sn}`;
+              if (item.model) return item.model;
+              return JSON.stringify(item);
+            }).join(', ');
+            
+            const newDetails = newArray.map(item => {
+              if (item.name) return item.name;
+              if (item.sn) return `SN:${item.sn}`;
+              if (item.model) return item.model;
+              return JSON.stringify(item);
+            }).join(', ');
+            
             changes.push({
               field: field,
-              old: `${oldArray.length} items`,
-              new: `${newArray.length} items`
+              old: oldArray.length > 0 ? `${oldArray.length} items: ${oldDetails}` : 'ไม่มีข้อมูล',
+              new: newArray.length > 0 ? `${newArray.length} items: ${newDetails}` : 'ไม่มีข้อมูล'
             });
           } else {
             // Compare each item in the array
             const oldStr = JSON.stringify(oldArray);
             const newStr = JSON.stringify(newArray);
             if (oldStr !== newStr) {
+              const oldDetails = oldArray.map(item => {
+                if (item.name) return item.name;
+                if (item.sn) return `SN:${item.sn}`;
+                if (item.model) return item.model;
+                return JSON.stringify(item);
+              }).join(', ');
+              
+              const newDetails = newArray.map(item => {
+                if (item.name) return item.name;
+                if (item.sn) return `SN:${item.sn}`;
+                if (item.model) return item.model;
+                return JSON.stringify(item);
+              }).join(', ');
+              
               changes.push({
                 field: field,
-                old: `${oldArray.length} items (changed)`,
-                new: `${newArray.length} items (changed)`
+                old: `${oldArray.length} items: ${oldDetails}`,
+                new: `${newArray.length} items: ${newDetails}`
               });
             }
           }
@@ -1385,7 +1414,8 @@ app.get('/api/alerts/:username', async (req, res) => {
         eventType = 'DELETE';
       }
       
-      // Get first change for alert details
+      // Get all changes for alert details
+      const allChanges = changes;
       const firstChange = changes[0];
       
       // Determine alert type and severity based on field changes
@@ -1428,10 +1458,13 @@ app.get('/api/alerts/:username', async (req, res) => {
         username: row.username,
         isRead: false, // Will be managed by frontend localStorage
         isOldAlert, // Flag to indicate this is an old alert
-        changeDetails: firstChange ? {
-          field: firstChange.field,
-          oldValue: firstChange.old,
-          newValue: firstChange.new
+        changeDetails: allChanges.length > 0 ? {
+          fields: allChanges.map(change => change.field),
+          changes: allChanges.map(change => ({
+            field: change.field,
+            oldValue: change.old,
+            newValue: change.new
+          }))
         } : undefined
       };
       
