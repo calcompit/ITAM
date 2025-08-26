@@ -134,7 +134,15 @@ export function Alerts() {
         : 'admin';
       
       const allAlerts = await apiService.getAlerts(currentUser);
-      setAlerts(allAlerts);
+      
+      // Load read status from localStorage
+      const readAlerts = JSON.parse(localStorage.getItem('readAlerts') || '[]');
+      const alertsWithReadStatus = allAlerts.map(alert => ({
+        ...alert,
+        isRead: readAlerts.includes(alert.id)
+      }));
+      
+      setAlerts(alertsWithReadStatus);
       
       // Calculate total pages (assuming 50 items per page)
       setTotalPages(Math.ceil(allAlerts.length / 50));
@@ -172,15 +180,26 @@ export function Alerts() {
 
   const handleMarkAsRead = async (alert: AlertItem) => {
     try {
-      const currentUser = localStorage.getItem('currentUser') 
-        ? JSON.parse(localStorage.getItem('currentUser')!).username 
-        : 'admin';
+      // Save to localStorage
+      const readAlerts = JSON.parse(localStorage.getItem('readAlerts') || '[]');
+      if (!readAlerts.includes(alert.id)) {
+        readAlerts.push(alert.id);
+        localStorage.setItem('readAlerts', JSON.stringify(readAlerts));
+      }
       
-      const success = await apiService.markAlertAsRead(currentUser, alert.id);
-      if (success) {
-        setAlerts(prev => prev.map(a => 
-          a.id === alert.id ? { ...a, isRead: true } : a
-        ));
+      // Update state
+      setAlerts(prev => prev.map(a => 
+        a.id === alert.id ? { ...a, isRead: true } : a
+      ));
+      
+      // Also try to save to backend
+      try {
+        const currentUser = localStorage.getItem('currentUser') 
+          ? JSON.parse(localStorage.getItem('currentUser')!).username 
+          : 'admin';
+        await apiService.markAlertAsRead(currentUser, alert.id);
+      } catch (backendError) {
+        console.log('Backend save failed, but local save succeeded');
       }
     } catch (error) {
       console.error('Error marking alert as read:', error);
@@ -189,7 +208,14 @@ export function Alerts() {
 
   const handleMarkAllAsRead = async () => {
     try {
+      // Save all alert IDs to localStorage
+      const allAlertIds = alerts.map(alert => alert.id);
+      localStorage.setItem('readAlerts', JSON.stringify(allAlertIds));
+      
+      // Update state
       setAlerts(prev => prev.map(a => ({ ...a, isRead: true })));
+      
+      console.log('All alerts marked as read and saved to localStorage');
     } catch (error) {
       console.error('Error marking all alerts as read:', error);
     }
@@ -270,6 +296,13 @@ export function Alerts() {
         >
           <CheckCircle className="h-4 w-4 mr-2" />
           Mark all as read
+        </Button>
+        <Button
+          variant="outline"
+          onClick={addTestAlerts}
+          className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
+        >
+          {testMode ? '✓ Test Alerts Added' : 'Add Test Alerts'}
         </Button>
       </div>
 
