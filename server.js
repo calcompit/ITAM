@@ -1271,7 +1271,6 @@ app.get('/api/alerts/:username', async (req, res) => {
     
     // Get recent changelog entries and convert to alerts
     const result = await pool.request()
-      .input('username', sql.NVarChar, username)
       .query(`
         SELECT TOP 100
           c.ChangeID as id,
@@ -1283,7 +1282,6 @@ app.get('/api/alerts/:username', async (req, res) => {
           mc.ComputerName
         FROM [mes].[dbo].[TBL_IT_MachineChangeLog] c
         LEFT JOIN [mes].[dbo].[TBL_IT_MachinesCurrent] mc ON mc.MachineID = c.MachineID
-        WHERE c.ChangedSUser = @username
         ORDER BY c.ChangeDate DESC, c.ChangeID DESC
       `);
     
