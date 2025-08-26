@@ -976,126 +976,116 @@ app.get('/api/computers/:machineID/changelog', async (req, res) => {
     const { machineID } = req.params;
     const pool = await getDbConnection();
     
-
-    
-    // Use the complex SQL query to compare SnapshotJson_Old and SnapshotJson_New
-    const result = await pool.request()
+    // Get current computer data
+    const currentDataResult = await pool.request()
       .input('machineID', sql.VarChar, machineID)
       .query(`
-        ;WITH B AS (
-            SELECT ChangeID, MachineID, ChangeDate, ChangedSUser,
-                   SnapshotJson_Old, SnapshotJson_New
-            FROM mes.dbo.TBL_IT_MachineChangeLog
-            WHERE MachineID = @machineID
-        ),
-        Keys AS (
-            SELECT b.ChangeID, b.MachineID, b.ChangeDate, b.ChangedSUser,
-                   k.[key] COLLATE DATABASE_DEFAULT AS FieldName
-            FROM B b
-            OUTER APPLY (
-                SELECT [key] FROM OPENJSON(b.SnapshotJson_Old)
-                UNION
-                SELECT [key] FROM OPENJSON(b.SnapshotJson_New)
-            ) k
-        ),
-        DiffRows AS (
-            SELECT
-                k.ChangeID, k.MachineID, k.ChangeDate, k.ChangedSUser, k.FieldName,
-                CAST(COALESCE(JSON_QUERY(b.SnapshotJson_Old, '$.' + k.FieldName),
-                              JSON_VALUE(b.SnapshotJson_Old, '$.' + k.FieldName)) AS nvarchar(max)) COLLATE DATABASE_DEFAULT AS OldValue,
-                CAST(COALESCE(JSON_QUERY(b.SnapshotJson_New, '$.' + k.FieldName),
-                              JSON_VALUE(b.SnapshotJson_New, '$.' + k.FieldName)) AS nvarchar(max)) COLLATE DATABASE_DEFAULT AS NewValue
-            FROM Keys k
-            JOIN B b ON b.ChangeID = k.ChangeID
-        ),
-        RowDiffChanged AS (
-            SELECT ChangeID, MachineID, ChangeDate, ChangedSUser,
-                   FieldName COLLATE DATABASE_DEFAULT AS FieldName,
-                   OldValue  COLLATE DATABASE_DEFAULT AS OldValue,
-                   NewValue  COLLATE DATABASE_DEFAULT AS NewValue
-            FROM DiffRows
-            WHERE ISNULL(OldValue, N'') COLLATE DATABASE_DEFAULT
-                  <> ISNULL(NewValue, N'') COLLATE DATABASE_DEFAULT
-              AND FieldName NOT IN (N'LastBoot', N'UpdatedAt', N'HUD_Mode', N'HUD_ColorARGB')
-        ),
-        DiffAgg AS (
-            SELECT
-                c.ChangeID,
-                COUNT(*) AS ChangedCount,
-                STRING_AGG(c.FieldName COLLATE DATABASE_DEFAULT, N', ')
-                    WITHIN GROUP (ORDER BY c.FieldName) AS ChangedFields,
-                (
-                    SELECT
-                        c2.FieldName AS [field],
-                        c2.OldValue  AS [old],
-                        c2.NewValue  AS [new]
-                    FROM RowDiffChanged c2
-                    WHERE c2.ChangeID = c.ChangeID
-                    FOR JSON PATH
-                ) AS ChangedDetailJson
-            FROM RowDiffChanged c
-            GROUP BY c.ChangeID
-        )
-        SELECT TOP 50
-            b.ChangeID,
-            b.MachineID,
-            b.ChangeDate,
-            b.ChangedSUser,
-            EventType =
-                CASE 
-                    WHEN (b.SnapshotJson_Old IS NULL OR b.SnapshotJson_Old = N'{}')
-                         AND (b.SnapshotJson_New IS NOT NULL AND b.SnapshotJson_New <> N'{}')
-                        THEN N'INSERT'
-                    WHEN (b.SnapshotJson_Old IS NOT NULL AND b.SnapshotJson_Old <> N'{}')
-                         AND (b.SnapshotJson_New IS NULL OR b.SnapshotJson_New = N'{}')
-                        THEN N'DELETE'
-                    WHEN da.ChangedCount IS NOT NULL AND da.ChangedCount > 0
-                        THEN N'UPDATE'
-                    ELSE N'NO CHANGE'
-                END,
-            ISNULL(da.ChangedCount, 0)          AS ChangedCount,
-            ISNULL(da.ChangedFields, N'')       AS ChangedFields,
-            ISNULL(da.ChangedDetailJson, N'[]') AS ChangedDetailJson
-        FROM B b
-        LEFT JOIN DiffAgg da
-          ON da.ChangeID = b.ChangeID
-        ORDER BY b.ChangeDate DESC, b.ChangeID DESC
+        SELECT TOP 1 *
+        FROM mes.dbo.TBL_IT_Machine
+        WHERE MachineID = @machineID
+        ORDER BY UpdatedAt DESC
       `);
-
-    const changelog = result.recordset.map(row => {
-      let changedDetails = [];
+    
+    const currentData = currentDataResult.recordset[0];
+    
+    // Get changelog data
+    const changelogResult = await pool.request()
+      .input('machineID', sql.VarChar, machineID)
+      .query(`
+        SELECT TOP 10
+          ChangeID,
+          MachineID,
+          ChangeDate,
+          ChangedSUser,
+          SnapshotJson_Old,
+          SnapshotJson_New
+        FROM mes.dbo.TBL_IT_MachineChangeLog
+        WHERE MachineID = @machineID
+        ORDER BY ChangeDate DESC, ChangeID DESC
+      `);
+    
+    // Process changelog and compare with current data
+    const changelog = changelogResult.recordset.map(row => {
+      let oldData = {};
+      let newData = {};
       
-      // Parse ChangedDetailJson if it exists
-      if (row.ChangedDetailJson && row.ChangedDetailJson !== '[]') {
-        try {
-          const details = JSON.parse(row.ChangedDetailJson);
-          if (Array.isArray(details)) {
-            changedDetails = details.map(detail => ({
-              field: detail.field || 'Unknown',
-              old: detail.old || 'ไม่มีค่า',
-              new: detail.new || 'ไม่มีค่า'
-            }));
-          }
-        } catch (e) {
-          // If parsing fails, create a fallback
-          changedDetails = [{
-            field: 'Changes',
-            old: 'ไม่ทราบ',
-            new: 'ไม่ทราบ'
-          }];
+      try {
+        if (row.SnapshotJson_Old && row.SnapshotJson_Old !== '{}') {
+          oldData = JSON.parse(row.SnapshotJson_Old);
         }
+        if (row.SnapshotJson_New && row.SnapshotJson_New !== '{}') {
+          newData = JSON.parse(row.SnapshotJson_New);
+        }
+      } catch (e) {
+        console.error('Error parsing JSON:', e);
+      }
+      
+      // Compare old vs new data
+      const changes = [];
+      const allFields = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
+      
+      allFields.forEach(field => {
+        const oldValue = oldData[field];
+        const newValue = newData[field];
+        
+        // Skip certain fields that change frequently
+        if (['LastBoot', 'UpdatedAt', 'HUD_Mode', 'HUD_ColorARGB'].includes(field)) {
+          return;
+        }
+        
+        // Check if values are different
+        if (oldValue !== newValue) {
+          changes.push({
+            field: field,
+            old: oldValue || 'ไม่มีค่า',
+            new: newValue || 'ไม่มีค่า'
+          });
+        }
+      });
+      
+      // Determine event type
+      let eventType = 'UPDATE';
+      if (!oldData || Object.keys(oldData).length === 0) {
+        eventType = 'INSERT';
+      } else if (!newData || Object.keys(newData).length === 0) {
+        eventType = 'DELETE';
       }
       
       return {
         changeID: row.ChangeID,
         changeDate: row.ChangeDate,
         changedSUser: row.ChangedSUser || 'System',
-        eventType: row.EventType || 'UPDATE',
-        changedCount: row.ChangedCount || 0,
-        changedFields: row.ChangedFields || 'Unknown',
-        changedDetails: changedDetails
+        eventType: eventType,
+        changedCount: changes.length,
+        changedFields: changes.map(c => c.field).join(', '),
+        changedDetails: changes
       };
     });
+    
+    // Add current state comparison if there are changes
+    if (currentData && changelog.length > 0) {
+      const latestChange = changelog[0];
+      const latestNewData = latestChange.changedDetails.find(d => d.field === 'NICs_Json')?.new;
+      
+      if (latestNewData && currentData.NICs_Json !== latestNewData) {
+        // Add a "current state" entry
+        changelog.unshift({
+          changeID: 'current',
+          changeDate: new Date().toISOString(),
+          changedSUser: 'System',
+          eventType: 'CURRENT',
+          changedCount: 1,
+          changedFields: 'NICs_Json',
+          changedDetails: [{
+            field: 'NICs_Json',
+            old: latestNewData,
+            new: currentData.NICs_Json
+          }]
+        });
+      }
+    }
+    
+    res.json(changelog);
 
     res.json(changelog);
   } catch (err) {
