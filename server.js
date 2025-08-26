@@ -1296,6 +1296,16 @@ app.get('/api/alerts/:username', async (req, res) => {
       computerName: result.recordset[0].ComputerName
     } : 'No records');
     
+    // Get read status for this user
+    const readStatusResult = await pool.request()
+      .input('username', sql.NVarChar, username)
+      .query(`
+        SELECT AlertID FROM TBL_IT_AlertReadStatus 
+        WHERE UserID = @username
+      `);
+    
+    const readAlertIds = new Set(readStatusResult.recordset.map(r => r.AlertID));
+    
     // Convert to alert format
     const alerts = result.recordset.map(row => {
       let oldData = {};
@@ -1385,7 +1395,7 @@ app.get('/api/alerts/:username', async (req, res) => {
         computerName: row.ComputerName || 'Unknown Computer',
         timestamp: row.timestamp,
         username: row.username,
-        isRead: false, // Will be managed by frontend localStorage
+        isRead: readAlertIds.has(row.id.toString()), // Check if user has read this alert
         isOldAlert, // Flag to indicate this is an old alert
         changeDetails: allChanges.length > 0 ? {
           fields: allChanges.map(change => change.field),
@@ -1408,12 +1418,125 @@ app.get('/api/alerts/:username', async (req, res) => {
 app.post('/api/alerts/:username/read/:alertId', async (req, res) => {
   try {
     const { username, alertId } = req.params;
+    const pool = await getDbConnection();
     
-    // In a real system, you might want to store read status in database
-    // For now, we'll just return success (frontend manages read status)
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
+    // Check if already marked as read
+    const checkResult = await pool.request()
+      .input('alertId', sql.VarChar, alertId)
+      .input('username', sql.VarChar, username)
+      .query(`
+        SELECT ID FROM TBL_IT_AlertReadStatus 
+        WHERE AlertID = @alertId AND UserID = @username
+      `);
+    
+    if (checkResult.recordset.length > 0) {
+      return res.json({ success: true, message: 'Alert already marked as read' });
+    }
+    
+    // Get machine ID from the alert
+    const alertResult = await pool.request()
+      .input('alertId', sql.VarChar, alertId)
+      .query(`
+        SELECT MachineID FROM TBL_IT_MachineChangeLog 
+        WHERE ChangeID = @alertId
+      `);
+    
+    const machineID = alertResult.recordset[0]?.MachineID || '';
+    
+    // Insert read status
+    await pool.request()
+      .input('alertId', sql.VarChar, alertId)
+      .input('username', sql.VarChar, username)
+      .input('machineID', sql.VarChar, machineID)
+      .query(`
+        INSERT INTO TBL_IT_AlertReadStatus (AlertID, UserID, MachineID)
+        VALUES (@alertId, @username, @machineID)
+      `);
+    
     res.json({ success: true, message: 'Alert marked as read' });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to mark alert as read' });
+    console.error('Error marking alert as read:', err);
+    res.status(500).json({ error: 'Failed to mark alert as read', details: err.message });
+  }
+});
+
+// Mark all alerts as read for a user
+app.post('/api/alerts/:username/read-all', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const pool = await getDbConnection();
+    
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
+    // Get all unread alerts for this user
+    const unreadResult = await pool.request()
+      .input('username', sql.VarChar, username)
+      .query(`
+        SELECT c.ChangeID, c.MachineID
+        FROM TBL_IT_MachineChangeLog c
+        WHERE c.SnapshotJson_Old IS NOT NULL 
+          AND c.SnapshotJson_Old != '{}' 
+          AND c.SnapshotJson_Old != ''
+          AND c.ChangeID NOT IN (
+            SELECT AlertID FROM TBL_IT_AlertReadStatus WHERE UserID = @username
+          )
+      `);
+    
+    // Insert read status for all unread alerts
+    for (const alert of unreadResult.recordset) {
+      await pool.request()
+        .input('alertId', sql.VarChar, alert.ChangeID)
+        .input('username', sql.VarChar, username)
+        .input('machineID', sql.VarChar, alert.MachineID)
+        .query(`
+          INSERT INTO TBL_IT_AlertReadStatus (AlertID, UserID, MachineID)
+          VALUES (@alertId, @username, @machineID)
+        `);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Marked ${unreadResult.recordset.length} alerts as read` 
+    });
+  } catch (err) {
+    console.error('Error marking all alerts as read:', err);
+    res.status(500).json({ error: 'Failed to mark all alerts as read', details: err.message });
+  }
+});
+
+// Get read status for alerts
+app.get('/api/alerts/:username/read-status', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const pool = await getDbConnection();
+    
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
+    const result = await pool.request()
+      .input('username', sql.VarChar, username)
+      .query(`
+        SELECT AlertID, ReadDate
+        FROM TBL_IT_AlertReadStatus 
+        WHERE UserID = @username
+      `);
+    
+    const readAlerts = result.recordset.reduce((acc, row) => {
+      acc[row.AlertID] = row.ReadDate;
+      return acc;
+    }, {});
+    
+    res.json(readAlerts);
+  } catch (err) {
+    console.error('Error getting read status:', err);
+    res.status(500).json({ error: 'Failed to get read status', details: err.message });
   }
 });
 
@@ -2397,6 +2520,64 @@ app.get('/api/alerts/realtime', async (req, res) => {
   } catch (error) {
     console.error('Error fetching realtime alerts:', error);
     res.status(500).json({ error: 'Failed to fetch realtime alerts' });
+  }
+});
+
+// Create read status table
+app.post('/api/setup/create-read-status-table', async (req, res) => {
+  try {
+    const pool = await getDbConnection();
+    
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
+    // Create table if not exists
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='TBL_IT_AlertReadStatus' AND xtype='U')
+      CREATE TABLE TBL_IT_AlertReadStatus (
+        ID INT IDENTITY(1,1) PRIMARY KEY,
+        AlertID VARCHAR(50) NOT NULL,
+        UserID VARCHAR(100) NOT NULL,
+        ReadDate DATETIME DEFAULT GETDATE(),
+        MachineID VARCHAR(200),
+        CreatedAt DATETIME DEFAULT GETDATE()
+      )
+    `);
+    
+    // Create indexes
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AlertReadStatus_AlertID')
+      CREATE INDEX IX_AlertReadStatus_AlertID ON TBL_IT_AlertReadStatus (AlertID)
+    `);
+    
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AlertReadStatus_UserID')
+      CREATE INDEX IX_AlertReadStatus_UserID ON TBL_IT_AlertReadStatus (UserID)
+    `);
+    
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AlertReadStatus_ReadDate')
+      CREATE INDEX IX_AlertReadStatus_ReadDate ON TBL_IT_AlertReadStatus (ReadDate)
+    `);
+    
+    // Add unique constraint
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.objects WHERE name = 'UQ_AlertReadStatus_AlertUser')
+      ALTER TABLE TBL_IT_AlertReadStatus 
+      ADD CONSTRAINT UQ_AlertReadStatus_AlertUser UNIQUE (AlertID, UserID)
+    `);
+    
+    res.json({ 
+      success: true, 
+      message: 'Read status table created successfully' 
+    });
+  } catch (err) {
+    console.error('Error creating read status table:', err);
+    res.status(500).json({ 
+      error: 'Failed to create read status table', 
+      details: err.message 
+    });
   }
 });
 
