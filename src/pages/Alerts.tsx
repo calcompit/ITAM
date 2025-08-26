@@ -402,11 +402,11 @@ export function Alerts() {
                                 </div>
                                 {alert.changeDetails.changes?.slice(0, 2).map((change, index) => (
                                   <div key={index} className="flex items-center gap-2 text-xs mb-1">
-                                    <span className="text-red-600 bg-red-50 px-2 py-1 rounded truncate max-w-20">
+                                    <span className="text-red-600 bg-red-50 px-2 py-1 rounded break-all">
                                       {change.oldValue}
                                     </span>
                                     <span className="text-gray-400">→</span>
-                                    <span className="text-green-600 bg-green-50 px-2 py-1 rounded truncate max-w-20">
+                                    <span className="text-green-600 bg-green-50 px-2 py-1 rounded break-all">
                                       {change.newValue}
                                     </span>
                                   </div>
@@ -546,13 +546,13 @@ export function Alerts() {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <label className="text-xs font-medium text-red-600">Previous Value</label>
-                              <p className="text-sm bg-red-50 border border-red-200 rounded px-2 py-1 text-red-700 break-words">
+                              <p className="text-sm bg-red-50 border border-red-200 rounded px-2 py-1 text-red-700 break-all">
                                 {change.oldValue}
                               </p>
                             </div>
                             <div>
                               <label className="text-xs font-medium text-green-600">New Value</label>
-                              <p className="text-sm bg-green-50 border border-green-200 rounded px-2 py-1 text-green-700 break-words">
+                              <p className="text-sm bg-green-50 border border-green-200 rounded px-2 py-1 text-green-700 break-all">
                                 {change.newValue}
                               </p>
                             </div>
