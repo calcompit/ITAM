@@ -1271,6 +1271,8 @@ app.get('/api/alerts/:username', async (req, res) => {
     
     // Get recent changelog entries and convert to alerts
     console.log(`[DEBUG] Fetching alerts for user: ${username}`);
+    console.log(`[DEBUG] Request URL: ${req.url}`);
+    console.log(`[DEBUG] Query params:`, req.query);
     const result = await pool.request()
       .query(`
         SELECT TOP 100
