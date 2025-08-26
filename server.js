@@ -1483,6 +1483,48 @@ app.get('/api/debug/changelog', async (req, res) => {
   }
 });
 
+// Simple alerts endpoint for testing
+app.get('/api/alerts-simple', async (req, res) => {
+  try {
+    const pool = await getDbConnection();
+    
+    const result = await pool.request()
+      .query(`
+        SELECT TOP 10
+          ChangeID as id,
+          MachineID,
+          ChangeDate as timestamp,
+          ChangedSUser as username,
+          SnapshotJson_Old,
+          SnapshotJson_New
+        FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+        ORDER BY ChangeDate DESC
+      `);
+    
+    const alerts = result.recordset.map(row => ({
+      id: row.id.toString(),
+      type: 'system',
+      severity: 'medium',
+      title: 'System Change',
+      description: `Change on ${row.MachineID}`,
+      computerName: row.MachineID,
+      timestamp: row.timestamp,
+      username: row.username,
+      isRead: false,
+      isOldAlert: false,
+      changeDetails: {
+        field: 'System',
+        oldValue: 'Old',
+        newValue: 'New'
+      }
+    }));
+    
+    res.json(alerts);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch alerts', details: err.message });
+  }
+});
+
 // Mark alert as read
 app.post('/api/alerts/:username/read/:alertId', async (req, res) => {
   try {
