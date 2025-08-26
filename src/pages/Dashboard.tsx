@@ -35,9 +35,10 @@ import { AlertNotification } from "@/components/alert-notification";
 interface DashboardProps {
   activeTab: string;
   onTabChange?: (tab: string) => void;
+  showPinnedOnly?: boolean;
 }
 
-export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
+export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false }: DashboardProps) {
   const [computers, setComputers] = useState<APIComputer[]>([]);
   const [ipGroups, setIpGroups] = useState<IPGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +57,6 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
   const [vncModalMessage, setVncModalMessage] = useState("");
   const [vncModalType, setVncModalType] = useState<"loading" | "error" | "success">("loading");
   const [vncLinks, setVncLinks] = useState<any[]>([]);
-  const [showPinnedOnly, setShowPinnedOnly] = useState(false);
 
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();

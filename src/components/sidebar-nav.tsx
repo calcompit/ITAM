@@ -16,6 +16,9 @@ interface SidebarNavProps {
   onTabChange: (tab: string) => void;
   onLogout: () => void;
   user: { username: string };
+  showPinnedOnly: boolean;
+  onPinnedToggle: () => void;
+  pinnedCount: number;
 }
 
 export const sidebarNavItems = [
@@ -39,12 +42,11 @@ export const sidebarNavItems = [
   },
 ] as const
 
-export function SidebarNav({ activeTab, onTabChange, onLogout, user }: SidebarNavProps) {
+export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedOnly, onPinnedToggle, pinnedCount }: SidebarNavProps) {
   const { lastUpdate, connectionStatus } = useStatus();
   
-    const navItems = [
+  const navItems = [
     { id: "dashboard", label: "Dashboard", icon: Monitor },
-    { id: "pinned", label: "Pinned", icon: Pin },
     { id: "groups", label: "IP Groups", icon: Network },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "alerts", label: "Alerts", icon: Bell },
@@ -81,6 +83,28 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user }: SidebarNa
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Pin Filter Button */}
+      <div className="p-4 border-b border-border">
+        <Button
+          variant={showPinnedOnly ? "default" : "outline"}
+          className={cn(
+            "w-full justify-start gap-3 h-12",
+            showPinnedOnly && "bg-blue-600 hover:bg-blue-700"
+          )}
+          onClick={onPinnedToggle}
+        >
+          <Pin className="h-5 w-5" />
+          <div className="flex-1 text-left">
+            <div className="font-medium">
+              {showPinnedOnly ? "Show All" : "Pinned Only"}
+            </div>
+            <div className="text-xs opacity-75">
+              {pinnedCount} computers pinned
+            </div>
+          </div>
+        </Button>
       </div>
 
       {/* Navigation */}

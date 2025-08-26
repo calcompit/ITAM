@@ -2214,6 +2214,156 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
+// Alerts API endpoints
+app.get('/api/alerts', async (req, res) => {
+  try {
+    const { page = 1, limit = 50, unreadOnly = false } = req.query;
+    const offset = (page - 1) * limit;
+    
+    let query = `
+      SELECT TOP (${limit}) 
+        [ChangeID],
+        [MachineID],
+        [ChangeDate],
+        [ChangedSUser],
+        [SnapshotJson_Old],
+        [SnapshotJson_New],
+        [Changes]
+      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+      ORDER BY [ChangeDate] DESC
+    `;
+    
+    if (unreadOnly === 'true') {
+      // For now, we'll consider recent alerts (last 24 hours) as unread
+      query = `
+        SELECT TOP (${limit}) 
+          [ChangeID],
+          [MachineID],
+          [ChangeDate],
+          [ChangedSUser],
+          [SnapshotJson_Old],
+          [SnapshotJson_New],
+          [Changes]
+        FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+        WHERE [ChangeDate] >= DATEADD(hour, -24, GETDATE())
+        ORDER BY [ChangeDate] DESC
+      `;
+    }
+    
+    const result = await pool.request().query(query);
+    
+    res.json({
+      alerts: result.recordset,
+      total: result.recordset.length,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
+  } catch (error) {
+    console.error('Error fetching alerts:', error);
+    res.status(500).json({ error: 'Failed to fetch alerts' });
+  }
+});
+
+app.get('/api/alerts/summary', async (req, res) => {
+  try {
+    // Get total alerts count
+    const totalResult = await pool.request().query(`
+      SELECT COUNT(*) as totalAlerts
+      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+    `);
+    
+    // Get unread alerts count (last 24 hours)
+    const unreadResult = await pool.request().query(`
+      SELECT COUNT(*) as unreadAlerts
+      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+      WHERE [ChangeDate] >= DATEADD(hour, -24, GETDATE())
+    `);
+    
+    // Get high priority alerts (status changes to offline)
+    const highPriorityResult = await pool.request().query(`
+      SELECT COUNT(*) as highPriorityAlerts
+      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+      WHERE [Changes] LIKE '%"status"%' 
+      AND [Changes] LIKE '%"offline"%'
+      AND [ChangeDate] >= DATEADD(hour, -24, GETDATE())
+    `);
+    
+    // Get recent alerts
+    const recentResult = await pool.request().query(`
+      SELECT TOP (5)
+        [ChangeID],
+        [MachineID],
+        [ChangeDate],
+        [ChangedSUser],
+        [SnapshotJson_Old],
+        [SnapshotJson_New],
+        [Changes]
+      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+      ORDER BY [ChangeDate] DESC
+    `);
+    
+    res.json({
+      totalAlerts: totalResult.recordset[0].totalAlerts,
+      unreadAlerts: unreadResult.recordset[0].unreadAlerts,
+      highPriorityAlerts: highPriorityResult.recordset[0].highPriorityAlerts,
+      recentAlerts: recentResult.recordset
+    });
+  } catch (error) {
+    console.error('Error fetching alert summary:', error);
+    res.status(500).json({ error: 'Failed to fetch alert summary' });
+  }
+});
+
+app.put('/api/alerts/:changeId/read', async (req, res) => {
+  try {
+    const { changeId } = req.params;
+    
+    // For now, we'll just return success
+    // In a real implementation, you might want to add a "Read" column to the table
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marking alert as read:', error);
+    res.status(500).json({ error: 'Failed to mark alert as read' });
+  }
+});
+
+app.put('/api/alerts/read-all', async (req, res) => {
+  try {
+    // For now, we'll just return success
+    // In a real implementation, you might want to update all recent alerts
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error marking all alerts as read:', error);
+    res.status(500).json({ error: 'Failed to mark all alerts as read' });
+  }
+});
+
+app.get('/api/alerts/realtime', async (req, res) => {
+  try {
+    // Get alerts from the last 5 minutes for real-time updates
+    const result = await pool.request().query(`
+      SELECT TOP (10)
+        [ChangeID],
+        [MachineID],
+        [ChangeDate],
+        [ChangedSUser],
+        [SnapshotJson_Old],
+        [SnapshotJson_New],
+        [Changes]
+      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
+      WHERE [ChangeDate] >= DATEADD(minute, -5, GETDATE())
+      ORDER BY [ChangeDate] DESC
+    `);
+    
+    res.json({
+      alerts: result.recordset
+    });
+  } catch (error) {
+    console.error('Error fetching realtime alerts:', error);
+    res.status(500).json({ error: 'Failed to fetch realtime alerts' });
+  }
+});
+
 // Start server
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

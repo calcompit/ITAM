@@ -16,7 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
 
-export function Analytics() {
+interface AnalyticsProps {
+  showPinnedOnly?: boolean;
+}
+
+export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
   const [computers, setComputers] = useState<APIComputer[]>([]);
   const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
