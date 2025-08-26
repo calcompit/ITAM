@@ -14,10 +14,11 @@ interface ComputerCardProps {
   onPin: (id: string) => void;
   onClick: (computer: Computer) => void;
   onVNC?: (ip: string, computerName: string) => void;
+  onVNCNative?: (ip: string, computerName: string) => void;
   isUpdated?: boolean;
 }
 
-export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: ComputerCardProps) {
+export function ComputerCard({ computer, onPin, onClick, onVNC, onVNCNative, isUpdated }: ComputerCardProps) {
   return (
     <Card 
       className={cn(
@@ -69,18 +70,37 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
                 className="text-sm font-mono text-foreground hover:text-blue-600 dark:hover:text-blue-400"
                 onClick={(e) => e.stopPropagation()}
               />
-              {onVNC && computer.ipAddresses[0] && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onVNC(computer.ipAddresses[0], computer.computerName);
-                  }}
-                  className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                >
-                  <MonitorCheck className="h-4 w-4 text-blue-500" />
-                </Button>
+              {computer.ipAddresses[0] && (
+                <div className="flex items-center gap-1">
+                  {onVNC && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onVNC(computer.ipAddresses[0], computer.computerName);
+                      }}
+                      className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                      title="Web VNC"
+                    >
+                      <MonitorCheck className="h-4 w-4 text-blue-500" />
+                    </Button>
+                  )}
+                  {onVNCNative && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onVNCNative(computer.ipAddresses[0], computer.computerName);
+                      }}
+                      className="h-8 w-8 p-0 hover:bg-green-100 dark:hover:bg-green-900/20"
+                      title="TightVNC App"
+                    >
+                      <Monitor className="h-4 w-4 text-green-500" />
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </div>

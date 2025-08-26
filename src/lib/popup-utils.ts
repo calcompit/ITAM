@@ -6,6 +6,7 @@ export interface PopupBlockResult {
   browser: string;
   solution: string;
   manualUrl?: string;
+  alternativeSolutions?: string[];
 }
 
 export interface VNCLink {
@@ -37,28 +38,55 @@ export function detectPopupBlock(windowRef: Window | null): PopupBlockResult {
                    windowRef.outerWidth === 0;
 
   let solution = '';
+  let alternativeSolutions: string[] = [];
   
   switch (browser) {
     case 'chrome':
       solution = 'คลิกที่ไอคอน 🚫 ในแถบที่อยู่ แล้วเลือก "อนุญาต" สำหรับ popup';
+      alternativeSolutions = [
+        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
+        'คัดลอก URL และเปิดในแท็บใหม่',
+        'ตั้งค่า "Allow popups" ใน Chrome Settings'
+      ];
       break;
     case 'firefox':
       solution = 'คลิกที่ไอคอน 🚫 ในแถบที่อยู่ แล้วเลือก "อนุญาต" สำหรับ popup';
+      alternativeSolutions = [
+        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
+        'ตั้งค่า "Allow popups" ใน Firefox Settings',
+        'เพิ่มเว็บไซต์ใน whitelist'
+      ];
       break;
     case 'safari':
       solution = 'ไปที่ Safari > Preferences > Websites > Pop-up Windows แล้วเลือก "Allow" สำหรับเว็บไซต์นี้';
+      alternativeSolutions = [
+        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
+        'เปิด Safari Preferences และอนุญาต popup',
+        'ใช้ Command+Click เพื่อเปิดในแท็บใหม่'
+      ];
       break;
     case 'edge':
       solution = 'คลิกที่ไอคอน 🚫 ในแถบที่อยู่ แล้วเลือก "อนุญาต" สำหรับ popup';
+      alternativeSolutions = [
+        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
+        'ตั้งค่า "Allow popups" ใน Edge Settings',
+        'เพิ่มเว็บไซต์ใน whitelist'
+      ];
       break;
     default:
       solution = 'กรุณาอนุญาต popup ในเบราว์เซอร์ของคุณ';
+      alternativeSolutions = [
+        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
+        'ตั้งค่าเบราว์เซอร์ให้อนุญาต popup',
+        'ติดต่อผู้ดูแลระบบ'
+      ];
   }
 
   return {
     isBlocked,
     browser,
-    solution
+    solution,
+    alternativeSolutions
   };
 }
 
@@ -155,6 +183,24 @@ export function openVNCPopup(url: string, computerName: string, ip: string): Pop
   }
   
   return result;
+}
+
+// Try to open VNC in native app
+export function openVNCNativeApp(ip: string, port: number = 5900): void {
+  const vncUrl = `vnc://:123@${ip}:${port}`;
+  console.log('Opening VNC in native app:', vncUrl);
+  window.open(vncUrl, '_blank');
+}
+
+// Copy VNC URL to clipboard
+export async function copyVNCUrlToClipboard(url: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(url);
+    return true;
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    return false;
+  }
 }
 
 // Format timestamp for display

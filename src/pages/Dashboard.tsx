@@ -29,7 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
-import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
+import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp, openVNCNativeApp } from "@/lib/popup-utils";
 
 interface DashboardProps {
   activeTab: string;
@@ -251,6 +251,33 @@ export function Dashboard({ activeTab }: DashboardProps) {
     setVncLinks(links);
   };
 
+  const handleVNCNativeApp = (ip: string, computerName: string) => {
+    try {
+      console.log(`Opening TightVNC for IP: ${ip} (${computerName})`);
+      
+      // Open VNC in native app (TightVNC)
+      openVNCNativeApp(ip, 5900);
+      
+      // Show success message
+      setShowVncModal(true);
+      setVncModalTitle("TightVNC App");
+      setVncModalMessage(`Opening TightVNC for ${computerName} (${ip})\n\nIf TightVNC is not installed, please install it first.`);
+      setVncModalType("success");
+      
+      // Auto-close after 3 seconds
+      setTimeout(() => {
+        setShowVncModal(false);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error opening TightVNC:', error);
+      setShowVncModal(true);
+      setVncModalTitle("TightVNC Error");
+      setVncModalMessage("Failed to open TightVNC. Please make sure it's installed.");
+      setVncModalType("error");
+    }
+  };
+
   const handleVNC = async (ip: string, computerName: string) => {
              // Show loading modal immediately when button is clicked
          setVncModalTitle("VNC Connection");
@@ -377,9 +404,13 @@ export function Dashboard({ activeTab }: DashboardProps) {
         const popupResult = openVNCPopup(finalVncUrl, computerName, ip);
         
         if (popupResult.isBlocked) {
-          // Popup blocked - show specific solution
-          setVncModalTitle("⚠️ Popup Blocked");
-          setVncModalMessage(popupResult.solution);
+          // Popup blocked - show specific solution with alternatives
+          setVncModalTitle("⚠️ Popup Blocked - Security Feature");
+          setVncModalMessage(
+            `${popupResult.solution}\n\n` +
+            `ทางเลือกอื่นๆ:\n` +
+            popupResult.alternativeSolutions?.map((alt, index) => `${index + 1}. ${alt}`).join('\n') || ''
+          );
           setVncModalType("error");
           
           // Update VNC links
@@ -747,6 +778,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
             onPin={handlePin}
             onClick={handleComputerClick}
             onVNC={handleVNC}
+            onVNCNative={handleVNCNativeApp}
             isUpdated={updatedMachineIDs.has(computer.machineID)}
           />
         ))}

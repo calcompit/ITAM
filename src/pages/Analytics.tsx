@@ -14,7 +14,7 @@ import { useStatus } from "@/contexts/StatusContext";
 import { API_CONFIG } from "@/config/api";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
+import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp, openVNCNativeApp } from "@/lib/popup-utils";
 
 export function Analytics() {
   const [computers, setComputers] = useState<APIComputer[]>([]);
@@ -51,6 +51,33 @@ export function Analytics() {
     removeVNCLink(linkId);
     const links = getStoredVNCLinks();
     setVncLinks(links);
+  };
+
+  const handleVNCNativeApp = (ip: string, computerName: string) => {
+    try {
+      console.log(`Opening TightVNC for IP: ${ip} (${computerName})`);
+      
+      // Open VNC in native app (TightVNC)
+      openVNCNativeApp(ip, 5900);
+      
+      // Show success message
+      setShowVncModal(true);
+      setVncModalTitle("TightVNC App");
+      setVncModalMessage(`Opening TightVNC for ${computerName} (${ip})\n\nIf TightVNC is not installed, please install it first.`);
+      setVncModalType("success");
+      
+      // Auto-close after 3 seconds
+      setTimeout(() => {
+        setShowVncModal(false);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error opening TightVNC:', error);
+      setShowVncModal(true);
+      setVncModalTitle("TightVNC Error");
+      setVncModalMessage("Failed to open TightVNC. Please make sure it's installed.");
+      setVncModalType("error");
+    }
   };
 
   // VNC connection handler
@@ -679,6 +706,7 @@ export function Analytics() {
             onPin={handlePin}
             onClick={(computer) => setSelectedComputer(computer)}
             onVNC={(ip, computerName) => handleVNC(ip, computerName)}
+            onVNCNative={handleVNCNativeApp}
           />
         ))}
       </div>
