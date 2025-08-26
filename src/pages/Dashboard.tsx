@@ -30,6 +30,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
 import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
+import { AlertNotification } from "@/components/alert-notification";
 
 interface DashboardProps {
   activeTab: string;
@@ -634,7 +635,7 @@ export function Dashboard({ activeTab, onTabChange }: DashboardProps) {
               className="pl-10 w-64"
             />
           </div>
-
+          <AlertNotification />
         </div>
       </div>
 
