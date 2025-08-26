@@ -44,23 +44,23 @@ export function detectPopupBlock(windowRef: Window | null): PopupBlockResult {
     case 'chrome':
       solution = 'คลิกที่ไอคอน 🚫 ในแถบที่อยู่ แล้วเลือก "อนุญาต" สำหรับ popup';
       alternativeSolutions = [
-        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
+        'คลิกลิงก์ด้านล่างเพื่อเปิด VNC',
         'คัดลอก URL และเปิดในแท็บใหม่',
-        'ตั้งค่า "Allow popups" ใน Chrome Settings'
+        'ตั้งค่า "Allow popups" ใน Chrome Settings > Privacy and security > Site Settings > Pop-ups and redirects'
       ];
       break;
     case 'firefox':
       solution = 'คลิกที่ไอคอน 🚫 ในแถบที่อยู่ แล้วเลือก "อนุญาต" สำหรับ popup';
       alternativeSolutions = [
-        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
-        'ตั้งค่า "Allow popups" ใน Firefox Settings',
+        'คลิกลิงก์ด้านล่างเพื่อเปิด VNC',
+        'ตั้งค่า "Allow popups" ใน Firefox Settings > Privacy & Security > Permissions',
         'เพิ่มเว็บไซต์ใน whitelist'
       ];
       break;
     case 'safari':
       solution = 'ไปที่ Safari > Preferences > Websites > Pop-up Windows แล้วเลือก "Allow" สำหรับเว็บไซต์นี้';
       alternativeSolutions = [
-        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
+        'คลิกลิงก์ด้านล่างเพื่อเปิด VNC',
         'เปิด Safari Preferences และอนุญาต popup',
         'ใช้ Command+Click เพื่อเปิดในแท็บใหม่'
       ];
@@ -68,15 +68,15 @@ export function detectPopupBlock(windowRef: Window | null): PopupBlockResult {
     case 'edge':
       solution = 'คลิกที่ไอคอน 🚫 ในแถบที่อยู่ แล้วเลือก "อนุญาต" สำหรับ popup';
       alternativeSolutions = [
-        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
-        'ตั้งค่า "Allow popups" ใน Edge Settings',
+        'คลิกลิงก์ด้านล่างเพื่อเปิด VNC',
+        'ตั้งค่า "Allow popups" ใน Edge Settings > Cookies and site permissions > Pop-ups and redirects',
         'เพิ่มเว็บไซต์ใน whitelist'
       ];
       break;
     default:
       solution = 'กรุณาอนุญาต popup ในเบราว์เซอร์ของคุณ';
       alternativeSolutions = [
-        'ใช้ VNC Viewer แอปพลิเคชัน (แนะนำ)',
+        'คลิกลิงก์ด้านล่างเพื่อเปิด VNC',
         'ตั้งค่าเบราว์เซอร์ให้อนุญาต popup',
         'ติดต่อผู้ดูแลระบบ'
       ];
@@ -155,7 +155,7 @@ export function openVNCPopup(url: string, computerName: string, ip: string): Pop
   let windowRef: Window | null = null;
   
   try {
-    // Method 1: Standard approach
+    // Method 1: Standard approach with unique name
     const uniqueName = `vnc_${ip.replace(/\./g, '_')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     windowRef = window.open(url, uniqueName, windowFeatures);
     
@@ -168,6 +168,11 @@ export function openVNCPopup(url: string, computerName: string, ip: string): Pop
     // Method 3: For Safari, try without features
     if ((!windowRef || windowRef.closed) && browser === 'safari') {
       windowRef = window.open(url, '_blank');
+    }
+    
+    // Method 4: Try with minimal features
+    if (!windowRef || windowRef.closed) {
+      windowRef = window.open(url, '_blank', 'width=1200,height=800');
     }
     
   } catch (error) {
@@ -185,30 +190,7 @@ export function openVNCPopup(url: string, computerName: string, ip: string): Pop
   return result;
 }
 
-// Try to open VNC in native app with better error handling
-export function openVNCNativeApp(ip: string, port: number = 5900): void {
-  // Method 1: Try vnc:// protocol first
-  const vncUrl = `vnc://:123@${ip}:${port}`;
-  console.log('Opening VNC in native app:', vncUrl);
-  
-  try {
-    // Try vnc:// protocol
-    window.open(vncUrl, '_blank');
-  } catch (error) {
-    console.log('vnc:// protocol failed, trying alternative methods');
-    
-    // Method 2: Try with different format
-    try {
-      const altVncUrl = `vnc://${ip}:${port}`;
-      window.open(altVncUrl, '_blank');
-    } catch (error2) {
-      console.log('Alternative vnc:// format failed');
-      
-      // Method 3: Show instructions to user
-      alert(`TightVNC Connection Info:\n\nIP: ${ip}\nPort: ${port}\nPassword: 123\n\nPlease open TightVNC manually and enter these details.`);
-    }
-  }
-}
+
 
 // Copy VNC URL to clipboard
 export async function copyVNCUrlToClipboard(url: string): Promise<boolean> {

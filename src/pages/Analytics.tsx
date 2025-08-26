@@ -14,7 +14,7 @@ import { useStatus } from "@/contexts/StatusContext";
 import { API_CONFIG } from "@/config/api";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp, openVNCNativeApp } from "@/lib/popup-utils";
+import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
 
 export function Analytics() {
   const [computers, setComputers] = useState<APIComputer[]>([]);
@@ -51,45 +51,6 @@ export function Analytics() {
     removeVNCLink(linkId);
     const links = getStoredVNCLinks();
     setVncLinks(links);
-  };
-
-  const handleVNCNativeApp = (ip: string, computerName: string) => {
-    try {
-      console.log(`Opening TightVNC for IP: ${ip} (${computerName})`);
-      
-      // Open VNC in native app (TightVNC)
-      openVNCNativeApp(ip, 5900);
-      
-      // Show connection details
-      setShowVncModal(true);
-      setVncModalTitle("TightVNC Connection");
-      setVncModalMessage(
-        `Computer: ${computerName}\n` +
-        `IP Address: ${ip}\n` +
-        `Port: 5900\n` +
-        `Password: 123\n\n` +
-        `If TightVNC doesn't open automatically, please enter these details manually.`
-      );
-      setVncModalType("success");
-      
-      // Auto-close after 5 seconds
-      setTimeout(() => {
-        setShowVncModal(false);
-      }, 5000);
-      
-    } catch (error) {
-      console.error('Error opening TightVNC:', error);
-      setShowVncModal(true);
-      setVncModalTitle("TightVNC Connection Info");
-      setVncModalMessage(
-        `Computer: ${computerName}\n` +
-        `IP Address: ${ip}\n` +
-        `Port: 5900\n` +
-        `Password: 123\n\n` +
-        `Please open TightVNC manually and enter these details.`
-      );
-      setVncModalType("error");
-    }
   };
 
   // VNC connection handler
@@ -718,7 +679,6 @@ export function Analytics() {
             onPin={handlePin}
             onClick={(computer) => setSelectedComputer(computer)}
             onVNC={(ip, computerName) => handleVNC(ip, computerName)}
-            onVNCNative={handleVNCNativeApp}
           />
         ))}
       </div>

@@ -29,7 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
-import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp, openVNCNativeApp } from "@/lib/popup-utils";
+import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
 
 interface DashboardProps {
   activeTab: string;
@@ -249,45 +249,6 @@ export function Dashboard({ activeTab }: DashboardProps) {
     removeVNCLink(linkId);
     const links = getStoredVNCLinks();
     setVncLinks(links);
-  };
-
-  const handleVNCNativeApp = (ip: string, computerName: string) => {
-    try {
-      console.log(`Opening TightVNC for IP: ${ip} (${computerName})`);
-      
-      // Open VNC in native app (TightVNC)
-      openVNCNativeApp(ip, 5900);
-      
-      // Show connection details
-      setShowVncModal(true);
-      setVncModalTitle("TightVNC Connection");
-      setVncModalMessage(
-        `Computer: ${computerName}\n` +
-        `IP Address: ${ip}\n` +
-        `Port: 5900\n` +
-        `Password: 123\n\n` +
-        `If TightVNC doesn't open automatically, please enter these details manually.`
-      );
-      setVncModalType("success");
-      
-      // Auto-close after 5 seconds
-      setTimeout(() => {
-        setShowVncModal(false);
-      }, 5000);
-      
-    } catch (error) {
-      console.error('Error opening TightVNC:', error);
-      setShowVncModal(true);
-      setVncModalTitle("TightVNC Connection Info");
-      setVncModalMessage(
-        `Computer: ${computerName}\n` +
-        `IP Address: ${ip}\n` +
-        `Port: 5900\n` +
-        `Password: 123\n\n` +
-        `Please open TightVNC manually and enter these details.`
-      );
-      setVncModalType("error");
-    }
   };
 
   const handleVNC = async (ip: string, computerName: string) => {
@@ -790,7 +751,6 @@ export function Dashboard({ activeTab }: DashboardProps) {
             onPin={handlePin}
             onClick={handleComputerClick}
             onVNC={handleVNC}
-            onVNCNative={handleVNCNativeApp}
             isUpdated={updatedMachineIDs.has(computer.machineID)}
           />
         ))}
