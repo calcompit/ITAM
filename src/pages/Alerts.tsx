@@ -20,18 +20,18 @@ import {
   Calendar,
   TrendingUp
 } from "lucide-react";
-import { AlertRecord, alertService } from "@/services/alert-service";
+import { apiService, type AlertItem } from "@/services/api";
 
 export function Alerts() {
-  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
-  const [filteredAlerts, setFilteredAlerts] = useState<AlertRecord[]>([]);
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [filteredAlerts, setFilteredAlerts] = useState<AlertItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSeverity, setSelectedSeverity] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [selectedAlert, setSelectedAlert] = useState<AlertRecord | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<AlertItem | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
   // Load alerts on mount
@@ -47,26 +47,20 @@ export function Alerts() {
   const loadAlerts = async () => {
     try {
       setIsLoading(true);
-      const allAlerts = await alertService.getAlerts(currentPage, 50, false);
+      // Get current user from localStorage or use default
+      const currentUser = localStorage.getItem('currentUser') 
+        ? JSON.parse(localStorage.getItem('currentUser')!).username 
+        : 'admin';
+      
+      const allAlerts = await apiService.getAlerts(currentUser);
       setAlerts(allAlerts);
       
       // Calculate total pages (assuming 50 items per page)
-      const totalAlerts = await getTotalAlerts();
-      setTotalPages(Math.ceil(totalAlerts / 50));
+      setTotalPages(Math.ceil(allAlerts.length / 50));
     } catch (error) {
       console.error('Error loading alerts:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const getTotalAlerts = async (): Promise<number> => {
-    try {
-      const summary = await alertService.getAlertSummary();
-      return summary.totalAlerts;
-    } catch (error) {
-      console.error('Error getting total alerts:', error);
-      return 0;
     }
   };
 
@@ -76,9 +70,9 @@ export function Alerts() {
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(alert => 
-        alert.machineID.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        alert.changedUser.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        alertService.getChangeDescription(alert).toLowerCase().includes(searchTerm.toLowerCase())
+        alert.computerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        alert.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        alert.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -95,9 +89,13 @@ export function Alerts() {
     setFilteredAlerts(filtered);
   };
 
-  const handleMarkAsRead = async (alert: AlertRecord) => {
+  const handleMarkAsRead = async (alert: AlertItem) => {
     try {
-      const success = await alertService.markAsRead(alert.changeID);
+      const currentUser = localStorage.getItem('currentUser') 
+        ? JSON.parse(localStorage.getItem('currentUser')!).username 
+        : 'admin';
+      
+      const success = await apiService.markAlertAsRead(currentUser, alert.id);
       if (success) {
         setAlerts(prev => prev.map(a => 
           a.changeID === alert.changeID ? { ...a, isRead: true } : a
@@ -145,16 +143,7 @@ export function Alerts() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('th-TH', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+
 
   const getAlertStats = () => {
     const total = alerts.length;
@@ -332,7 +321,7 @@ export function Alerts() {
               <div className="space-y-3">
                 {filteredAlerts.map((alert) => (
                   <Card 
-                    key={alert.changeID} 
+                    key={alert.id} 
                     className={`${getSeverityColor(alert.severity)} hover:shadow-md transition-shadow cursor-pointer ${
                       !alert.isRead ? 'ring-2 ring-blue-500' : ''
                     }`}
@@ -351,7 +340,7 @@ export function Alerts() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="font-medium text-sm">
-                                {alertService.getChangeDescription(alert)}
+                                {alert.title}
                               </span>
                               <Badge 
                                 variant="secondary" 
@@ -373,15 +362,15 @@ export function Alerts() {
                             <div className="flex items-center gap-4 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Computer className="h-3 w-3" />
-                                <span>{alert.machineID}</span>
+                                <span>{alert.computerName}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <User className="h-3 w-3" />
-                                <span>{alert.changedUser}</span>
+                                <span>{alert.username}</span>
                               </div>
                               <div className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />
-                                <span>{formatDate(alert.changeDate)}</span>
+                                <span>{new Date(alert.timestamp).toLocaleString('th-TH')}</span>
                               </div>
                             </div>
                           </div>
@@ -452,15 +441,15 @@ export function Alerts() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Machine ID</label>
-                    <p className="text-sm">{selectedAlert.machineID}</p>
+                    <p className="text-sm">{selectedAlert.id}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Changed By</label>
-                    <p className="text-sm">{selectedAlert.changedUser}</p>
+                    <p className="text-sm">{selectedAlert.username}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Date & Time</label>
-                    <p className="text-sm">{formatDate(selectedAlert.changeDate)}</p>
+                    <p className="text-sm">{new Date(selectedAlert.timestamp).toLocaleString('th-TH')}</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Severity</label>
@@ -479,29 +468,14 @@ export function Alerts() {
                 
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Description</label>
-                  <p className="text-sm mt-1">{alertService.getChangeDescription(selectedAlert)}</p>
+                  <p className="text-sm mt-1">{selectedAlert.description}</p>
                 </div>
                 
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">Changes</label>
                   <pre className="text-xs bg-muted p-3 rounded-md mt-1 overflow-auto">
-                    {JSON.stringify(alertService.parseChanges(selectedAlert.changes), null, 2)}
+                    {selectedAlert.changeDetails ? JSON.stringify(selectedAlert.changeDetails, null, 2) : '{}'}
                   </pre>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Previous State</label>
-                    <pre className="text-xs bg-muted p-3 rounded-md mt-1 overflow-auto">
-                      {JSON.stringify(selectedAlert.snapshotOld, null, 2)}
-                    </pre>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">New State</label>
-                    <pre className="text-xs bg-muted p-3 rounded-md mt-1 overflow-auto">
-                      {JSON.stringify(selectedAlert.snapshotNew, null, 2)}
-                    </pre>
-                  </div>
                 </div>
               </div>
             </ScrollArea>
