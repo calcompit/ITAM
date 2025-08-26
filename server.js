@@ -1290,6 +1290,11 @@ app.get('/api/alerts/:username', async (req, res) => {
       `);
     
     console.log(`[DEBUG] Found ${result.recordset.length} changelog records`);
+    console.log(`[DEBUG] First record:`, result.recordset[0] ? {
+      id: result.recordset[0].id,
+      machineID: result.recordset[0].MachineID,
+      computerName: result.recordset[0].ComputerName
+    } : 'No records');
     
     // Convert to alert format
     const alerts = result.recordset.map(row => {
