@@ -1490,14 +1490,19 @@ app.post('/api/alerts/:username/read-all', async (req, res) => {
     
     // Insert read status for all unread alerts
     for (const alert of unreadResult.recordset) {
-      await pool.request()
-        .input('alertId', sql.VarChar, alert.ChangeID)
-        .input('username', sql.VarChar, username)
-        .input('machineID', sql.VarChar, alert.MachineID)
-        .query(`
-          INSERT INTO TBL_IT_AlertReadStatus (AlertID, UserID, MachineID)
-          VALUES (@alertId, @username, @machineID)
-        `);
+      try {
+        await pool.request()
+          .input('alertId', sql.VarChar, alert.ChangeID.toString())
+          .input('username', sql.VarChar, username)
+          .input('machineID', sql.VarChar, alert.MachineID || '')
+          .query(`
+            INSERT INTO TBL_IT_AlertReadStatus (AlertID, UserID, MachineID)
+            VALUES (@alertId, @username, @machineID)
+          `);
+      } catch (insertError) {
+        // Skip if already exists (unique constraint)
+        console.log(`Skipping alert ${alert.ChangeID} - may already be marked as read`);
+      }
     }
     
     res.json({ 
