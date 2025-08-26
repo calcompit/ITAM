@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,13 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { ComputerCard } from "@/components/computer-card";
 import { ComputerDetailsModal } from "@/components/computer-details-modal";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, BarChart3, Cpu, HardDrive, MemoryStick, CheckCircle, AlertTriangle, Monitor } from "lucide-react";
+import { Search, Filter, BarChart3, Cpu, HardDrive, MemoryStick, CheckCircle, AlertTriangle, Monitor, X } from "lucide-react";
 import { apiService, type APIComputer } from "@/services/api";
 import { websocketService } from "@/services/websocket";
 import { useStatus } from "@/contexts/StatusContext";
 import { API_CONFIG } from "@/config/api";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
 
 export function Analytics() {
   const [computers, setComputers] = useState<APIComputer[]>([]);
@@ -29,14 +30,28 @@ export function Analytics() {
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();
+
+  // Load VNC links and clear old ones
+  useEffect(() => {
+    clearOldVNCLinks();
+    const links = getStoredVNCLinks();
+    setVncLinks(links);
+  }, []);
   
   // VNC Connection Modal States
   const [showVncModal, setShowVncModal] = useState(false);
   const [vncModalTitle, setVncModalTitle] = useState("");
   const [vncModalMessage, setVncModalMessage] = useState("");
   const [vncModalType, setVncModalType] = useState<"loading" | "error" | "success">("loading");
+  const [vncLinks, setVncLinks] = useState<any[]>([]);
 
 
+
+  const handleRemoveVNCLink = (linkId: string) => {
+    removeVNCLink(linkId);
+    const links = getStoredVNCLinks();
+    setVncLinks(links);
+  };
 
   // VNC connection handler
   const handleVNC = async (ip: string, computerName: string) => {
@@ -52,9 +67,9 @@ export function Analytics() {
       const currentUser = localStorage.getItem('currentUser') || 'default';
       
       // Close any existing VNC windows and clear references
-      if (window.vncWindow && !window.vncWindow.closed) {
+      if ((window as any).vncWindow && !(window as any).vncWindow.closed) {
         try {
-          window.vncWindow.close();
+          (window as any).vncWindow.close();
           console.log('Closed existing VNC window');
         } catch (error) {
           console.log('Error closing existing window:', error);
@@ -62,11 +77,11 @@ export function Analytics() {
       }
       
       // Clear any existing VNC window references
-      window.vncWindow = null;
+      (window as any).vncWindow = null;
       
       // Force browser to forget about previous VNC windows
-      if (window.vncWindows) {
-        window.vncWindows.forEach((win: any) => {
+      if ((window as any).vncWindows) {
+        (window as any).vncWindows.forEach((win: any) => {
           try {
             if (win && !win.closed) {
               win.close();
@@ -76,7 +91,7 @@ export function Analytics() {
           }
         });
       }
-      window.vncWindows = [];
+      (window as any).vncWindows = [];
       
       // Start VNC session directly (no login required)
       const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
@@ -156,59 +171,20 @@ export function Analytics() {
         
         console.log('Opening VNC URL in new window:', vncUrl);
         
-        // Try to open VNC window as new window with unique name
-        const uniqueWindowName = `vnc_${ip.replace(/\./g, '_')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no,left=100,top=100';
+        // Use improved popup handling
+        const popupResult = openVNCPopup(vncUrl, computerName, ip);
         
-        console.log('Opening VNC with unique window name:', uniqueWindowName);
-        const vncWindow = window.open(vncUrl, uniqueWindowName, windowFeatures);
-        
-        // Store reference to close later
-        window.vncWindow = vncWindow;
-        
-        // Add to window tracking array
-        if (!window.vncWindows) {
-          window.vncWindows = [];
-        }
-        window.vncWindows.push(vncWindow);
-        
-        console.log('Window open result:', vncWindow);
-        
-        if (!vncWindow) {
-          // Popup blocked - show manual link
+        if (popupResult.isBlocked) {
+          // Popup blocked - show specific solution
           setVncModalTitle("⚠️ Popup Blocked");
-          setVncModalMessage("Please allow popups or click the link below to open VNC");
+          setVncModalMessage(popupResult.solution);
           setVncModalType("error");
           
-          // Create manual link container if it doesn't exist
-          let vncContainer = document.getElementById('vnc-container');
-          if (!vncContainer) {
-            vncContainer = document.createElement('div');
-            vncContainer.id = 'vnc-container';
-            vncContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; background: white; border: 1px solid #ccc; padding: 10px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);';
-            document.body.appendChild(vncContainer);
-          }
-          
-          vncContainer.innerHTML = `
-            <div style="margin-bottom: 10px; font-weight: bold;">VNC Connections</div>
-            <div style="margin-bottom: 5px;">
-              <a href="${vncUrl}" target="_blank" style="color: blue; text-decoration: underline;">
-                ${computerName} (${ip})
-              </a>
-            </div>
-            <button onclick="this.parentElement.remove()" style="background: #f44336; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 12px;">
-              Close
-            </button>
-          `;
-          
-          // Auto-remove after 30 seconds
-          setTimeout(() => {
-            if (vncContainer && vncContainer.parentElement) {
-              vncContainer.remove();
-            }
-          }, 30000);
+          // Update VNC links
+          const links = getStoredVNCLinks();
+          setVncLinks(links);
         } else {
-          // Show success modal and auto-close after 2 seconds
+          // Success - show success modal and auto-close after 2 seconds
           setVncModalTitle("VNC Connected");
           setVncModalMessage(`Successfully connected to ${computerName} (${ip})`);
           setVncModalType("success");
@@ -640,6 +616,52 @@ export function Analytics() {
           </div>
         </CardContent>
       </Card>
+
+      {/* VNC Links Container - Show when there are stored links */}
+      {vncLinks.length > 0 && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-blue-800">VNC Connections (Popup Blocked)</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                vncLinks.forEach(link => removeVNCLink(link.id));
+                setVncLinks([]);
+              }}
+              className="text-xs"
+            >
+              Clear All
+            </Button>
+          </div>
+          <p className="text-xs text-blue-600 mb-3">Click the links below to open VNC connections:</p>
+          <div className="space-y-2">
+            {vncLinks.map((link) => (
+              <div key={link.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                <div className="flex-1">
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    {link.computerName} ({link.ip})
+                  </a>
+                  <p className="text-xs text-gray-500">{formatTimestamp(link.timestamp)}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveVNCLink(link.id)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Results */}
       <div className="flex items-center justify-between">

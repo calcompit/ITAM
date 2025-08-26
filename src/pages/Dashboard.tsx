@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,8 @@ import {
   BarChart3, 
   Bell, 
   RefreshCw,
-  Circle
+  Circle,
+  X
 } from "lucide-react";
 import { apiService, type APIComputer, type IPGroup } from "@/services/api";
 import { websocketService } from "@/services/websocket";
@@ -28,6 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
+import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
 
 interface DashboardProps {
   activeTab: string;
@@ -51,6 +53,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
   const [vncModalTitle, setVncModalTitle] = useState("");
   const [vncModalMessage, setVncModalMessage] = useState("");
   const [vncModalType, setVncModalType] = useState<"loading" | "error" | "success">("loading");
+  const [vncLinks, setVncLinks] = useState<any[]>([]);
 
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();
@@ -73,6 +76,13 @@ export function Dashboard({ activeTab }: DashboardProps) {
       // Ignore localStorage errors
     }
   };
+
+  // Load VNC links and clear old ones
+  useEffect(() => {
+    clearOldVNCLinks();
+    const links = getStoredVNCLinks();
+    setVncLinks(links);
+  }, []);
 
   // Load data from API
   useEffect(() => {
@@ -235,6 +245,12 @@ export function Dashboard({ activeTab }: DashboardProps) {
     setShowComputerDetails(true);
   };
 
+  const handleRemoveVNCLink = (linkId: string) => {
+    removeVNCLink(linkId);
+    const links = getStoredVNCLinks();
+    setVncLinks(links);
+  };
+
   const handleVNC = async (ip: string, computerName: string) => {
              // Show loading modal immediately when button is clicked
          setVncModalTitle("VNC Connection");
@@ -248,9 +264,9 @@ export function Dashboard({ activeTab }: DashboardProps) {
       const currentUser = localStorage.getItem('currentUser') || 'default';
       
       // Close any existing VNC windows and clear references
-      if (window.vncWindow && !window.vncWindow.closed) {
+      if ((window as any).vncWindow && !(window as any).vncWindow.closed) {
         try {
-          window.vncWindow.close();
+          (window as any).vncWindow.close();
           console.log('Closed existing VNC window');
         } catch (error) {
           console.log('Error closing existing window:', error);
@@ -258,11 +274,11 @@ export function Dashboard({ activeTab }: DashboardProps) {
       }
       
       // Clear any existing VNC window references
-      window.vncWindow = null;
+      (window as any).vncWindow = null;
       
       // Force browser to forget about previous VNC windows
-      if (window.vncWindows) {
-        window.vncWindows.forEach((win: any) => {
+      if ((window as any).vncWindows) {
+        (window as any).vncWindows.forEach((win: any) => {
           try {
             if (win && !win.closed) {
               win.close();
@@ -272,7 +288,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
           }
         });
       }
-      window.vncWindows = [];
+      (window as any).vncWindows = [];
       
       // Start VNC session directly (no login required)
       const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
@@ -356,122 +372,30 @@ export function Dashboard({ activeTab }: DashboardProps) {
         const finalVncUrl = session.vncUrl || `${API_CONFIG.NOVNC_URL.replace(':6081', `:${session.port}`)}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`;
         console.log('Final VNC URL:', finalVncUrl);
         
-        // Open VNC in a new window with specific size - Force new window, not tab
+        // Use improved popup handling
         console.log(`Opening VNC URL in new window: ${finalVncUrl}`);
+        const popupResult = openVNCPopup(finalVncUrl, computerName, ip);
         
-        // Try to open window with different approaches
-        let vncWindow = null;
-        
-        try {
-          // Method 1: Force new window with unique name and specific features
-          const uniqueWindowName = `vnc_${ip.replace(/\./g, '_')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          const windowFeatures = 'width=1200,height=800,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no,status=no,directories=no,left=100,top=100';
-          
-          console.log('Opening VNC with unique window name:', uniqueWindowName);
-          vncWindow = window.open(finalVncUrl, uniqueWindowName, windowFeatures);
-          console.log('Window open result:', vncWindow);
-          
-          // Store reference to close later
-          window.vncWindow = vncWindow;
-          
-          // Add to window tracking array
-          if (!window.vncWindows) {
-            window.vncWindows = [];
-          }
-          window.vncWindows.push(vncWindow);
-          
-          if (!vncWindow || vncWindow.closed) {
-            // Method 2: Try with different window name to force new window
-            const fallbackName = `vnc_fallback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            vncWindow = window.open(finalVncUrl, fallbackName, windowFeatures);
-            console.log('Window open with fallback name result:', vncWindow);
-            if (vncWindow) {
-              window.vncWindow = vncWindow;
-              window.vncWindows.push(vncWindow);
-            }
-          }
-          
-          if (!vncWindow || vncWindow.closed) {
-            // Method 4: Show manual link if all else fails
-            console.log('All window.open methods failed, showing manual link');
-            setVncModalTitle("Popup Blocked");
-            setVncModalMessage("Please click the manual link below to open VNC");
-            setVncModalType("error");
-            
-            // Show manual link container
-            const container = document.getElementById('vnc-container');
-            if (container) {
-              container.classList.remove('hidden');
-              
-              // Create manual link
-              const link = document.createElement('a');
-              link.href = finalVncUrl;
-              link.target = '_blank';
-              link.textContent = `Open VNC Viewer for ${computerName} (${ip})`;
-              link.style.display = 'block';
-              link.style.marginTop = '10px';
-              link.style.padding = '10px';
-              link.style.backgroundColor = '#007bff';
-              link.style.color = 'white';
-              link.style.textDecoration = 'none';
-              link.style.borderRadius = '5px';
-              link.style.textAlign = 'center';
-              
-              container.appendChild(link);
-            }
-            return;
-          }
-        } catch (error) {
-          console.error('Error opening window:', error);
-        }
-        
-        if (!vncWindow || vncWindow.closed) {
-          // Popup blocked - show alert
-          setVncModalTitle("Popup Blocked");
-          setVncModalMessage("Please allow popups for this site to open VNC connections automatically");
+        if (popupResult.isBlocked) {
+          // Popup blocked - show specific solution
+          setVncModalTitle("⚠️ Popup Blocked");
+          setVncModalMessage(popupResult.solution);
           setVncModalType("error");
           
-          // Show manual link container
-          const container = document.getElementById('vnc-container');
-          if (container) {
-            container.classList.remove('hidden');
-            
-            // Create manual link
-            const link = document.createElement('a');
-            link.href = finalVncUrl;
-            link.target = '_blank';
-            link.textContent = `Open VNC Viewer for ${computerName} (${ip})`;
-            link.style.display = 'block';
-            link.style.marginTop = '10px';
-            link.style.padding = '10px';
-            link.style.backgroundColor = '#007bff';
-            link.style.color = 'white';
-            link.style.textDecoration = 'none';
-            link.style.borderRadius = '5px';
-            link.style.textAlign = 'center';
-            
-            container.appendChild(link);
-          }
+          // Update VNC links
+          const links = getStoredVNCLinks();
+          setVncLinks(links);
         } else {
-          // Send message to enable local scaling after a delay
+          // Success - show success modal and auto-close after 2 seconds
+          setVncModalTitle("VNC Connected");
+          setVncModalMessage(`Successfully connected to ${computerName} (${ip})`);
+          setVncModalType("success");
+          
+          // Auto-close success modal after 2 seconds
           setTimeout(() => {
-            try {
-              vncWindow.postMessage('enableLocalScaling', '*');
-            } catch (error) {
-              console.error('Error sending postMessage:', error);
-            }
-          }, 5000);
+            setShowVncModal(false);
+          }, 2000);
         }
-        
-                 // Show success modal and auto-close after 2 seconds
-         setVncModalTitle("VNC Connected");
-         setVncModalMessage(`Successfully connected to ${computerName} (${ip})`);
-        setVncModalType("success");
-        
-        // Auto-close success modal after 2 seconds
-        setTimeout(() => {
-          setShowVncModal(false);
-        }, 2000);
       } else {
         console.error('Failed to start VNC session');
         setVncModalTitle("VNC Error");
@@ -768,12 +692,51 @@ export function Dashboard({ activeTab }: DashboardProps) {
         </div>
       )}
 
-      {/* VNC Links Container - Hidden by default */}
-      <div id="vnc-container" className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
-        <h3 className="text-sm font-medium text-blue-800 mb-2">VNC Connections</h3>
-        <p className="text-xs text-blue-600 mb-2">Click the links below if popup was blocked:</p>
-        {/* VNC links will be added here dynamically */}
-      </div>
+      {/* VNC Links Container - Show when there are stored links */}
+      {vncLinks.length > 0 && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-blue-800">VNC Connections (Popup Blocked)</h3>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                vncLinks.forEach(link => removeVNCLink(link.id));
+                setVncLinks([]);
+              }}
+              className="text-xs"
+            >
+              Clear All
+            </Button>
+          </div>
+          <p className="text-xs text-blue-600 mb-3">Click the links below to open VNC connections:</p>
+          <div className="space-y-2">
+            {vncLinks.map((link) => (
+              <div key={link.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                <div className="flex-1">
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    {link.computerName} ({link.ip})
+                  </a>
+                  <p className="text-xs text-gray-500">{formatTimestamp(link.timestamp)}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveVNCLink(link.id)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Computers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
@@ -789,8 +752,7 @@ export function Dashboard({ activeTab }: DashboardProps) {
         ))}
       </div>
 
-      {/* Container for manual VNC links */}
-      <div id="vnc-container"></div>
+
 
       {/* Computer Details Modal */}
       <ComputerDetailsModal
