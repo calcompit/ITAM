@@ -7,9 +7,9 @@ const getBackendUrl = () => {
   
   // Fallback based on NODE_ENV
   if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3002';
+    return 'http://100.117.205.41:3002';
   }
-  return 'http://10.51.101.49:3002';
+  return 'http://100.117.205.41:3002';
 };
 
 const getFrontendUrl = () => {
