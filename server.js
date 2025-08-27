@@ -958,7 +958,7 @@ app.get('/api/computers', async (req, res) => {
           const utcDate = new Date(row.UpdatedAt);
           const thaiDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
           const diffMinutes = (now - thaiDate) / (1000 * 60);
-          return diffMinutes <= 10 ? 'online' : 'offline';
+          return diffMinutes <= 30 ? 'online' : 'offline';
         })(),
         isPinned: false
       };
@@ -1118,8 +1118,8 @@ app.get('/api/ip-groups', async (req, res) => {
         SELECT 
           SUBSTRING(IPv4, 1, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4) + 1) + 1) - 1) + '.x' as subnet,
           COUNT(*) as totalComputers,
-          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) <= 10 THEN 1 ELSE 0 END) as onlineCount,
-          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) > 10 THEN 1 ELSE 0 END) as offlineCount,
+          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) <= 30 THEN 1 ELSE 0 END) as onlineCount,
+          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) > 30 THEN 1 ELSE 0 END) as offlineCount,
           0 as alertCount
         FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
         WHERE IPv4 IS NOT NULL AND IPv4 != ''
@@ -1578,7 +1578,7 @@ app.get('/api/computers/:machineID/status', async (req, res) => {
     }
 
     const computer = result.recordset[0];
-    const isOnline = computer.minutesSinceUpdate <= 10;
+    const isOnline = computer.minutesSinceUpdate <= 30;
     
     res.json({
       machineID: computer.MachineID,

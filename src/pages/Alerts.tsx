@@ -33,87 +33,7 @@ export function Alerts() {
   const [totalPages, setTotalPages] = useState(1);
   const [selectedAlert, setSelectedAlert] = useState<AlertItem | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [currentUser] = useState(() => localStorage.getItem('currentUser') || 'admin');
-  const [testMode, setTestMode] = useState(false);
-
-  // Add test alerts function
-  const addTestAlerts = () => {
-    const testAlerts: AlertItem[] = [
-      {
-        id: 'test-001',
-        machineID: 'TEST-MACHINE-001',
-        type: 'network',
-        severity: 'low',
-        title: 'IPv4 Changed',
-        description: 'UPDATE event on TEST-PC - 1 field(s) changed',
-        computerName: 'TEST-PC',
-        timestamp: new Date().toISOString(),
-        username: 'TEST_USER',
-        isRead: false,
-        isOldAlert: false,
-        changeDetails: {
-          fields: ['IPv4'],
-          changes: [{
-            field: 'IPv4',
-            oldValue: '192.168.1.100',
-            newValue: '192.168.1.101'
-          }]
-        }
-      },
-      {
-        id: 'test-002',
-        machineID: 'TEST-MACHINE-002',
-        type: 'hardware',
-        severity: 'medium',
-        title: 'RAM_TotalGB Changed',
-        description: 'UPDATE event on TEST-SERVER - 2 field(s) changed',
-        computerName: 'TEST-SERVER',
-        timestamp: new Date().toISOString(),
-        username: 'ADMIN_USER',
-        isRead: false,
-        isOldAlert: false,
-        changeDetails: {
-          fields: ['RAM_TotalGB', 'Storage_TotalGB'],
-          changes: [
-            {
-              field: 'RAM_TotalGB',
-              oldValue: '8',
-              newValue: '16'
-            },
-            {
-              field: 'Storage_TotalGB',
-              oldValue: '500',
-              newValue: '1000'
-            }
-          ]
-        }
-      },
-      {
-        id: 'test-003',
-        machineID: 'TEST-MACHINE-003',
-        type: 'network',
-        severity: 'low',
-        title: 'NICs_Json Changed',
-        description: 'UPDATE event on TEST-LAPTOP - 1 field(s) changed',
-        computerName: 'TEST-LAPTOP',
-        timestamp: new Date().toISOString(),
-        username: 'SYSTEM',
-        isRead: false,
-        isOldAlert: false,
-        changeDetails: {
-          fields: ['NICs_Json'],
-          changes: [{
-            field: 'NICs_Json',
-            oldValue: '1 items: Ethernet',
-            newValue: '2 items: Ethernet, WiFi'
-          }]
-        }
-      }
-    ];
-
-    setAlerts(prevAlerts => [...testAlerts, ...prevAlerts]);
-    setTestMode(true);
-  };
+  const [currentUser] = useState(() => localStorage.getItem('it-asset-monitor-user') || 'admin');
 
   // Load alerts on mount
   useEffect(() => {
@@ -303,100 +223,104 @@ export function Alerts() {
           <CheckCircle className="h-4 w-4 mr-2" />
           Mark all as read
         </Button>
-        <Button
-          variant="outline"
-          onClick={addTestAlerts}
-          className="bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200"
-        >
-          {testMode ? '✓ Test Alerts Added' : 'Add Test Alerts'}
-        </Button>
+
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-card border-border">
+      {/* Modern Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-blue-700">
               Total Alerts
             </CardTitle>
-            <Bell className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Bell className="h-4 w-4 text-blue-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-blue-900">{stats.total}</div>
+            <p className="text-xs text-blue-600 mt-1">
               All time alerts
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border">
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-amber-700">
               Unread
             </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-status-warning" />
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-status-warning">{stats.unread}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-amber-900">{stats.unread}</div>
+            <p className="text-xs text-amber-600 mt-1">
               Need attention
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-red-700">
               High Priority
             </CardTitle>
-            <AlertTriangle className="h-4 w-4 text-status-offline" />
+            <div className="p-2 bg-red-100 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-status-offline">{stats.highPriority}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-red-900">{stats.highPriority}</div>
+            <p className="text-xs text-red-600 mt-1">
               Critical issues
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-medium text-green-700">
               Today
             </CardTitle>
-            <Calendar className="h-4 w-4 text-status-online" />
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Calendar className="h-4 w-4 text-green-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-status-online">{stats.today}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold text-green-900">{stats.today}</div>
+            <p className="text-xs text-green-600 mt-1">
               Recent changes
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
+      {/* Modern Filters */}
+      <Card className="bg-gradient-to-r from-slate-50 to-slate-100 border-slate-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-slate-700">
+            <div className="p-1.5 bg-slate-200 rounded-lg">
+              <Filter className="h-4 w-4 text-slate-600" />
+            </div>
+            Filters & Search
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                 <Input
-                  placeholder="Search alerts..."
+                  placeholder="Search alerts by computer name, user, or description..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                 />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <select
                 value={selectedSeverity}
                 onChange={(e) => setSelectedSeverity(e.target.value)}
