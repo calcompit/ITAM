@@ -53,13 +53,13 @@ app.use(cors({
       return callback(null, true);
     }
     
-    // Allow localhost for development
-    if (origin.match(/^https?:\/\/localhost/)) {
+    // Allow localhost for development (any port)
+    if (origin.match(/^https?:\/\/localhost:\d+/)) {
       return callback(null, true);
     }
     
-    // Allow localhost for development
-    if (origin.match(/^https?:\/\/localhost/)) {
+    // Allow localhost without port for development
+    if (origin.match(/^https?:\/\/localhost$/)) {
       return callback(null, true);
     }
     

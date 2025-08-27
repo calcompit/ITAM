@@ -41,6 +41,9 @@ class AlertService {
         }
       }
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(
         `${this.baseUrl}/alerts/${currentUser}?page=${page}&limit=${limit}&unreadOnly=${unreadOnly}`,
         {
@@ -48,8 +51,11 @@ class AlertService {
           headers: {
             'Content-Type': 'application/json',
           },
+          signal: controller.signal,
         }
       );
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -62,6 +68,17 @@ class AlertService {
         .filter((alert: AlertRecord | null) => alert !== null) || [];
     } catch (error) {
       console.error('Error fetching alerts:', error);
+      
+      // Log more details for debugging
+      if (error instanceof TypeError && error.message.includes('Load failed')) {
+        console.error('Network error - unable to connect to backend server');
+        console.error('Backend URL:', this.baseUrl);
+        console.error('Full URL:', `${this.baseUrl}/alerts/${currentUser}?page=${page}&limit=${limit}&unreadOnly=${unreadOnly}`);
+      } else if (error.name === 'AbortError') {
+        console.error('Request timeout - backend server took too long to respond');
+      } else if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('Fetch error - check network connectivity and CORS settings');
+      }
       
       // Return mock data for testing
       return this.getMockAlerts();
