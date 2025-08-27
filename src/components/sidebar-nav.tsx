@@ -157,13 +157,15 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
               )}
               onClick={() => onTabChange(item.id)}
             >
-              <Icon className="h-5 w-5" />
+              <div className="relative">
+                <Icon className="h-5 w-5" />
+                {item.badge && (
+                  <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold min-w-[20px]">
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </div>
+                )}
+              </div>
               <span className="flex-1 text-left">{item.label}</span>
-              {item.badge && (
-                <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                  {item.badge > 99 ? '99+' : item.badge}
-                </div>
-              )}
             </Button>
           );
         })}
