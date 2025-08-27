@@ -26,7 +26,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         "transition-all duration-200 hover:scale-105",
         className
       )}
-      title={theme === 'light' ? 'สลับเป็นโหมดกลางคืน' : 'สลับเป็นโหมดกลางวัน'}
+      title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
     >
       {theme === 'light' ? (
         <Moon className="h-4 w-4" />
@@ -34,7 +34,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         <Sun className="h-4 w-4" />
       )}
       <span className="sr-only">
-        {theme === 'light' ? 'สลับเป็นโหมดกลางคืน' : 'สลับเป็นโหมดกลางวัน'}
+        {theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
       </span>
     </Button>
   );

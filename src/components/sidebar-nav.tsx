@@ -220,7 +220,7 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
       {/* Footer */}
       <div className="p-4 border-t border-border space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Theme</span>
+          <span className="text-xs text-muted-foreground">Light/Dark</span>
           <ThemeToggle size="sm" variant="outline" />
         </div>
         <Button
