@@ -10,7 +10,7 @@ import {
   Home
 } from "lucide-react";
 import { useStatus } from "@/contexts/StatusContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { alertService } from "@/services/alert-service";
 import { websocketService } from "@/services/websocket";
 
@@ -48,10 +48,19 @@ export const sidebarNavItems = [
 export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedOnly, onPinnedToggle, pinnedCount }: SidebarNavProps) {
   const { lastUpdate, connectionStatus } = useStatus();
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
+  const [isFetchingCount, setIsFetchingCount] = useState(false);
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Fetch unread alerts count
   useEffect(() => {
     const fetchUnreadCount = async () => {
+      // Prevent multiple simultaneous requests
+      if (isFetchingCount) {
+        console.log('[Sidebar] Already fetching count, skipping...');
+        return;
+      }
+      
+      setIsFetchingCount(true);
       try {
         // Get current user from localStorage
         const savedUser = localStorage.getItem('it-asset-monitor-user');
@@ -70,13 +79,16 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
         const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3002'}/api/alerts/${currentUser}/count`);
         if (response.ok) {
           const data = await response.json();
-          setUnreadAlertsCount(data.unreadCount || 0);
-          console.log(`[Sidebar] Unread alerts count: ${data.unreadCount}`);
+          const newCount = data.unreadCount || 0;
+          setUnreadAlertsCount(newCount);
+          console.log(`[Sidebar] Unread alerts count updated: ${newCount}`);
         } else {
           console.error('Failed to fetch unread count');
         }
       } catch (error) {
         console.error('Error fetching unread alerts count:', error);
+      } finally {
+        setIsFetchingCount(false);
       }
     };
     
@@ -88,8 +100,15 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
     // Listen for WebSocket alert notifications
     const handleAlertNotification = (data: any) => {
       if (data.type === 'alert_notification') {
-        // Increment unread count when new alert arrives
-        setUnreadAlertsCount(prev => prev + 1);
+        // Debounce notifications to prevent multiple rapid calls
+        if (notificationTimeoutRef.current) {
+          clearTimeout(notificationTimeoutRef.current);
+        }
+        
+        notificationTimeoutRef.current = setTimeout(() => {
+          console.log('[Sidebar] Received alert notification, refetching count...');
+          fetchUnreadCount();
+        }, 1000); // Wait 1 second before refetching
       }
     };
     
@@ -98,6 +117,9 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
     return () => {
       clearInterval(interval);
       websocketService.off('alert_notification', handleAlertNotification);
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+      }
     };
   }, []);
   
