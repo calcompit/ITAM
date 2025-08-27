@@ -28,8 +28,11 @@ class AlertService {
   // Get all alerts with pagination
   async getAlerts(page: number = 1, limit: number = 50, unreadOnly: boolean = false): Promise<AlertRecord[]> {
     try {
+      // Get current user from localStorage
+      const currentUser = localStorage.getItem('currentUser') || 'testuser';
+      
       const response = await fetch(
-        `${this.baseUrl}/alerts?page=${page}&limit=${limit}&unreadOnly=${unreadOnly}`,
+        `${this.baseUrl}/alerts/${currentUser}?page=${page}&limit=${limit}&unreadOnly=${unreadOnly}`,
         {
           method: 'GET',
           headers: {
