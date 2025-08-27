@@ -1394,6 +1394,7 @@ app.get('/api/alerts/:username/count', async (req, res) => {
     // Get unread alerts count
     console.log(`[DEBUG] Fetching unread alerts count for user: ${username}`);
     const result = await pool.request()
+      .input('username', sql.VarChar, username)
       .query(`
         SELECT COUNT(*) as unreadCount
         FROM [mes].[dbo].[TBL_IT_MachineChangeLog] c
@@ -1402,7 +1403,6 @@ app.get('/api/alerts/:username/count', async (req, res) => {
           AND c.SnapshotJson_Old != '{}' 
           AND c.SnapshotJson_Old != ''
           AND c.ChangedSUser = @username
-        ORDER BY c.ChangeDate DESC
       `);
     
     const unreadCount = result.recordset[0]?.unreadCount || 0;
