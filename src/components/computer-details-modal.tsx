@@ -9,40 +9,45 @@ import { Monitor, HardDrive, MemoryStick, Wifi, Calendar, MonitorCheck } from "l
 import { MachineIdDisplay } from "@/components/ui/machine-id-display";
 import { ClickableText } from "@/components/ui/clickable-text";
 import { formatThailandTime } from "@/lib/utils";
-import { openVNCPopup } from "@/lib/popup-utils";
+import { openVNCPopup, getStoredVNCLinks } from "@/lib/popup-utils";
+import { toast } from "@/hooks/use-toast";
 
-import { APIComputer, apiService } from "@/services/api";
+import { APIComputer } from "@/services/api";
+import { useData } from "@/contexts/DataContext";
+import { ComputerDetailsLoadingOverlay } from "@/components/loading-overlay";
 
 interface ComputerDetailsModalProps {
   computer: APIComputer | null;
   open: boolean;
   onClose: () => void;
+  onVNC?: (ip: string, computerName: string) => void;
 }
 
-export function ComputerDetailsModal({ computer, open, onClose }: ComputerDetailsModalProps) {
-  const [changelog, setChangelog] = useState<APIComputer['changelog']>([]);
+export function ComputerDetailsModal({ computer, open, onClose, onVNC }: ComputerDetailsModalProps) {
+  // Use global changelog data instead of loading individually
+  const { changelogData } = useData();
   const [loadingChangelog, setLoadingChangelog] = useState(false);
+  
+  // VNC Modal states
+  const [showVncModal, setShowVncModal] = useState(false);
+  const [vncModalTitle, setVncModalTitle] = useState("");
+  const [vncModalMessage, setVncModalMessage] = useState("");
+  const [vncModalType, setVncModalType] = useState<"loading" | "success" | "error">("loading");
+  const [vncLinks, setVncLinks] = useState<any[]>([]);
 
+  // Get changelog from global data
+  const changelog = computer ? (changelogData[computer.machineID] || []) : [];
+
+  // Show loading if changelog is not yet loaded
   useEffect(() => {
-    if (computer && open) {
-      loadChangelog();
-    }
-  }, [computer, open]);
-
-  const loadChangelog = async () => {
-    if (!computer) return;
-    
-    try {
+    if (computer && open && !changelogData[computer.machineID]) {
       setLoadingChangelog(true);
-      const changelogData = await apiService.getComputerChangelog(computer.machineID);
-      setChangelog(changelogData || []);
-    } catch (error) {
-      console.error('Failed to load changelog:', error);
-      setChangelog([]);
-    } finally {
+      // Changelog will be loaded by global context
+      setTimeout(() => setLoadingChangelog(false), 1000);
+    } else {
       setLoadingChangelog(false);
     }
-  };
+  }, [computer, open, changelogData]);
 
   if (!computer) return null;
 
@@ -73,20 +78,180 @@ export function ComputerDetailsModal({ computer, open, onClose }: ComputerDetail
     }
   };
 
-  const handleVNC = (ip: string) => {
-    openVNCPopup(ip, computer.computerName);
+  const handleVNC = async (ip: string) => {
+    // If onVNC prop is provided, use it (for Dashboard integration)
+    if (onVNC) {
+      onVNC(ip, computer.computerName);
+      return;
+    }
+    
+    // Show loading modal immediately when button is clicked
+    setVncModalTitle("VNC Connection");
+    setVncModalMessage(`Connecting to ${computer.computerName} (${ip})...`);
+    setVncModalType("loading");
+    setShowVncModal(true);
+    
+    try {
+      console.log(`Starting VNC for IP: ${ip} (${computer.computerName})`);
+      
+      const currentUser = localStorage.getItem('currentUser') || 'default';
+      
+      // Close any existing VNC windows and clear references
+      if ((window as any).vncWindow && !(window as any).vncWindow.closed) {
+        try {
+          (window as any).vncWindow.close();
+          console.log('Closed existing VNC window');
+        } catch (error) {
+          console.log('Error closing existing window:', error);
+        }
+      }
+      
+      // Clear any existing VNC window references
+      (window as any).vncWindow = null;
+      
+      // Force browser to forget about previous VNC windows
+      if ((window as any).vncWindows) {
+        (window as any).vncWindows.forEach((win: any) => {
+          try {
+            if (win && !win.closed) {
+              win.close();
+            }
+          } catch (error) {
+            console.log('Error closing VNC window:', error);
+          }
+        });
+      }
+      (window as any).vncWindows = [];
+      
+      // Start VNC session directly (no login required)
+      const sessionResponse = await fetch(`${API_CONFIG.API_BASE_URL}/vnc/start-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: currentUser, 
+          host: ip, 
+          port: 5900 
+        })
+      });
+
+      let session = null;
+      if (sessionResponse.ok) {
+        const result = await sessionResponse.json();
+        session = result.session;
+        console.log('New session created:', session);
+      } else if (sessionResponse.status === 409) {
+        // User already has an active session for this target
+        const result = await sessionResponse.json();
+        if (result.existingSession) {
+          console.log('Existing session found:', result.existingSession);
+          session = {
+            port: result.existingSession.port,
+            host: result.existingSession.host,
+            targetPort: result.existingSession.targetPort,
+            sessionId: result.existingSession.sessionId,
+            vncUrl: `${API_CONFIG.NOVNC_URL.replace(':6081', `:${result.existingSession.port}`)}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`
+          };
+          console.log('Session with custom VNC URL:', session);
+        }
+      }
+
+      // Wait for websockify to be ready (simplified approach)
+      if (session) {
+        console.log('Starting VNC Connection...');
+        console.log('Session details:', session);
+        
+        // Fast port checking - optimized for speed
+        console.log(`Quick port check for ${session.port}...`);
+        
+        let attempts = 0;
+        const maxAttempts = 6; // Reduced from 10
+        let isReady = false;
+        
+        while (attempts < maxAttempts && !isReady) {
+          try {
+            // Faster connection check with timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 200); // 200ms timeout
+            
+            const response = await fetch(`http://localhost:${session.port}`, { 
+              mode: 'no-cors',
+              method: 'HEAD',
+              signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            isReady = true;
+            console.log(`✅ Port ${session.port} ready!`);
+          } catch (error) {
+            attempts++;
+            console.log(`⏳ Check ${attempts}/${maxAttempts}...`);
+            await new Promise(resolve => setTimeout(resolve, 250)); // Reduced to 250ms
+          }
+        }
+        
+        if (!isReady) {
+          console.log(`⚠️ Quick check completed, proceeding with VNC...`);
+          // Reduced fallback wait time
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        console.log(`Proceeding with VNC connection on port ${session.port}`);
+      }
+      
+      if (session) {
+        console.log('VNC session started/retrieved successfully');
+        
+        // Ensure we use the correct VNC URL with dynamic port
+        const finalVncUrl = session.vncUrl || `${API_CONFIG.NOVNC_URL.replace(':6081', `:${session.port}`)}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`;
+        console.log('Final VNC URL:', finalVncUrl);
+        
+        // Use improved popup handling
+        console.log(`Opening VNC URL in new window: ${finalVncUrl}`);
+        const popupResult = openVNCPopup(finalVncUrl, computer.computerName, ip);
+        
+        if (popupResult.isBlocked) {
+          // Popup blocked - show specific solution with alternatives
+          setVncModalTitle("⚠️ Popup Blocked - Security Feature");
+          setVncModalMessage(
+            `${popupResult.solution}\n\n` +
+            `ทางเลือกอื่นๆ:\n` +
+            popupResult.alternativeSolutions?.map((alt, index) => `${index + 1}. ${alt}`).join('\n') || ''
+          );
+          setVncModalType("error");
+          
+          // Update VNC links
+          const links = getStoredVNCLinks();
+          setVncLinks(links);
+        } else {
+          // Success - show success modal and auto-close after 2 seconds
+          setVncModalTitle("VNC Connected");
+          setVncModalMessage(`Successfully connected to ${computer.computerName} (${ip})`);
+          setVncModalType("success");
+          
+          // Auto-close success modal after 2 seconds
+          setTimeout(() => {
+            setShowVncModal(false);
+          }, 2000);
+        }
+      } else {
+        console.error('Failed to start VNC session');
+        setVncModalTitle("VNC Error");
+        setVncModalMessage("Failed to start VNC session");
+        setVncModalType("error");
+      }
+    } catch (error) {
+      console.error('Error starting VNC:', error);
+      setVncModalTitle("VNC Error");
+      setVncModalMessage("Failed to start VNC connection");
+      setVncModalType("error");
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto modal-fast-in">
         {loadingChangelog && (
-          <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading computer details...</p>
-            </div>
-          </div>
+          <ComputerDetailsLoadingOverlay isLoading={true} />
         )}
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -125,7 +290,7 @@ export function ComputerDetailsModal({ computer, open, onClose }: ComputerDetail
                           variant="ghost"
                           size="sm"
                           onClick={() => handleVNC(computer.ipAddresses[0])}
-                          className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                          className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 btn-fast-enhanced hover:scale-110"
                           title="VNC Connection"
                         >
                           <MonitorCheck className="h-4 w-4 text-blue-500" />
@@ -143,7 +308,7 @@ export function ComputerDetailsModal({ computer, open, onClose }: ComputerDetail
                             variant="ghost"
                             size="sm"
                             onClick={() => handleVNC(ip)}
-                            className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                            className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 btn-fast-enhanced hover:scale-110"
                             title="VNC Connection"
                           >
                             <MonitorCheck className="h-3 w-3 text-blue-500" />
@@ -355,6 +520,74 @@ export function ComputerDetailsModal({ computer, open, onClose }: ComputerDetail
           </TabsContent>
         </Tabs>
       </DialogContent>
+      
+      {/* VNC Modal */}
+      {showVncModal && (
+        <Dialog open={showVncModal} onOpenChange={setShowVncModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {vncModalType === "loading" && (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                )}
+                {vncModalType === "success" && (
+                  <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
+                    <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+                {vncModalType === "error" && (
+                  <div className="h-5 w-5 rounded-full bg-red-500 flex items-center justify-center">
+                    <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                )}
+                {vncModalTitle}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground whitespace-pre-line">
+                {vncModalMessage}
+              </p>
+              
+              {vncModalType === "error" && vncLinks.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">VNC Links:</p>
+                  <div className="space-y-2">
+                    {vncLinks.map((link) => (
+                      <div key={link.id} className="flex items-center justify-between p-2 bg-muted rounded">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{link.computerName}</p>
+                          <p className="text-xs text-muted-foreground">{link.ip}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(link.url, '_blank')}
+                          className="ml-2"
+                        >
+                          Open
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowVncModal(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Dialog>
   );
 }

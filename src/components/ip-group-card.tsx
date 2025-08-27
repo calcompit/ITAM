@@ -23,17 +23,17 @@ export function IPGroupCard({ group, onClick }: IPGroupCardProps) {
   return (
     <Card 
       className={cn(
-        "cursor-pointer card-elevated",
-        "bg-gradient-card border-border"
+        "cursor-pointer card-fast-hover fast-animation",
+        "bg-gradient-card border-border hover:border-primary/50"
       )}
       onClick={() => onClick(group.subnet)}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
-          <Network className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">{group.subnet}</CardTitle>
+                      <Network className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-lg">{group.subnet}</CardTitle>
         </div>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 transition-all duration-80">
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 btn-fast-enhanced hover:scale-110">
           <ChevronRight className="h-4 w-4" />
         </Button>
       </CardHeader>
@@ -49,16 +49,22 @@ export function IPGroupCard({ group, onClick }: IPGroupCardProps) {
           {/* Status breakdown */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <StatusIndicator status="online" pulse={false} />
+              <div>
+                <StatusIndicator status="online" pulse={false} />
+              </div>
               <span className="font-semibold text-card-foreground">{group.onlineCount}</span>
             </div>
             <div className="flex items-center justify-between">
-              <StatusIndicator status="offline" pulse={false} />
+              <div>
+                <StatusIndicator status="offline" pulse={false} />
+              </div>
               <span className="font-semibold text-card-foreground">{group.offlineCount}</span>
             </div>
             {group.alertCount > 0 && (
               <div className="flex items-center justify-between">
-                <StatusIndicator status="alert" pulse={false} />
+                <div>
+                  <StatusIndicator status="alert" pulse={false} />
+                </div>
                 <span className="font-semibold text-card-foreground">{group.alertCount}</span>
               </div>
             )}
@@ -72,7 +78,7 @@ export function IPGroupCard({ group, onClick }: IPGroupCardProps) {
             </div>
             <div className="w-full bg-muted rounded-full h-2">
               <div 
-                className="bg-gradient-status h-2 rounded-full transition-all duration-100"
+                className="bg-gradient-status h-2 rounded-full transition-all duration-300"
                 style={{ width: `${onlinePercentage}%` }}
               />
             </div>

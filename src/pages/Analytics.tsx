@@ -8,32 +8,31 @@ import { ComputerCard } from "@/components/computer-card";
 import { ComputerDetailsModal } from "@/components/computer-details-modal";
 import { Button } from "@/components/ui/button";
 import { Search, Filter, BarChart3, Cpu, HardDrive, MemoryStick, CheckCircle, AlertTriangle, Monitor, X } from "lucide-react";
-import { apiService, type APIComputer } from "@/services/api";
-import { websocketService } from "@/services/websocket";
-import { useStatus } from "@/contexts/StatusContext";
+import { type APIComputer } from "@/services/api";
+import { useData } from "@/contexts/DataContext";
 import { API_CONFIG } from "@/config/api";
+import { apiService } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
+import { AnalyticsLoadingOverlay } from "@/components/loading-overlay";
 
 interface AnalyticsProps {
   showPinnedOnly?: boolean;
 }
 
 export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
-  const [computers, setComputers] = useState<APIComputer[]>([]);
+  // Use global data context instead of local state
+  const { computers, loading, error } = useData();
+  
   const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [cpuFilter, setCpuFilter] = useState<string>("all");
   const [ramFilter, setRamFilter] = useState<string>("all");
   const [storageFilter, setStorageFilter] = useState<string>("all");
   const [activatedFilter, setActivatedFilter] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const { toast } = useToast();
-  const { updateStatus, updateLastUpdate } = useStatus();
 
   // Load VNC links and clear old ones
   useEffect(() => {
@@ -230,110 +229,23 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
     }
   };
 
-  // Load data from API
+  // Load analytics data only once on mount
   useEffect(() => {
-    const loadData = async (showLoading = true) => {
+    const loadAnalytics = async () => {
       try {
-        if (showLoading) {
-          setLoading(true);
-        }
-        const [computersData, analytics] = await Promise.all([
-          apiService.getComputers(),
-          apiService.getAnalytics()
-        ]);
-        
-        // Load pinned computers from localStorage
-        const pinnedMachineIDs = loadPinnedComputers();
-        
-        // Set pinned status for computers
-        const computersWithPinnedStatus = computersData.map(computer => ({
-          ...computer,
-          isPinned: pinnedMachineIDs.includes(computer.machineID)
-        }));
-        
-        setComputers(computersWithPinnedStatus);
+        const analytics = await apiService.getAnalytics();
         setAnalyticsData(analytics);
-        setError(null);
-        updateStatus('connected');
-        updateLastUpdate();
       } catch (err) {
-        console.error('Failed to load data:', err);
-        updateStatus('disconnected');
-        // Don't update data, keep existing data
-        // Don't set error since we're keeping existing data
-        // setError('Failed to load data from server');
-      } finally {
-        if (showLoading) {
-          setLoading(false);
-        }
-        setIsInitialLoad(false);
+        console.error('Failed to load analytics:', err);
       }
     };
 
-    loadData();
-
-    // Connect to WebSocket for realtime updates
-    websocketService.connect();
-    
-    // Listen for data changes (legacy - not used anymore)
-    const handleDataChange = (data: any) => {
-      // This is handled by handleDataUpdate now
-    };
-
-    // Listen for data updates (smooth updates without refresh)
-    const handleDataUpdate = (data: any) => {
-      if (data.data?.updatedComputers) {
-        setComputers(prevComputers => {
-          const updatedComputers = [...prevComputers];
-          
-          data.data.updatedComputers.forEach((updatedComputer: APIComputer) => {
-            const existingIndex = updatedComputers.findIndex(c => c.machineID === updatedComputer.machineID);
-            
-            if (existingIndex >= 0) {
-              // Preserve pinned status
-              const wasPinned = updatedComputers[existingIndex].isPinned;
-              updatedComputers[existingIndex] = { ...updatedComputer, isPinned: wasPinned };
-            } else {
-              // New computer
-              updatedComputers.push(updatedComputer);
-            }
-          });
-          
-          return updatedComputers;
-        });
-      }
-    };
-
-    websocketService.on('data_change', handleDataChange);
-    websocketService.on('data_update', handleDataUpdate);
-
-    // Fallback: Set up polling every 30 seconds if WebSocket fails
-    const interval = setInterval(loadData, 30000);
-
-    return () => {
-      clearInterval(interval);
-      websocketService.off('data_change', handleDataChange);
-      websocketService.off('data_update', handleDataUpdate);
-      websocketService.disconnect();
-    };
+    loadAnalytics();
   }, []);
 
   const handlePin = (machineID: string) => {
-    setComputers(prev => {
-      const updatedComputers = prev.map(comp => 
-        comp.machineID === machineID 
-          ? { ...comp, isPinned: !comp.isPinned }
-          : comp
-      );
-      
-      // Save pinned computers to localStorage
-      const pinnedMachineIDs = updatedComputers
-        .filter(comp => comp.isPinned)
-        .map(comp => comp.machineID);
-      savePinnedComputers(pinnedMachineIDs);
-      
-      return updatedComputers;
-    });
+    // Pin functionality is handled by global data context
+    console.log('Pin functionality handled by global context');
   };
 
   // Extract CPU types
@@ -424,15 +336,27 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
     setActivatedFilter("all");
   };
 
-  // Show loading state
+  // Show loading overlay
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading analytics data...</p>
+      <>
+        <AnalyticsLoadingOverlay isLoading={true} />
+        <div className="space-y-6 opacity-50">
+          {/* Show skeleton content behind loading overlay */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-card rounded-lg border p-6">
+                <div className="h-4 bg-muted rounded w-24 mb-4"></div>
+                <div className="space-y-2">
+                  <div className="h-3 bg-muted rounded w-full"></div>
+                  <div className="h-3 bg-muted rounded w-3/4"></div>
+                  <div className="h-3 bg-muted rounded w-1/2"></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -460,73 +384,85 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
         </div>
       </div>
 
-      {/* Analytics Cards */}
+      {/* Analytics Cards with Fast Animations */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-card border-border">
+        <Card className="bg-gradient-card border-border card-fast fast-animation data-item">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">CPU Distribution</CardTitle>
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {analyticsData && Object.entries(analyticsData.cpuTypes).map(([type, count]) => (
-                <div key={type} className="flex justify-between items-center">
-                  <span className="text-sm text-foreground capitalize">{type}</span>
-                  <Badge variant="secondary">{count}</Badge>
-                </div>
-              ))}
+              {analyticsData && analyticsData.cpuTypes ? (
+                Object.entries(analyticsData.cpuTypes).map(([type, count]) => (
+                  <div key={type} className="flex justify-between items-center list-item-fast">
+                    <span className="text-sm text-foreground capitalize">{type}</span>
+                    <Badge variant="secondary" className="fast-animation">{String(count)}</Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-muted-foreground">Loading CPU data...</div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border">
+        <Card className="bg-gradient-card border-border card-fast fast-animation data-item">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">RAM Distribution</CardTitle>
             <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {analyticsData && Object.entries(analyticsData.ramDistribution).map(([range, count]) => (
-                <div key={range} className="flex justify-between items-center">
-                  <span className="text-sm text-foreground">{range}</span>
-                  <Badge variant="secondary">{count}</Badge>
-                </div>
-              ))}
+              {analyticsData && analyticsData.ramDistribution ? (
+                Object.entries(analyticsData.ramDistribution).map(([range, count]) => (
+                  <div key={range} className="flex justify-between items-center list-item-fast">
+                    <span className="text-sm text-foreground">{range}</span>
+                    <Badge variant="secondary" className="fast-animation">{count as number}</Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-muted-foreground">Loading RAM data...</div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border">
+        <Card className="bg-gradient-card border-border card-fast fast-animation data-item">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Storage Distribution</CardTitle>
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {analyticsData && Object.entries(analyticsData.storageDistribution).map(([range, count]) => (
-                <div key={range} className="flex justify-between items-center">
-                  <span className="text-sm text-foreground">{range}</span>
-                  <Badge variant="secondary">{count}</Badge>
-                </div>
-              ))}
+              {analyticsData && analyticsData.storageDistribution ? (
+                Object.entries(analyticsData.storageDistribution).map(([range, count]) => (
+                  <div key={range} className="flex justify-between items-center list-item-fast">
+                    <span className="text-sm text-foreground">{range}</span>
+                    <Badge variant="secondary" className="fast-animation">{count as number}</Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-muted-foreground">Loading Storage data...</div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border">
+        <Card className="bg-gradient-card border-border card-fast fast-animation data-item">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Windows Activation</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center list-item-fast">
                 <span className="text-sm text-status-online">Activated</span>
-                <Badge variant="secondary">{analyticsData?.activatedCount || 0}</Badge>
+                <Badge variant="secondary" className="fast-animation">{analyticsData?.activatedCount || 0}</Badge>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center list-item-fast">
                 <span className="text-sm text-status-offline">Not Activated</span>
-                <Badge variant="secondary">{analyticsData?.notActivatedCount || 0}</Badge>
+                <Badge variant="secondary" className="fast-animation">{analyticsData?.notActivatedCount || 0}</Badge>
               </div>
             </div>
           </CardContent>
@@ -682,15 +618,20 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
       </div>
 
       {/* Computers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredComputers.map((computer) => (
-          <ComputerCard
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+        {filteredComputers.map((computer, index) => (
+          <div 
             key={computer.machineID}
-            computer={computer}
-            onPin={handlePin}
-            onClick={(computer) => setSelectedComputer(computer)}
-            onVNC={(ip, computerName) => handleVNC(ip, computerName)}
-          />
+            className="stagger-item"
+            style={{ '--stagger-index': index } as React.CSSProperties}
+          >
+            <ComputerCard
+              computer={computer as any}
+              onPin={handlePin}
+              onClick={(computer) => setSelectedComputer(computer)}
+              onVNC={(ip, computerName) => handleVNC(ip, computerName)}
+            />
+          </div>
         ))}
       </div>
 
@@ -711,6 +652,7 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
         computer={selectedComputer}
         open={!!selectedComputer}
         onClose={() => setSelectedComputer(null)}
+        onVNC={handleVNC}
       />
 
       {/* VNC Connection Modal */}

@@ -1,3 +1,4 @@
+import React from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { Button } from "@/components/ui/button";
@@ -21,15 +22,15 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
   return (
     <Card 
       className={cn(
-        "relative overflow-hidden cursor-pointer card-elevated",
-        "bg-gradient-card border-border",
-        isUpdated && "animate-data-update ring-2 ring-primary ring-opacity-50"
+        "relative overflow-hidden cursor-pointer computer-card card-fast-hover fast-animation",
+        "bg-gradient-card border-border hover:border-primary/50 min-h-[280px]",
+        isUpdated && "data-update ring-2 ring-primary ring-opacity-50"
       )}
       onClick={() => onClick(computer)}
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
-          <Monitor className="h-5 w-5 text-primary" />
+                      <Monitor className="h-5 w-5 text-primary" />
           <div className="flex-1 min-w-0">
             <ClickableText 
               text={computer.computerName} 
@@ -47,7 +48,7 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
               e.stopPropagation();
               onPin(computer.machineID);
             }}
-            className={`h-8 w-8 p-0 transition-all duration-80 ${computer.isPinned ? "bg-primary hover:bg-primary/90" : "hover:bg-accent"}`}
+            className={`h-8 w-8 p-0 btn-fast-enhanced hover:scale-110 ${computer.isPinned ? "bg-primary hover:bg-primary/90" : "hover:bg-accent"}`}
             title={computer.isPinned ? "Unpin Computer" : "Pin Computer"}
           >
             {computer.isPinned ? (
@@ -59,8 +60,8 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
         </div>
       </CardHeader>
       
-      <CardContent>
-        <div className="space-y-3">
+      <CardContent className="flex flex-col h-full">
+        <div className="space-y-3 flex-1">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Primary IP</span>
             <div className="flex items-center gap-2">
@@ -75,9 +76,11 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onVNC(computer.ipAddresses[0], computer.computerName);
+                    if (onVNC) {
+                      onVNC(computer.ipAddresses[0], computer.computerName);
+                    }
                   }}
-                  className="h-8 w-8 p-0 hover:bg-accent transition-all duration-80"
+                  className="h-8 w-8 p-0 hover:bg-accent btn-fast-enhanced hover:scale-110"
                   title="VNC Connection"
                 >
                   <MonitorCheck className="h-4 w-4 text-primary" />
@@ -86,20 +89,23 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
             </div>
           </div>
           
-          {computer.ipAddresses.length > 1 && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Additional IPs</span>
+                    {/* Additional IPs - Always show for consistent card height */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Additional IPs</span>
+            {computer.ipAddresses.length > 1 ? (
               <Badge variant="secondary" className="text-xs">
                 +{computer.ipAddresses.length - 1} IP{computer.ipAddresses.length > 2 ? 's' : ''}
               </Badge>
-            </div>
-          )}
+            ) : (
+              <span className="text-xs text-muted-foreground/50">None</span>
+            )}
+          </div>
           
           {/* Status with relative time */}
           <div className="text-xs">
             <div className="flex items-center justify-between">
               <span className={cn(
-                "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-100 status-indicator",
+                "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 status-indicator hover:scale-110",
                 computer.status === 'online' 
                   ? 'bg-status-online/20 text-status-online' 
                   : 'bg-status-offline/20 text-status-offline',
@@ -131,7 +137,7 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
             </div>
           </div>
           
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground mt-auto">
             <div>Domain: {computer.domain}</div>
             <div>User: {computer.sUser ? computer.sUser.split('\\').pop() : 'N/A'}</div>
             {computer.hudVersion && (

@@ -92,10 +92,12 @@ export function detectPopupBlock(windowRef: Window | null): PopupBlockResult {
 
 // Create manual VNC link
 export function createVNCLink(computerName: string, ip: string, url: string): VNCLink {
+  // Ensure ip is not undefined or null
+  const safeIp = ip || 'unknown';
   return {
-    id: `vnc_${ip.replace(/\./g, '_')}_${Date.now()}`,
+    id: `vnc_${safeIp.replace(/\./g, '_')}_${Date.now()}`,
     computerName,
-    ip,
+    ip: safeIp,
     url,
     timestamp: Date.now()
   };
@@ -156,7 +158,8 @@ export function openVNCPopup(url: string, computerName: string, ip: string): Pop
   
   try {
     // Method 1: Standard approach with unique name
-    const uniqueName = `vnc_${ip.replace(/\./g, '_')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const safeIp = ip || 'unknown';
+    const uniqueName = `vnc_${safeIp.replace(/\./g, '_')}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     windowRef = window.open(url, uniqueName, windowFeatures);
     
     // Method 2: If blocked, try with different name
@@ -204,11 +207,14 @@ export async function copyVNCUrlToClipboard(url: string): Promise<boolean> {
 // Format timestamp for display
 export function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp);
-  return date.toLocaleString('th-TH', {
+  // Convert to Thailand timezone (UTC+7)
+  const thailandTime = new Date(date.getTime() + (7 * 60 * 60 * 1000));
+  return thailandTime.toLocaleString('th-TH', {
     hour: '2-digit',
     minute: '2-digit',
     day: '2-digit',
     month: '2-digit',
-    year: 'numeric'
+    year: 'numeric',
+    timeZone: 'Asia/Bangkok'
   });
 }

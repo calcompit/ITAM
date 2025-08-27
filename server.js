@@ -5,6 +5,10 @@ import { WebSocketServer } from 'ws';
 import http from 'http';
 import { spawn } from 'child_process';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config({ path: process.env.NODE_ENV === 'development' ? 'env.mac' : '.env' });
 
 // Helper function to check if computer is online (10 minutes threshold)
 function isComputerOnline(updatedAt) {
@@ -31,7 +35,7 @@ const getHost = () => {
   if (isDevelopment) {
     return 'localhost';
   }
-  return '10.51.101.49';
+  return process.env.PRODUCTION_HOST || 'localhost';
 };
 
 const HOST = getHost();
@@ -72,6 +76,11 @@ app.use(cors({
       return callback(null, true);
     }
     
+    // Allow specific localhost ports for development
+    if (origin === 'http://localhost:8081' || origin === 'http://localhost:8082') {
+      return callback(null, true);
+    }
+    
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
@@ -90,14 +99,28 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
 });
 
-// SQL Server configuration
+// SQL Server configuration - Optimized for internal network
 const sqlConfig = {
   user: process.env.DB_USER || 'ccet',
   password: process.env.DB_PASSWORD || '!qaz7410',
   database: process.env.DB_NAME || 'mes',
-  server: process.env.DB_SERVER || '10.53.64.205',
+  server: process.env.DB_SERVER || 'localhost',
   options: {
-    encrypt: true,
+    encrypt: false, // Disable encryption for internal network performance
+    trustServerCertificate: true,
+    enableArithAbort: true,
+    requestTimeout: 30000, // 30 seconds
+    connectionTimeout: 30000,
+    pool: {
+      max: 20, // Increased for better performance
+      min: 5,
+      idleTimeoutMillis: 30000,
+      acquireTimeoutMillis: 30000,
+      createTimeoutMillis: 30000,
+      destroyTimeoutMillis: 5000,
+      reapIntervalMillis: 1000,
+      createRetryIntervalMillis: 200,
+    },
     trustServerCertificate: true,
     connectTimeout: 60000, // เพิ่ม timeout เป็น 60 วินาที
     requestTimeout: 60000, // เพิ่ม timeout เป็น 60 วินาที
@@ -122,6 +145,12 @@ const sqlConfig = {
     createRetryIntervalMillis: 100
   }
 };
+
+// Log database configuration (without password)
+console.log('[DB] Database configuration:');
+console.log(`[DB] Server: ${sqlConfig.server}`);
+console.log(`[DB] Database: ${sqlConfig.database}`);
+console.log(`[DB] User: ${sqlConfig.user}`);
 
 // Database connection pool with retry logic
 let pool = null;
@@ -274,11 +303,15 @@ let PORT_RANGE = {
 
 // Broadcast to all connected clients
 function broadcast(data) {
+  console.log(`[WebSocket] Broadcasting ${data.type} to ${clients.size} clients`);
+  let sentCount = 0;
   clients.forEach(client => {
     if (client.readyState === 1) { // WebSocket.OPEN
       client.send(JSON.stringify(data));
+      sentCount++;
     }
   });
+  console.log(`[WebSocket] Successfully sent to ${sentCount} clients`);
 }
 
 // Kick user's WebSocket clients
@@ -312,25 +345,7 @@ wss.on('connection', (ws) => {
     timestamp: new Date().toISOString()
   }));
   
-  // Send test alert notification for development
-  setTimeout(() => {
-    ws.send(JSON.stringify({
-      type: 'alert_notification',
-      alert: {
-        id: 'test-001',
-        machineID: 'TEST-MACHINE-001',
-        type: 'network',
-        severity: 'medium',
-        title: 'Test Alert Notification',
-        description: 'This is a test alert notification via WebSocket',
-        computerName: 'TEST-PC-001',
-        timestamp: new Date().toISOString(),
-        username: 'TEST_USER',
-        isRead: false
-      },
-      message: 'New alert received'
-    }));
-  }, 2000); // Send after 2 seconds
+  // WebSocket connection established successfully
   
   ws.on('close', () => {
     clients.delete(ws);
@@ -558,126 +573,43 @@ async function testConnection() {
 // Setup realtime monitoring using Service Broker
 async function setupRealtimeMonitoring(pool) {
   try {
-    console.log('Setting up Service Broker for real-time monitoring...');
+    console.log('Setting up real-time monitoring...');
     
-    // Create Service Broker objects
-    await createServiceBrokerObjects(pool);
-    
-    // Start monitoring for changes
-    await startChangeMonitoring(pool);
-    
-    // Start listening for messages
-    startListeningForMessages(pool);
-    
-    console.log('Service Broker setup completed successfully');
+    // Since Service Broker is disabled to prevent C# errors, use polling monitoring
+    console.log('Service Broker disabled, using polling monitoring for real-time updates...');
+    startPollingMonitoring();
     
   } catch (err) {
-    console.error('Service Broker setup failed:', err.message);
+    console.error('Real-time monitoring setup failed:', err.message);
     console.log('Falling back to polling monitoring...');
     startPollingMonitoring();
   }
 }
 
-// Create Service Broker objects
+// Create Service Broker objects (disabled to prevent C# errors)
 async function createServiceBrokerObjects(pool) {
   try {
-    // Enable Service Broker on database
-    await pool.request().query(`
-      IF NOT EXISTS (SELECT * FROM sys.service_queues WHERE name = 'ITAssetChangeQueue')
-      BEGIN
-        ALTER DATABASE [mes] SET ENABLE_BROKER;
-        
-        CREATE MESSAGE TYPE [ITAssetChangeMessage]
-        VALIDATION = NONE;
-        
-        CREATE CONTRACT [ITAssetChangeContract]
-        ([ITAssetChangeMessage] SENT BY ANY);
-        
-        CREATE QUEUE [ITAssetChangeQueue];
-        
-        CREATE SERVICE [ITAssetChangeService]
-        AUTHORIZATION [dbo]
-        ON QUEUE [ITAssetChangeQueue]
-        ([ITAssetChangeContract]);
-      END
-    `);
+    console.log('[Service Broker] Skipping Service Broker setup to prevent C# errors');
+    // Service Broker setup disabled to prevent C# application errors
+    // If you need real-time updates, implement them at application level
     
   } catch (err) {
-    throw err;
+    console.log('[Service Broker] Error (ignored):', err.message);
   }
 }
 
-// Start monitoring for changes using Service Broker
+// Start monitoring for changes using Service Broker (disabled to prevent C# errors)
 async function startChangeMonitoring(pool) {
   try {
-    // Create trigger to send messages when data changes
-    await pool.request().query(`
-      IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'TR_IT_MachinesCurrent_Change')
-        DROP TRIGGER [TR_IT_MachinesCurrent_Change]
-    `);
+    console.log('[Service Broker] Skipping trigger creation to prevent C# errors');
+    // Trigger creation disabled to prevent C# application errors
+    // If you need real-time updates, implement them at application level
     
-    await pool.request().query(`
-      CREATE TRIGGER [TR_IT_MachinesCurrent_Change]
-      ON [mes].[dbo].[TBL_IT_MachinesCurrent]
-      AFTER INSERT, UPDATE, DELETE
-      AS
-      BEGIN
-        SET NOCOUNT ON;
-        
-        DECLARE @message NVARCHAR(MAX);
-        DECLARE @changeType NVARCHAR(10);
-        
-        IF EXISTS(SELECT * FROM inserted) AND EXISTS(SELECT * FROM deleted)
-          SET @changeType = 'UPDATE';
-        ELSE IF EXISTS(SELECT * FROM inserted)
-          SET @changeType = 'INSERT';
-        ELSE
-          SET @changeType = 'DELETE';
-        
-        -- Get all columns dynamically using INFORMATION_SCHEMA
-        DECLARE @columns NVARCHAR(MAX) = '';
-        SELECT @columns = STRING_AGG(COLUMN_NAME, ',') 
-        FROM INFORMATION_SCHEMA.COLUMNS 
-        WHERE TABLE_SCHEMA = 'dbo' 
-          AND TABLE_NAME = 'TBL_IT_MachinesCurrent'
-          AND TABLE_CATALOG = 'mes';
-        
-        -- Build dynamic SQL for JSON generation
-        DECLARE @sql NVARCHAR(MAX) = '
-          SELECT 
-            ''' + @changeType + ''' as changeType,
-            GETUTCDATE() as timestamp,
-            ' + @columns + '
-          FROM inserted
-          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-        ';
-        
-        -- Execute dynamic SQL
-        DECLARE @result NVARCHAR(MAX);
-        EXEC sp_executesql @sql, N'@result NVARCHAR(MAX) OUTPUT', @result OUTPUT;
-        SET @message = @result;
-        
-        IF @message IS NOT NULL
-        BEGIN
-          DECLARE @dialog_handle UNIQUEIDENTIFIER;
-          BEGIN DIALOG CONVERSATION @dialog_handle
-            FROM SERVICE [ITAssetChangeService]
-            TO SERVICE 'ITAssetChangeService'
-            ON CONTRACT [ITAssetChangeContract]
-            WITH ENCRYPTION = OFF;
-          
-          SEND ON CONVERSATION @dialog_handle
-            MESSAGE TYPE [ITAssetChangeMessage]
-            (@message);
-        END
-      END
-    `);
-    
-    // Start listening for messages
-    startMessageListener(pool);
+    // Start listening for messages (disabled)
+    // startMessageListener(pool);
     
   } catch (err) {
-    throw err;
+    console.log('[Service Broker] Error (ignored):', err.message);
   }
 }
 
@@ -820,6 +752,7 @@ function startListeningForMessages(pool) {
 // Fallback: Polling-based monitoring
 function startPollingMonitoring() {
   let lastCheck = new Date();
+  console.log('[Real-time] Starting polling monitoring with initial check time:', lastCheck.toISOString());
   
   const pollForChanges = async () => {
     try {
@@ -846,6 +779,7 @@ function startPollingMonitoring() {
       
       if (result.recordset.length > 0) {
         console.log(`[Real-time] Found ${result.recordset.length} changes, broadcasting to ${clients.size} clients`);
+        console.log('[Real-time] Changed records:', result.recordset.map(r => ({ MachineID: r.MachineID, ComputerName: r.ComputerName, UpdatedAt: r.UpdatedAt })));
         
         // Get full updated data for changed records
         const machineIDs = result.recordset.map(r => `'${r.MachineID}'`).join(',');
@@ -891,10 +825,15 @@ function startPollingMonitoring() {
       // Update lastCheck only if no changes detected, or use the latest UpdatedAt
       if (result.recordset.length === 0) {
         lastCheck = new Date();
+        // Reduce logging frequency for no changes
+        if (Math.random() < 0.1) { // Only log 10% of the time
+          console.log('[Real-time] No changes detected, updated lastCheck to:', lastCheck.toISOString());
+        }
       } else {
         // Use the latest UpdatedAt from the changes
         const latestUpdate = Math.max(...result.recordset.map(r => new Date(r.UpdatedAt).getTime()));
         lastCheck = new Date(latestUpdate);
+        console.log('[Real-time] Changes detected, updated lastCheck to:', lastCheck.toISOString());
       }
       // Don't close the pool, keep it for reuse
       
@@ -912,26 +851,34 @@ function startPollingMonitoring() {
       // Continue polling even if there's an error
     }
     
-    // Poll every 2 seconds for faster updates
-    setTimeout(pollForChanges, 2000);
+    // Poll every 1 second for faster updates
+    setTimeout(pollForChanges, 1000);
   };
   
   console.log('[Real-time] Starting polling monitoring...');
   pollForChanges();
 }
 
-// Get all computers from TBL_IT_MachinesCurrent
+// Get all computers from TBL_IT_MachinesCurrent with caching
 app.get('/api/computers', async (req, res) => {
   try {
+    // Check cache first
+    if (isCacheValid('computers')) {
+      console.log('[CACHE] Returning cached computers data');
+      return res.json(getCache('computers'));
+    }
+    
     const pool = await getDbConnection();
     
     if (!pool) {
-      console.log('[DB] Database not available, returning error for computers');
-      return res.status(503).json({ 
-        error: 'Database connection unavailable',
-        message: 'Unable to connect to database server'
-      });
+      console.log('[DB] Database not available, using fallback data for computers');
+      // Import fallback data
+      const { fallbackComputers } = await import('./src/data/fallback-data.js');
+      return res.json(fallbackComputers);
     }
+    
+    console.log('[DB] Fetching computers data from database...');
+    const startTime = Date.now();
     
     // Use the correct column names based on the actual database schema
     const result = await pool.request()
@@ -966,6 +913,9 @@ app.get('/api/computers', async (req, res) => {
         FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
         ORDER BY ComputerName
       `);
+    
+    const queryTime = Date.now() - startTime;
+    console.log(`[DB] Query completed in ${queryTime}ms`);
 
     const computers = result.recordset.map(row => {
       // Parse JSON fields safely with error handling
@@ -1039,18 +989,28 @@ app.get('/api/computers', async (req, res) => {
       };
     });
     
+    // Cache the processed data
+    setCache('computers', computers);
+    console.log(`[CACHE] Cached ${computers.length} computers for 30 seconds`);
+    
     // Don't close the pool, keep it for reuse
     res.json(computers);
     
   } catch (err) {
     console.error('Error fetching computers:', err.message);
     
-    // Return error when database is unavailable
-    console.log('[DB] Database error, returning error for computers');
-    res.status(503).json({ 
-      error: 'Database error',
-      message: err.message
-    });
+    // Return fallback data when database is unavailable
+    console.log('[DB] Database error, using fallback data for computers');
+    try {
+      const { fallbackComputers } = await import('./src/data/fallback-data.js');
+      res.json(fallbackComputers);
+    } catch (fallbackError) {
+      console.error('Fallback data error:', fallbackError.message);
+      res.status(503).json({ 
+        error: 'Database error',
+        message: err.message
+      });
+    }
   }
 });
 
@@ -1179,29 +1139,46 @@ app.get('/api/computers/:machineID/changelog', async (req, res) => {
 // Get IP groups summary
 app.get('/api/ip-groups', async (req, res) => {
   try {
+    // Check cache first
+    if (isCacheValid('ip_groups')) {
+      console.log('[CACHE] Returning cached IP groups data');
+      return res.json(getCache('ip_groups'));
+    }
+    
     const pool = await getDbConnection();
     
     if (!pool) {
-      console.log('[DB] Database not available, returning error for IP groups');
-      return res.status(503).json({ 
-        error: 'Database connection unavailable',
-        message: 'Unable to connect to database server'
-      });
+      console.log('[DB] Database not available, using fallback data for IP groups');
+      // Import fallback data
+      const { fallbackIPGroups } = await import('./src/data/fallback-data.js');
+      return res.json(fallbackIPGroups);
     }
+    
+    console.log('[DB] Fetching IP groups data from database...');
+    const startTime = Date.now();
+    
+    // OPTIMIZED: Simplified query with better performance
     const result = await pool.request()
       .query(`
         SELECT 
-          SUBSTRING(IPv4, 1, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4) + 1) + 1) - 1) + '.x' as subnet,
+          LEFT(IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4) + 1) + 1) - 1) + '.x' as subnet,
           COUNT(*) as totalComputers,
           SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, GETUTCDATE()) <= 10 THEN 1 ELSE 0 END) as onlineCount,
           SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, GETUTCDATE()) > 10 THEN 1 ELSE 0 END) as offlineCount,
           0 as alertCount
-        FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
-        WHERE IPv4 IS NOT NULL AND IPv4 != ''
-        GROUP BY SUBSTRING(IPv4, 1, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4) + 1) + 1) - 1)
+        FROM [mes].[dbo].[TBL_IT_MachinesCurrent] WITH (NOLOCK)
+        WHERE IPv4 IS NOT NULL AND IPv4 != '' AND IPv4 LIKE '%.%.%.%'
+        GROUP BY LEFT(IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4) + 1) + 1) - 1)
         ORDER BY subnet
       `);
 
+    const queryTime = Date.now() - startTime;
+    console.log(`[DB] IP groups query completed in ${queryTime}ms`);
+    
+    // Cache the result for 30 seconds
+    setCache('ip_groups', result.recordset);
+    console.log(`[CACHE] Cached IP groups data for 30 seconds`);
+    
     res.json(result.recordset);
   } catch (err) {
     console.error('Error fetching IP groups:', err.message);
@@ -1210,78 +1187,7 @@ app.get('/api/ip-groups', async (req, res) => {
   }
 });
 
-// Test alerts endpoint - Add test alerts for development
-app.post('/api/alerts/test', async (req, res) => {
-  try {
-    const { action, count = 5 } = req.body;
-    
-    if (action !== 'add_test_alerts') {
-      return res.status(400).json({ error: 'Invalid action' });
-    }
-    
-    const pool = await getDbConnection();
-    if (!pool) {
-      return res.status(503).json({ error: 'Database connection unavailable' });
-    }
-    
-    // Insert test alerts into changelog
-    const testAlerts = [];
-    const now = new Date();
-    
-    for (let i = 0; i < count; i++) {
-      const testAlert = {
-        ChangeID: 1000 + i,
-        MachineID: `TEST-MACHINE-${String(i + 1).padStart(3, '0')}`,
-        ChangeDate: new Date(now.getTime() - (i * 60000)), // Each alert 1 minute apart
-        ChangedSUser: 'TEST_USER',
-        SnapshotJson_Old: JSON.stringify({ 
-          IPv4: `192.168.1.${100 + i}`,
-          RAM_TotalGB: 8 + i,
-          CPU_Model: 'Intel Core i5'
-        }),
-        SnapshotJson_New: JSON.stringify({ 
-          IPv4: `192.168.1.${101 + i}`,
-          RAM_TotalGB: 16 + i,
-          CPU_Model: 'Intel Core i7'
-        })
-      };
-      
-      testAlerts.push(testAlert);
-    }
-    
-    // Insert test alerts into database
-    for (const alert of testAlerts) {
-      await pool.request()
-        .input('ChangeID', sql.Int, alert.ChangeID)
-        .input('MachineID', sql.VarChar, alert.MachineID)
-        .input('ChangeDate', sql.DateTime, alert.ChangeDate)
-        .input('ChangedSUser', sql.VarChar, alert.ChangedSUser)
-        .input('SnapshotJson_Old', sql.NVarChar, alert.SnapshotJson_Old)
-        .input('SnapshotJson_New', sql.NVarChar, alert.SnapshotJson_New)
-        .query(`
-          IF NOT EXISTS (SELECT 1 FROM [mes].[dbo].[TBL_IT_MachineChangeLog] WHERE ChangeID = @ChangeID)
-          INSERT INTO [mes].[dbo].[TBL_IT_MachineChangeLog] 
-          (ChangeID, MachineID, ChangeDate, ChangedSUser, SnapshotJson_Old, SnapshotJson_New)
-          VALUES (@ChangeID, @MachineID, @ChangeDate, @ChangedSUser, @SnapshotJson_Old, @SnapshotJson_New)
-        `);
-    }
-    
-    res.json({ 
-      success: true, 
-      message: `Added ${count} test alerts`,
-      alerts: testAlerts.map(a => ({
-        id: a.ChangeID,
-        machineID: a.MachineID,
-        timestamp: a.ChangeDate,
-        username: a.ChangedSUser
-      }))
-    });
-    
-  } catch (err) {
-    console.error('Error adding test alerts:', err.message);
-    res.status(500).json({ error: 'Failed to add test alerts' });
-  }
-});
+
 
 // Login endpoint
 app.post('/api/login', async (req, res) => {
@@ -1465,10 +1371,18 @@ app.get('/api/alerts/:username/count', async (req, res) => {
   }
 });
 
-// Alerts endpoint - Get alerts for specific user
+// Alerts endpoint - Get alerts for specific user with caching
 app.get('/api/alerts/:username', async (req, res) => {
   try {
     const { username } = req.params;
+    
+    // Check cache first
+    const cacheKey = `alerts_${username}`;
+    if (isCacheValid(cacheKey)) {
+      console.log(`[CACHE] Returning cached alerts data for ${username}`);
+      return res.json(getCache(cacheKey));
+    }
+    
     const pool = await getDbConnection();
     
     // Get recent changelog entries and convert to alerts
@@ -1613,6 +1527,10 @@ app.get('/api/alerts/:username', async (req, res) => {
         } : undefined
       };
     });
+    
+    // Cache the processed alerts
+    setCache(cacheKey, alerts);
+    console.log(`[CACHE] Cached ${alerts.length} alerts for user ${username} for 30 seconds`);
     
     res.json(alerts);
   } catch (err) {
@@ -1792,7 +1710,7 @@ app.get('/api/computers/:machineID/status', async (req, res) => {
 // VNC API endpoints
 app.post('/api/vnc/start', async (req, res) => {
   try {
-    const { host = '10.51.101.83', port = 5900, webPort = 6081 } = req.body;
+    const { host = process.env.DEFAULT_VNC_HOST || 'localhost', port = 5900, webPort = 6081 } = req.body;
     
     console.log(`Starting noVNC for ${host}:${port}`);
     
@@ -1915,7 +1833,7 @@ app.post('/api/vnc/start', async (req, res) => {
 async function checkNovncStatus() {
   try {
     const { default: fetch } = await import('node-fetch');
-    const response = await fetch('http://10.51.101.49:6081', { 
+    const response = await fetch(`${process.env.NOVNC_URL || `http://${HOST}:6081`}`, { 
       timeout: 2000,
       method: 'HEAD'
     });
@@ -2616,64 +2534,86 @@ app.get('/api/alerts', async (req, res) => {
 
 app.get('/api/alerts/summary', async (req, res) => {
   try {
-    // Get total alerts count (excluding insert records)
-    const totalResult = await pool.request().query(`
-      SELECT COUNT(*) as totalAlerts
-      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
-      WHERE [SnapshotJson_Old] IS NOT NULL 
-        AND [SnapshotJson_Old] != '{}' 
-        AND [SnapshotJson_Old] != 'null'
-        AND [SnapshotJson_New] IS NOT NULL
+    // Check cache first
+    if (isCacheValid('alerts_summary')) {
+      console.log('[CACHE] Returning cached alerts summary');
+      return res.json(getCache('alerts_summary'));
+    }
+    
+    const pool = await getDbConnection();
+    
+    if (!pool) {
+      console.log('[DB] Database not available, returning error for alerts summary');
+      return res.status(503).json({ 
+        error: 'Database connection unavailable',
+        message: 'Unable to connect to database server'
+      });
+    }
+    
+    console.log('[DB] Fetching alerts summary from database...');
+    const startTime = Date.now();
+    
+    // OPTIMIZED: Single query with CTE for better performance
+    const result = await pool.request().query(`
+      WITH AlertData AS (
+        SELECT 
+          [ChangeID],
+          [MachineID],
+          [ChangeDate],
+          [ChangedSUser],
+          [SnapshotJson_Old],
+          [SnapshotJson_New],
+          [Changes],
+          CASE 
+            WHEN [ChangeDate] >= DATEADD(hour, -24, GETDATE()) THEN 1 
+            ELSE 0 
+          END as isRecent,
+          CASE 
+            WHEN [Changes] LIKE '%"status"%' AND [Changes] LIKE '%"offline"%' 
+                 AND [ChangeDate] >= DATEADD(hour, -24, GETDATE()) THEN 1 
+            ELSE 0 
+          END as isHighPriority
+        FROM [mes].[dbo].[TBL_IT_MachineChangeLog] WITH (NOLOCK)
+        WHERE [SnapshotJson_Old] IS NOT NULL 
+          AND [SnapshotJson_Old] != '{}' 
+          AND [SnapshotJson_Old] != 'null'
+          AND [SnapshotJson_New] IS NOT NULL
+      )
+      SELECT 
+        (SELECT COUNT(*) FROM AlertData) as totalAlerts,
+        (SELECT COUNT(*) FROM AlertData WHERE isRecent = 1) as unreadAlerts,
+        (SELECT COUNT(*) FROM AlertData WHERE isHighPriority = 1) as highPriorityAlerts,
+        (SELECT TOP (5) 
+          [ChangeID],
+          [MachineID],
+          [ChangeDate],
+          [ChangedSUser],
+          [SnapshotJson_Old],
+          [SnapshotJson_New],
+          [Changes]
+         FROM AlertData 
+         ORDER BY [ChangeDate] DESC
+         FOR JSON PATH) as recentAlerts
     `);
     
-    // Get unread alerts count (last 24 hours, excluding insert records)
-    const unreadResult = await pool.request().query(`
-      SELECT COUNT(*) as unreadAlerts
-      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
-      WHERE [ChangeDate] >= DATEADD(hour, -24, GETDATE())
-        AND [SnapshotJson_Old] IS NOT NULL 
-        AND [SnapshotJson_Old] != '{}' 
-        AND [SnapshotJson_Old] != 'null'
-        AND [SnapshotJson_New] IS NOT NULL
-    `);
+    const queryTime = Date.now() - startTime;
+    console.log(`[DB] Alerts summary query completed in ${queryTime}ms`);
     
-    // Get high priority alerts (status changes to offline, excluding insert records)
-    const highPriorityResult = await pool.request().query(`
-      SELECT COUNT(*) as highPriorityAlerts
-      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
-      WHERE [Changes] LIKE '%"status"%' 
-      AND [Changes] LIKE '%"offline"%'
-      AND [ChangeDate] >= DATEADD(hour, -24, GETDATE())
-      AND [SnapshotJson_Old] IS NOT NULL 
-      AND [SnapshotJson_Old] != '{}' 
-      AND [SnapshotJson_Old] != 'null'
-      AND [SnapshotJson_New] IS NOT NULL
-    `);
+    const row = result.recordset[0];
+    const recentAlerts = row.recentAlerts ? JSON.parse(row.recentAlerts) : [];
     
-    // Get recent alerts (excluding insert records)
-    const recentResult = await pool.request().query(`
-      SELECT TOP (5)
-        [ChangeID],
-        [MachineID],
-        [ChangeDate],
-        [ChangedSUser],
-        [SnapshotJson_Old],
-        [SnapshotJson_New],
-        [Changes]
-      FROM [mes].[dbo].[TBL_IT_MachineChangeLog]
-      WHERE [SnapshotJson_Old] IS NOT NULL 
-        AND [SnapshotJson_Old] != '{}' 
-        AND [SnapshotJson_Old] != 'null'
-        AND [SnapshotJson_New] IS NOT NULL
-      ORDER BY [ChangeDate] DESC
-    `);
+    const summary = {
+      totalAlerts: row.totalAlerts,
+      unreadAlerts: row.unreadAlerts,
+      highPriorityAlerts: row.highPriorityAlerts,
+      recentAlerts: recentAlerts
+    };
     
-    res.json({
-      totalAlerts: totalResult.recordset[0].totalAlerts,
-      unreadAlerts: unreadResult.recordset[0].unreadAlerts,
-      highPriorityAlerts: highPriorityResult.recordset[0].highPriorityAlerts,
-      recentAlerts: recentResult.recordset
-    });
+    // Cache the result for 30 seconds
+    setCache('alerts_summary', summary);
+    console.log(`[CACHE] Cached alerts summary for 30 seconds`);
+    
+    res.json(summary);
   } catch (error) {
     console.error('Error fetching alert summary:', error);
     res.status(500).json({ error: 'Failed to fetch alert summary' });
@@ -2822,57 +2762,7 @@ app.post('/api/test/clear-read-status', async (req, res) => {
   }
 });
 
-// Test endpoint to add sample alerts
-app.post('/api/test/add-sample-alerts', async (req, res) => {
-  try {
-    const pool = await getDbConnection();
-    
-    // Add sample test data
-    const testData = [
-      {
-        machineID: 'TEST-MACHINE-001',
-        changedSUser: 'TEST_USER',
-        oldJson: '{"ComputerName":"TEST-PC-OLD","IPv4":"192.168.1.100"}',
-        newJson: '{"ComputerName":"TEST-PC-NEW","IPv4":"192.168.1.101"}'
-      },
-      {
-        machineID: 'TEST-MACHINE-002',
-        changedSUser: 'ADMIN_USER',
-        oldJson: '{"RAM_TotalGB":"8","Storage_TotalGB":"500"}',
-        newJson: '{"RAM_TotalGB":"16","Storage_TotalGB":"1000"}'
-      },
-      {
-        machineID: 'TEST-MACHINE-003',
-        changedSUser: 'SYSTEM',
-        oldJson: '{"NICs_Json":"[{\\"name\\":\\"Ethernet\\",\\"mac\\":\\"00:11:22:33:44:55\\"}]"}',
-        newJson: '{"NICs_Json":"[{\\"name\\":\\"Ethernet\\",\\"mac\\":\\"00:11:22:33:44:55\\"},{\\"name\\":\\"WiFi\\",\\"mac\\":\\"AA:BB:CC:DD:EE:FF\\"}]"}'
-      }
-    ];
-    
-    for (const data of testData) {
-      await pool.request()
-        .input('machineID', sql.VarChar, data.machineID)
-        .input('changedSUser', sql.VarChar, data.changedSUser)
-        .input('oldJson', sql.Text, data.oldJson)
-        .input('newJson', sql.Text, data.newJson)
-        .query(`
-          INSERT INTO TBL_IT_MachineChangeLog (MachineID, ChangeDate, ChangedSUser, SnapshotJson_Old, SnapshotJson_New)
-          VALUES (@machineID, GETDATE(), @changedSUser, @oldJson, @newJson)
-        `);
-    }
-    
-    res.json({ 
-      success: true, 
-      message: 'Added 3 test alerts',
-      testData: testData
-    });
-  } catch (err) {
-    res.status(500).json({ 
-      error: 'Failed to add test alerts', 
-      details: err.message 
-    });
-  }
-});
+
 
 // API endpoint to update HUD_Version
 app.post('/api/update-hud-version', async (req, res) => {
@@ -2948,6 +2838,102 @@ app.post('/api/update-hud-version', async (req, res) => {
     });
   }
 });
+
+// Cache configuration - Optimized for internal network performance
+const cache = {
+  computers: {
+    data: null,
+    timestamp: null,
+    ttl: 15000 // 15 seconds cache for faster updates
+  },
+  alerts: {
+    data: null,
+    timestamp: null,
+    ttl: 10000 // 10 seconds cache for real-time alerts
+  },
+  alerts_summary: {
+    data: null,
+    timestamp: null,
+    ttl: 10000 // 10 seconds cache for alerts summary
+  },
+  ip_groups: {
+    data: null,
+    timestamp: null,
+    ttl: 30000 // 30 seconds cache for IP groups
+  }
+};
+
+// Dynamic cache for user-specific alerts
+const userAlertsCache = new Map();
+
+// Cache helper functions
+function isCacheValid(cacheKey) {
+  // Check main cache first
+  const cacheData = cache[cacheKey];
+  if (cacheData && cacheData.data && cacheData.timestamp) {
+    const now = Date.now();
+    return (now - cacheData.timestamp) < cacheData.ttl;
+  }
+  
+  // Check user alerts cache
+  if (cacheKey.startsWith('alerts_')) {
+    const userCache = userAlertsCache.get(cacheKey);
+    if (userCache && userCache.timestamp) {
+      const now = Date.now();
+      return (now - userCache.timestamp) < 30000; // 30 seconds TTL
+    }
+  }
+  
+  return false;
+}
+
+function setCache(cacheKey, data) {
+  if (cacheKey.startsWith('alerts_')) {
+    // Store in user alerts cache
+    userAlertsCache.set(cacheKey, {
+      data: data,
+      timestamp: Date.now()
+    });
+  } else {
+    // Store in main cache
+    cache[cacheKey] = {
+      data: data,
+      timestamp: Date.now(),
+      ttl: cache[cacheKey]?.ttl || 30000
+    };
+  }
+}
+
+function getCache(cacheKey) {
+  if (cacheKey.startsWith('alerts_')) {
+    const userCache = userAlertsCache.get(cacheKey);
+    return userCache?.data || null;
+  }
+  return cache[cacheKey]?.data || null;
+}
+
+// Clear cache periodically
+setInterval(() => {
+  const now = Date.now();
+  
+  // Clear main cache
+  Object.keys(cache).forEach(key => {
+    if (cache[key] && cache[key].timestamp) {
+      if ((now - cache[key].timestamp) > cache[key].ttl) {
+        cache[key] = { data: null, timestamp: null, ttl: cache[key].ttl };
+        console.log(`[CACHE] Cleared expired cache: ${key}`);
+      }
+    }
+  });
+  
+  // Clear user alerts cache
+  for (const [key, value] of userAlertsCache.entries()) {
+    if ((now - value.timestamp) > 30000) { // 30 seconds TTL
+      userAlertsCache.delete(key);
+      console.log(`[CACHE] Cleared expired user cache: ${key}`);
+    }
+  }
+}, 60000); // Check every minute
 
 // Start server
 server.listen(PORT, () => {

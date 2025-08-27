@@ -6,10 +6,21 @@ import { Alerts } from "@/pages/Alerts";
 
 interface IndexProps {
   onLogout: () => void;
-  user: { username: string };
+  user: { username: string } | null;
 }
 
 const Index = ({ onLogout, user }: IndexProps) => {
+  // If no user, show loading or empty state
+  if (!user) {
+    return (
+      <div className="flex h-screen bg-background items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
+  }
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showPinnedOnly, setShowPinnedOnly] = useState(false);
   const [pinnedCount, setPinnedCount] = useState(0);

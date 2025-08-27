@@ -1,0 +1,303 @@
+/* Fast Animations for Realtime WebSocket Updates */
+
+/* Ultra-fast fade in/out for realtime updates */
+@keyframes fastFadeIn {
+  0% { opacity: 0; transform: translateY(-2px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fastFadeOut {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-2px); }
+}
+
+@keyframes fastSlideIn {
+  0% { transform: translateX(-10px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fastSlideOut {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(10px); opacity: 0; }
+}
+
+@keyframes fastScaleIn {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fastScaleOut {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0; }
+}
+
+@keyframes fastPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes fastShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+@keyframes fastGlow {
+  0%, 100% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+  50% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
+}
+
+/* Fast animation classes */
+.fast-fade-in {
+  animation: fastFadeIn 0.15s ease-out forwards;
+}
+
+.fast-fade-out {
+  animation: fastFadeOut 0.15s ease-out forwards;
+}
+
+.fast-slide-in {
+  animation: fastSlideIn 0.2s ease-out forwards;
+}
+
+.fast-slide-out {
+  animation: fastSlideOut 0.2s ease-out forwards;
+}
+
+.fast-scale-in {
+  animation: fastScaleIn 0.15s ease-out forwards;
+}
+
+.fast-scale-out {
+  animation: fastScaleOut 0.15s ease-out forwards;
+}
+
+.fast-pulse {
+  animation: fastPulse 0.3s ease-in-out;
+}
+
+.fast-shake {
+  animation: fastShake 0.2s ease-in-out;
+}
+
+.fast-glow {
+  animation: fastGlow 0.3s ease-in-out;
+}
+
+/* Fast hover effects */
+.fast-hover {
+  transition: all 0.1s ease-out;
+}
+
+.fast-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Fast focus effects */
+.fast-focus {
+  transition: all 0.1s ease-out;
+}
+
+.fast-focus:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Fast status indicators */
+.status-online {
+  animation: fastPulse 1s ease-in-out infinite;
+}
+
+.status-offline {
+  opacity: 0.5;
+}
+
+.status-warning {
+  animation: fastShake 0.5s ease-in-out;
+}
+
+/* Fast notification animations */
+.notification-in {
+  animation: fastSlideIn 0.2s ease-out;
+}
+
+.notification-out {
+  animation: fastSlideOut 0.2s ease-out;
+}
+
+/* Fast data update animations */
+.data-update {
+  animation: fastGlow 0.3s ease-in-out;
+}
+
+.data-refresh {
+  animation: fastScaleIn 0.15s ease-out;
+}
+
+/* Fast button animations */
+.btn-fast {
+  transition: all 0.1s ease-out;
+}
+
+.btn-fast:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-fast:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Fast card animations */
+.card-fast {
+  transition: all 0.15s ease-out;
+}
+
+.card-fast:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Fast modal animations */
+.modal-fast-in {
+  animation: fastScaleIn 0.2s ease-out;
+}
+
+.modal-fast-out {
+  animation: fastScaleOut 0.2s ease-out;
+}
+
+/* Fast list animations */
+.list-item-fast {
+  animation: fastFadeIn 0.2s ease-out;
+}
+
+.list-item-fast-remove {
+  animation: fastFadeOut 0.15s ease-out;
+}
+
+/* Fast progress animations */
+.progress-fast {
+  transition: width 0.2s ease-out;
+}
+
+/* NEW: Enhanced fast transitions */
+.fast-transition {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fast-transition-transform {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fast-transition-opacity {
+  transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fast-transition-shadow {
+  transition: box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* NEW: Fast hover effects for cards */
+.card-fast-hover {
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.card-fast-hover:hover {
+  transform: translateY(-8px) scale(1.03);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+/* NEW: Fast button effects */
+.btn-fast-enhanced {
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-fast-enhanced:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.btn-fast-enhanced:active {
+  transform: translateY(0) scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* NEW: Fast ripple effect */
+.btn-fast-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.btn-fast-enhanced:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* NEW: Fast loading states */
+.fast-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.fast-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  animation: fastSlideIn 0.8s ease-in-out infinite;
+}
+
+/* NEW: Fast stagger animations for lists */
+.stagger-item {
+  animation: fastFadeIn 0.2s ease-out forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 0.05s);
+}
+
+/* NEW: Fast page transitions */
+.page-transition-in {
+  animation: fastSlideIn 0.3s ease-out forwards;
+}
+
+.page-transition-out {
+  animation: fastSlideOut 0.3s ease-out forwards;
+}
+
+/* Performance optimizations */
+.fast-animation {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .fast-fade-in,
+  .fast-fade-out,
+  .fast-slide-in,
+  .fast-slide-out,
+  .fast-scale-in,
+  .fast-scale-out,
+  .fast-pulse,
+  .fast-shake,
+  .fast-glow {
+    animation: none;
+  }
+}

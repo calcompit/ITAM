@@ -50,6 +50,7 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
   const { lastUpdate, connectionStatus } = useStatus();
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
   const [isFetchingCount, setIsFetchingCount] = useState(false);
+  const [wsStatus, setWsStatus] = useState<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Fetch unread alerts count
@@ -113,14 +114,43 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
       }
     };
     
+    // Listen for alert read events
+    const handleAlertRead = (data: any) => {
+      if (data.type === 'alert_read' || data.type === 'alert_read_all') {
+        console.log('[Sidebar] Received alert read event, refetching count...');
+        fetchUnreadCount();
+      }
+    };
+    
     websocketService.on('alert_notification', handleAlertNotification);
+    websocketService.on('alert_read', handleAlertRead);
+    websocketService.on('alert_read_all', handleAlertRead);
     
     return () => {
       clearInterval(interval);
       websocketService.off('alert_notification', handleAlertNotification);
+      websocketService.off('alert_read', handleAlertRead);
+      websocketService.off('alert_read_all', handleAlertRead);
       if (notificationTimeoutRef.current) {
         clearTimeout(notificationTimeoutRef.current);
       }
+    };
+  }, []);
+
+  // Monitor WebSocket status
+  useEffect(() => {
+    const updateWsStatus = () => {
+      setWsStatus(websocketService.getConnectionStatus());
+    };
+
+    // Initial status
+    updateWsStatus();
+
+    // Listen for WebSocket status changes
+    const interval = setInterval(updateWsStatus, 1000);
+
+    return () => {
+      clearInterval(interval);
     };
   }, []);
   
@@ -154,7 +184,8 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
             <span className="font-mono">{lastUpdate.toLocaleTimeString()}</span>
           </div>
           <div className="text-sidebar-muted-foreground mt-1">
-            Status:             <span className={
+            Status: 
+            <span className={
               connectionStatus === 'connected' ? 'text-status-online' :
               connectionStatus === 'fallback' ? 'text-status-warning' :
               'text-status-offline'
@@ -163,6 +194,9 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
                connectionStatus === 'fallback' ? 'Using Cache' :
                'Disconnected'}
             </span>
+            {wsStatus === 'connected' && (
+              <span className="text-green-500 ml-1">• Realtime</span>
+            )}
           </div>
         </div>
       </div>
@@ -172,8 +206,9 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
         <Button
           variant={showPinnedOnly ? "default" : "outline"}
           className={cn(
-            "w-full justify-start gap-3 h-12",
-            showPinnedOnly && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
+            "w-full justify-start gap-3 h-12 btn-fast-enhanced",
+            showPinnedOnly && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90",
+            "hover:scale-105"
           )}
           onClick={onPinnedToggle}
         >
@@ -191,16 +226,17 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
-        {navItems.map((item) => {
+        {navItems.map((item, index) => {
           const Icon = item.icon;
           return (
             <Button
               key={item.id}
               variant={activeTab === item.id ? "default" : "ghost"}
               className={cn(
-                "w-full justify-start gap-3 h-12 relative",
-                activeTab === item.id ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent"
+                "w-full justify-start gap-3 h-12 relative btn-fast-enhanced stagger-item",
+                activeTab === item.id ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent hover:scale-105"
               )}
+              style={{ '--stagger-index': index } as React.CSSProperties}
               onClick={() => onTabChange(item.id)}
             >
               <div className="relative">
@@ -225,7 +261,7 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
         </div>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 h-12 text-destructive hover:bg-destructive/10"
+          className="w-full justify-start gap-3 h-12 text-destructive hover:bg-destructive/10 btn-fast-enhanced hover:scale-105"
           onClick={onLogout}
         >
           <LogOut className="h-5 w-5" />

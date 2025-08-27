@@ -21,15 +21,15 @@ import {
   Circle,
   X
 } from "lucide-react";
-import { apiService, type APIComputer, type IPGroup } from "@/services/api";
-import { websocketService } from "@/services/websocket";
-import { useStatus } from "@/contexts/StatusContext";
-import { DatabaseStatusBanner } from "@/components/database-status-banner";
+import { type APIComputer, type IPGroup } from "@/services/api";
+import { useData } from "@/contexts/DataContext";
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 import { Input } from "@/components/ui/input";
 import { Search, Filter, AlertTriangle, CheckCircle } from "lucide-react";
 import { openVNCPopup, getStoredVNCLinks, removeVNCLink, clearOldVNCLinks, formatTimestamp } from "@/lib/popup-utils";
+import { DashboardLoadingOverlay } from "@/components/loading-overlay";
 
 
 interface DashboardProps {
@@ -39,16 +39,14 @@ interface DashboardProps {
 }
 
 export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPinnedCountChange }: DashboardProps & { onPinnedCountChange?: (count: number) => void }) {
-  const [computers, setComputers] = useState<APIComputer[]>([]);
-  const [ipGroups, setIpGroups] = useState<IPGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use global data context instead of local state
+  const { computers, ipGroups, loading, error, isUpdating } = useData();
+  
   const [pinnedComputers, setPinnedComputers] = useState<string[]>([]);
   const [selectedSubnet, setSelectedSubnet] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
   const [showComputerDetails, setShowComputerDetails] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
   const [updatedMachineIDs, setUpdatedMachineIDs] = useState<Set<string>>(new Set());
   
   // VNC Connection Modal States
@@ -59,7 +57,6 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
   const [vncLinks, setVncLinks] = useState<any[]>([]);
 
   const { toast } = useToast();
-  const { updateStatus, updateLastUpdate } = useStatus();
   
   // Load pinned computers from localStorage
   const loadPinnedComputers = (): string[] => {
@@ -89,142 +86,18 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
 
 
 
-  // Load data from API
+  // Load pinned computers on mount
   useEffect(() => {
-    const loadData = async (showLoading = true) => {
-      try {
-        if (showLoading) {
-          setLoading(true);
-          setError(null);
-        }
-        
-        const [computersData, ipGroupsData] = await Promise.all([
-          apiService.getComputers(),
-          apiService.getIPGroups()
-        ]);
-        
-        // Load pinned computers from localStorage
-        const pinnedMachineIDs = loadPinnedComputers();
-        
-        // Set pinned status for computers
-        const computersWithPinnedStatus = computersData.map(computer => ({
-          ...computer,
-          isPinned: pinnedMachineIDs.includes(computer.machineID)
-        }));
-        
-        setComputers(computersWithPinnedStatus);
-        setIpGroups(ipGroupsData);
-        setError(null);
-        updateStatus('connected');
-        updateLastUpdate();
-      } catch (err) {
-        console.error('Failed to load data:', err);
-        updateStatus('disconnected');
-        
-        // Always show error on initial load failure
-        if (showLoading) {
-          setError('Failed to load data from server');
-          toast({
-            title: "Database Connection Failed",
-            description: "Unable to connect to database. Please refresh the page.",
-            variant: "destructive",
-            duration: 10000,
-          });
-        } else {
-          // Don't update data, keep existing data
-          toast({
-            title: "Database Connection Lost",
-            description: "Showing last known data. Attempting to reconnect...",
-            variant: "destructive",
-            duration: 5000,
-          });
-        }
-      } finally {
-        if (showLoading) {
-          setLoading(false);
-        }
-      }
-    };
-
-    // Initial load with loading indicator
-    loadData(true);
-
-    // Connect to WebSocket for realtime updates
-    websocketService.connect();
-    
-    // Listen for data changes (legacy - not used anymore)
-    const handleDataChange = (data: any) => {
-      // This is handled by handleDataUpdate now
-    };
-
-    // Listen for data updates (smooth updates without refresh)
-    const handleDataUpdate = (data: any) => {
-      if (data.data?.updatedComputers) {
-        setIsUpdating(true);
-        
-        // Track which machines were updated for animation
-        const updatedIDs = new Set<string>();
-        const updatedComputerNames: string[] = [];
-        
-        setComputers(prevComputers => {
-          const updatedComputers = [...prevComputers];
-          
-          data.data.updatedComputers.forEach((updatedComputer: APIComputer) => {
-            const existingIndex = updatedComputers.findIndex(c => c.machineID === updatedComputer.machineID);
-            
-            if (existingIndex >= 0) {
-              // Preserve pinned status
-              const wasPinned = updatedComputers[existingIndex].isPinned;
-              updatedComputers[existingIndex] = { ...updatedComputer, isPinned: wasPinned };
-              updatedIDs.add(updatedComputer.machineID);
-              updatedComputerNames.push(updatedComputer.computerName);
-            } else {
-              // New computer
-              updatedComputers.push(updatedComputer);
-              updatedIDs.add(updatedComputer.machineID);
-              updatedComputerNames.push(updatedComputer.computerName);
-            }
-          });
-          
-          return updatedComputers;
-        });
-        
-        // Set animation state
-        setUpdatedMachineIDs(updatedIDs);
-        
-        // Show toast notification
-        if (updatedComputerNames.length > 0) {
-          const computerList = updatedComputerNames.slice(0, 3).join(', ');
-          const moreText = updatedComputerNames.length > 3 ? ` and ${updatedComputerNames.length - 3} more` : '';
-          
-          toast({
-            title: "Data Updated",
-            description: `${computerList}${moreText} updated successfully`,
-            duration: 3000,
-          });
-        }
-        
-        // Clear animation after 2 seconds
-        setTimeout(() => {
-          setUpdatedMachineIDs(new Set());
-          setIsUpdating(false);
-        }, 2000);
-      }
-    };
-
-    websocketService.on('data_change', handleDataChange);
-    websocketService.on('data_update', handleDataUpdate);
-
-    // Fallback: Set up polling every 60 seconds if WebSocket fails (without loading)
-    const interval = setInterval(() => loadData(false), 60000);
-
-    return () => {
-      clearInterval(interval);
-      websocketService.off('data_change', handleDataChange);
-      websocketService.off('data_update', handleDataUpdate);
-      websocketService.disconnect();
-    };
+    const pinnedMachineIDs = loadPinnedComputers();
+    setPinnedComputers(pinnedMachineIDs);
   }, []);
+
+  // Update pinned count when pinned computers change
+  useEffect(() => {
+    if (onPinnedCountChange) {
+      onPinnedCountChange(pinnedComputers.length);
+    }
+  }, [pinnedComputers, onPinnedCountChange]);
 
 
 
@@ -585,15 +458,24 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
     );
   }
 
-  // Show loading state
+  // Show loading overlay
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading data...</p>
+      <>
+        <DashboardLoadingOverlay isLoading={true} />
+        <div className="space-y-6">
+          {/* Show skeleton content behind loading overlay */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-card rounded-lg border p-6 opacity-50">
+                <div className="h-4 bg-muted rounded w-24 mb-4"></div>
+                <div className="h-8 bg-muted rounded w-16 mb-2"></div>
+                <div className="h-3 bg-muted rounded w-20"></div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -615,10 +497,10 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 page-transition-in">
 
       {/* Database Status Banner */}
-      <DatabaseStatusBanner />
+      
       
 
 
@@ -810,15 +692,20 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
 
       {/* Computers Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-        {getDisplayComputers().map((computer) => (
-          <ComputerCard
+        {getDisplayComputers().map((computer, index) => (
+          <div 
             key={computer.machineID}
-            computer={computer}
-            onPin={handlePin}
-            onClick={handleComputerClick}
-            onVNC={handleVNC}
-            isUpdated={updatedMachineIDs.has(computer.machineID)}
-          />
+            className="stagger-item"
+            style={{ '--stagger-index': index } as React.CSSProperties}
+          >
+            <ComputerCard
+              computer={computer}
+              onPin={handlePin}
+              onClick={handleComputerClick}
+              onVNC={handleVNC}
+              isUpdated={updatedMachineIDs.has(computer.machineID)}
+            />
+          </div>
         ))}
       </div>
 
@@ -832,6 +719,7 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
           setShowComputerDetails(false);
           setSelectedComputer(null);
         }}
+        onVNC={handleVNC}
       />
 
       {/* VNC Connection Modal */}
