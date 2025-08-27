@@ -72,6 +72,14 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Serve static files from the dist directory
+app.use(express.static(path.join(process.cwd(), 'dist')));
+
+// Serve index.html for all routes (SPA routing)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
+});
+
 // SQL Server configuration
 const sqlConfig = {
   user: process.env.DB_USER || 'ccet',
