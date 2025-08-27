@@ -638,10 +638,7 @@ async function startChangeMonitoring(pool) {
           SELECT 
             @changeType as changeType,
             GETUTCDATE() as timestamp,
-            MachineID,
-            ComputerName,
-            UpdatedAt,
-            Win_Activated
+            *
           FROM inserted
         ));
         
