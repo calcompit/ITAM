@@ -129,7 +129,7 @@ export function Alerts() {
     try {
       setIsLoading(true);
       // Get current user from localStorage - must be logged in
-      const currentUserData = localStorage.getItem('currentUser');
+      const currentUserData = localStorage.getItem('it-asset-monitor-user');
       if (!currentUserData) {
         console.error('No user logged in');
         return;
@@ -183,7 +183,7 @@ export function Alerts() {
   const handleMarkAsRead = async (alert: AlertItem) => {
     try {
       // Get current user - must be logged in
-      const currentUserData = localStorage.getItem('currentUser');
+      const currentUserData = localStorage.getItem('it-asset-monitor-user');
       if (!currentUserData) {
         console.error('No user logged in');
         return;
@@ -207,7 +207,7 @@ export function Alerts() {
   const handleMarkAllAsRead = async () => {
     try {
       // Get current user - must be logged in
-      const currentUserData = localStorage.getItem('currentUser');
+      const currentUserData = localStorage.getItem('it-asset-monitor-user');
       if (!currentUserData) {
         console.error('No user logged in');
         return;
