@@ -71,9 +71,9 @@ class ApiService {
       return cachedData;
     }
     
-    // If no cached data, throw error to trigger loading state
-    console.log(`[CACHE] No cached data available for ${endpoint}`);
-    throw new Error('No cached data available');
+    // If no cached data, use fallback data
+    console.log(`[CACHE] No cached data available for ${endpoint}, using fallback data`);
+    return this.getFallbackData(endpoint);
   }
 
 

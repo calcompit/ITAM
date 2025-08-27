@@ -1,15 +1,20 @@
 // API Configuration
 const getBackendUrl = () => {
-  // Check environment variables first
+  // Check VITE_API_URL first (user preference)
+  if (process.env.VITE_API_URL) {
+    return process.env.VITE_API_URL;
+  }
+  
+  // Check environment variables
   if (process.env.BACKEND_URL) {
     return process.env.BACKEND_URL;
   }
   
   // Fallback based on NODE_ENV
   if (process.env.NODE_ENV === 'development') {
-    return 'http://100.117.205.41:3002';
+    return 'http://localhost:3002';
   }
-  return 'http://100.117.205.41:3002';
+  return 'http://localhost:3002';
 };
 
 const getFrontendUrl = () => {

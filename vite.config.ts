@@ -19,11 +19,12 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  define: {
-    'process.env.NODE_ENV': JSON.stringify(mode),
-    'process.env.BACKEND_URL': JSON.stringify(process.env.BACKEND_URL),
-    'process.env.FRONTEND_URL': JSON.stringify(process.env.FRONTEND_URL),
-    'process.env.NOVNC_URL': JSON.stringify(process.env.NOVNC_URL),
-    'process.env.HOST': JSON.stringify(process.env.HOST)
-  }
-}));
+      define: {
+      'process.env.NODE_ENV': JSON.stringify(mode),
+      'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || process.env.BACKEND_URL),
+      'process.env.BACKEND_URL': JSON.stringify(process.env.BACKEND_URL),
+      'process.env.FRONTEND_URL': JSON.stringify(process.env.FRONTEND_URL),
+      'process.env.NOVNC_URL': JSON.stringify(process.env.NOVNC_URL),
+      'process.env.HOST': JSON.stringify(process.env.HOST)
+    }
+  }));

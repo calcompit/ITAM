@@ -5,7 +5,14 @@ export class WebSocketService {
   private reconnectDelay = 1000;
   private listeners: Map<string, Function[]> = new Map();
 
-  constructor(private url: string = `ws://${window.location.hostname}:3002`) {}
+  constructor(private url?: string) {
+    // Use provided URL or construct from backend URL
+    if (!this.url) {
+      const backendUrl = process.env.VITE_API_URL || process.env.BACKEND_URL || 'http://localhost:3002';
+      const wsUrl = backendUrl.replace('http://', 'ws://').replace('https://', 'wss://');
+      this.url = wsUrl;
+    }
+  }
 
   connect() {
     try {
