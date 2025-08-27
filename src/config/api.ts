@@ -27,7 +27,7 @@ const getFrontendUrl = () => {
   if (process.env.NODE_ENV === 'development') {
     return 'http://localhost:8080';
   }
-  return 'http://10.51.101.49:8081';
+  return 'http://localhost:8080';
 };
 
 const getNovncUrl = () => {
@@ -40,7 +40,7 @@ const getNovncUrl = () => {
   if (process.env.NODE_ENV === 'development') {
     return 'http://localhost:6081';
   }
-  return 'http://10.51.101.49:6081';
+  return 'http://localhost:6081';
 };
 
 export const getApiConfig = () => ({
