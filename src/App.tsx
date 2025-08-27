@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { Login } from "./pages/Login";
 import { StatusProvider } from "@/contexts/StatusContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 
 const queryClient = new QueryClient();
@@ -26,22 +27,24 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StatusProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={
-                user ? <Index onLogout={handleLogout} user={user} /> : <Login onLogin={handleLogin} />
-              } />
+      <ThemeProvider>
+        <StatusProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={
+                  user ? <Index onLogout={handleLogout} user={user} /> : <Login onLogin={handleLogin} />
+                } />
 
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </StatusProvider>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </StatusProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };

@@ -13,6 +13,7 @@ import { useStatus } from "@/contexts/StatusContext";
 import { useEffect, useState, useRef } from "react";
 import { alertService } from "@/services/alert-service";
 import { websocketService } from "@/services/websocket";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface SidebarNavProps {
   activeTab: string;
@@ -136,7 +137,10 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
     <div className="w-64 h-screen bg-card border-r border-border flex flex-col">
       {/* Header */}
       <div className="p-6 border-b border-border">
-        <h1 className="text-xl font-bold text-foreground">IT Asset Monitor</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-xl font-bold text-foreground">IT Asset Monitor</h1>
+          <ThemeToggle size="sm" variant="ghost" />
+        </div>
         <p className="text-sm text-muted-foreground">Real-time tracking</p>
         <p className="text-xs text-muted-foreground mt-2">User: {user.username}</p>
         <div className="mt-2 p-2 bg-muted rounded text-xs">
@@ -213,8 +217,12 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-border">
+      {/* Footer */}
+      <div className="p-4 border-t border-border space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Theme</span>
+          <ThemeToggle size="sm" variant="outline" />
+        </div>
         <Button
           variant="ghost"
           className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive"
