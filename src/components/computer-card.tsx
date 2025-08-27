@@ -134,6 +134,11 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
           <div className="text-xs text-muted-foreground">
             <div>Domain: {computer.domain}</div>
             <div>User: {computer.sUser ? computer.sUser.split('\\').pop() : 'N/A'}</div>
+            {computer.hudVersion && (
+              <div className="flex items-center gap-1 text-primary font-medium">
+                Tracker: {computer.hudVersion}
+              </div>
+            )}
             <div className={`flex items-center gap-1 ${computer.winActivated ? 'text-status-online' : 'text-status-warning'}`}>
               Windows: {computer.winActivated ? 'Activated' : 'Not Activated'}
             </div>

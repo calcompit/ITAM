@@ -51,6 +51,7 @@ export interface Computer {
   updatedAt: string;
   hudMode: string;
   hudColorARGB: string;
+  hudVersion?: string;
   winActivated: boolean;
   status: "online" | "offline" | "alert";
   isPinned?: boolean;
@@ -114,6 +115,7 @@ export const mockComputers: Computer[] = [
     updatedAt: "2025-08-20 02:46:24.2996701",
     hudMode: "Normal:80",
     hudColorARGB: "-8355585;-32768",
+    hudVersion: "3.0.0",
     winActivated: true,
     status: "online",
     isPinned: true,
@@ -170,6 +172,7 @@ export const mockComputers: Computer[] = [
     updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
     hudMode: "Normal:80",
     hudColorARGB: "-15461356;-1",
+    hudVersion: "2.1.0",
     winActivated: false,
     status: "alert",
     isPinned: true,
