@@ -634,13 +634,38 @@ async function startChangeMonitoring(pool) {
         ELSE
           SET @changeType = 'DELETE';
         
-        SET @message = JSON_QUERY((
+        SET @message = (
           SELECT 
             @changeType as changeType,
             GETUTCDATE() as timestamp,
-            *
+            MachineID,
+            ComputerName,
+            Domain,
+            UUID,
+            SUser,
+            BoardSerial,
+            BiosSerial,
+            CPU_Model,
+            CPU_PhysicalCores,
+            CPU_LogicalCores,
+            RAM_TotalGB,
+            RAM_ModulesJson,
+            Storage_TotalGB,
+            Storage_Json,
+            GPU_Json,
+            NICs_Json,
+            OS_Caption,
+            OS_Version,
+            OS_InstallDate,
+            LastBoot,
+            IPv4,
+            UpdatedAt,
+            HUD_Mode,
+            HUD_ColorARGB,
+            Win_Activated
           FROM inserted
-        ));
+          FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+        );
         
         IF @message IS NOT NULL
         BEGIN
