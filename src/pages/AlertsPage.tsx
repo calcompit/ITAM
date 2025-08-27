@@ -321,7 +321,7 @@ export function AlertsPage() {
                   
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold text-foreground">{alert.title}</h3>
+                      <h3 className="font-semibold text-card-foreground">{alert.title}</h3>
                       {!alert.isRead && (
                         <div className="w-2 h-2 bg-primary rounded-full"></div>
                       )}

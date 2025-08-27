@@ -19,10 +19,10 @@ export const DatabaseStatusBanner: React.FC<DatabaseStatusBannerProps> = ({ clas
       <div className="flex items-center gap-2">
         {connectionStatus === 'disconnected' ? (
           <>
-            <WifiOff className="h-4 w-4 text-red-600" />
+            <WifiOff className="h-4 w-4 text-status-offline" />
             <div>
-              <AlertTitle className="text-red-800">Database Connection Lost</AlertTitle>
-              <AlertDescription className="text-red-700">
+              <AlertTitle className="text-destructive font-semibold">Database Connection Lost</AlertTitle>
+              <AlertDescription className="text-destructive/90">
                 The database connection is currently unavailable. You are viewing the last known data. 
                 The system will automatically reconnect when the database is available again.
               </AlertDescription>
@@ -30,10 +30,10 @@ export const DatabaseStatusBanner: React.FC<DatabaseStatusBannerProps> = ({ clas
           </>
         ) : (
           <>
-            <Database className="h-4 w-4 text-blue-600" />
+            <Database className="h-4 w-4 text-primary" />
             <div>
-              <AlertTitle className="text-blue-800">Connecting to Database...</AlertTitle>
-              <AlertDescription className="text-blue-700">
+              <AlertTitle className="text-primary">Connecting to Database...</AlertTitle>
+              <AlertDescription className="text-primary/80">
                 Attempting to establish database connection. Please wait...
               </AlertDescription>
             </div>

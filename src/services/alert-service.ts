@@ -436,7 +436,7 @@ class AlertService {
       {
         changeID: 2,
         machineID: "PC002",
-        changeDate: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15 minutes ago
+        changeDate: new Date(Date.now() - 1000 * 60 * 15).toISOString(), // 15 minutes ago (offline)
         changedUser: "user1",
         snapshotOld: { computerName: "PC002-OLD" },
         snapshotNew: { computerName: "PC002-NEW" },

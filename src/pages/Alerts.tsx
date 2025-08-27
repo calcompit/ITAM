@@ -251,7 +251,7 @@ export function Alerts() {
 
       {/* Modern Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-300">
+        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-150">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Alerts
@@ -268,7 +268,7 @@ export function Alerts() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-300">
+        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-150">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Unread
@@ -285,7 +285,7 @@ export function Alerts() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-300">
+        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-150">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               High Priority
@@ -302,7 +302,7 @@ export function Alerts() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-300">
+        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-150">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Today
@@ -395,7 +395,7 @@ export function Alerts() {
                                   {filteredAlerts.map((alert) => (
                     <Card 
                       key={alert.id} 
-                      className={`bg-gradient-to-r from-white to-gray-50 hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4 ${
+                      className={`bg-gradient-to-r from-white to-gray-50 hover:shadow-lg transition-all duration-100 cursor-pointer border-l-4 ${
                         !alert.isRead ? 'border-l-blue-500 ring-2 ring-blue-100' : 'border-l-gray-200'
                       } ${
                         alert.severity === 'high' ? 'hover:border-l-red-500' :
@@ -634,7 +634,7 @@ export function Alerts() {
                         {selectedAlert.changeDetails.changes.map((change, index) => (
                           <div key={index} className="bg-gradient-card border border-border rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm font-semibold text-foreground font-mono">
+                              <span className="text-sm font-semibold text-card-foreground font-mono">
                                 {change.field}
                               </span>
                               <Badge variant="outline" className="text-xs">

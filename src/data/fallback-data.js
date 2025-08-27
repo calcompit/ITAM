@@ -33,7 +33,7 @@ export const fallbackComputers = [
     nics: [{ name: 'Ethernet', ip: '10.53.64.101' }],
     os: { caption: 'Windows 11 Pro', version: '10.0.22621', installDate: '2023-03-20' },
     lastBoot: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
     winActivated: true,
     isPinned: false
   },

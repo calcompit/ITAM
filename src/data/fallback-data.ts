@@ -13,7 +13,7 @@ export const fallbackComputers = [
     gpu: { model: 'Intel UHD Graphics 630', memory: 0 },
     network: { adapters: [{ name: 'Ethernet', ip: '192.168.1.100' }] },
     lastBoot: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
     winActivated: true,
     isPinned: false
   },
@@ -30,7 +30,7 @@ export const fallbackComputers = [
     gpu: { model: 'NVIDIA GTX 1660', memory: 6 },
     network: { adapters: [{ name: 'Ethernet', ip: '192.168.1.101' }] },
     lastBoot: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    updatedAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
     winActivated: false,
     isPinned: false
   }

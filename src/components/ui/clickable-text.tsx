@@ -27,8 +27,8 @@ export function ClickableText({ text, className, title, onClick }: ClickableText
   return (
     <div 
       className={cn(
-        "cursor-pointer hover:bg-muted/50 px-2 py-1 rounded transition-colors",
-        copied && "bg-green-500/20 text-green-600",
+        "cursor-pointer hover:bg-accent px-2 py-1 rounded transition-all duration-80 hover:scale-101",
+        copied && "bg-status-online/20 text-status-online shadow-sm",
         className
       )}
       onClick={handleClick}

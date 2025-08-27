@@ -21,10 +21,9 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
   return (
     <Card 
       className={cn(
-        "relative overflow-hidden cursor-pointer transition-all duration-300",
-        "bg-gradient-card border-border shadow-card",
-        "hover:shadow-glow hover:scale-105",
-        isUpdated && "animate-data-update ring-2 ring-blue-500 ring-opacity-50"
+        "relative overflow-hidden cursor-pointer card-elevated",
+        "bg-gradient-card border-border",
+        isUpdated && "animate-data-update ring-2 ring-primary ring-opacity-50"
       )}
       onClick={() => onClick(computer)}
     >
@@ -35,7 +34,7 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
             <ClickableText 
               text={computer.computerName} 
               title="Click to copy Computer Name"
-              className="text-base font-semibold text-foreground"
+              className="text-base font-semibold text-card-foreground"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -48,7 +47,7 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
               e.stopPropagation();
               onPin(computer.machineID);
             }}
-            className={`h-8 w-8 p-0 ${computer.isPinned ? "bg-blue-600 hover:bg-blue-700" : "hover:bg-blue-100 dark:hover:bg-blue-900/20"}`}
+            className={`h-8 w-8 p-0 transition-all duration-80 ${computer.isPinned ? "bg-primary hover:bg-primary/90" : "hover:bg-accent"}`}
             title={computer.isPinned ? "Unpin Computer" : "Pin Computer"}
           >
             {computer.isPinned ? (
@@ -67,7 +66,7 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
             <div className="flex items-center gap-2">
               <ClickableText 
                 text={computer.ipAddresses[0] || "N/A"}
-                className="text-sm font-mono text-foreground hover:text-blue-600 dark:hover:text-blue-400"
+                className="text-sm font-mono text-card-foreground hover:text-primary"
                 onClick={(e) => e.stopPropagation()}
               />
               {onVNC && computer.ipAddresses[0] && (
@@ -78,10 +77,10 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
                     e.stopPropagation();
                     onVNC(computer.ipAddresses[0], computer.computerName);
                   }}
-                  className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                  className="h-8 w-8 p-0 hover:bg-accent transition-all duration-80"
                   title="VNC Connection"
                 >
-                  <MonitorCheck className="h-4 w-4 text-blue-500" />
+                  <MonitorCheck className="h-4 w-4 text-primary" />
                 </Button>
               )}
             </div>
@@ -100,14 +99,14 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
           <div className="text-xs">
             <div className="flex items-center justify-between">
               <span className={cn(
-                "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300",
+                "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-100 status-indicator",
                 computer.status === 'online' 
                   ? 'bg-status-online/20 text-status-online' 
                   : 'bg-status-offline/20 text-status-offline',
                 isUpdated && "animate-status-change"
               )}>
                 <div className={cn(
-                  "w-2 h-2 rounded-full transition-all duration-300",
+                  "w-2 h-2 rounded-full transition-all duration-100",
                   computer.status === 'online' ? 'bg-status-online' : 'bg-status-offline',
                   isUpdated && "animate-pulse"
                 )} />
@@ -120,13 +119,13 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
               <span className="text-muted-foreground">RAM:</span>
-              <span className="ml-1 text-foreground">
+              <span className="ml-1 text-card-foreground">
                 {computer.ram?.totalGB ? `${computer.ram.totalGB}GB` : 'N/A'}
               </span>
             </div>
             <div>
               <span className="text-muted-foreground">Storage:</span>
-              <span className="ml-1 text-foreground">
+              <span className="ml-1 text-card-foreground">
                 {computer.storage?.totalGB ? `${computer.storage.totalGB}GB` : 'N/A'}
               </span>
             </div>

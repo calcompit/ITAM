@@ -6,6 +6,15 @@ import http from 'http';
 import { spawn } from 'child_process';
 import path from 'path';
 
+// Helper function to check if computer is online (10 minutes threshold)
+function isComputerOnline(updatedAt) {
+  const now = new Date();
+  const utcDate = new Date(updatedAt);
+  const thaiDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000)); // Convert to Thai time
+  const diffInMinutes = (now - thaiDate) / (1000 * 60);
+  return diffInMinutes <= 10;
+}
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -992,13 +1001,13 @@ app.get('/api/computers', async (req, res) => {
         hudColorARGB: row.HUD_ColorARGB,
                      winActivated: row.Win_Activated === 1 || row.Win_Activated === true,
         status: (() => {
-          // Check if the computer is online based on UpdatedAt
+          // Check if the computer is online based on UpdatedAt (10 minutes threshold)
           // Convert to Thai time for comparison
           const now = new Date();
           const utcDate = new Date(row.UpdatedAt);
           const thaiDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000));
-          const diffDays = (now - thaiDate) / (1000 * 60 * 60 * 24);
-          return diffDays <= 7 ? 'online' : 'offline';
+          const diffInMinutes = (now - thaiDate) / (1000 * 60);
+          return diffInMinutes <= 10 ? 'online' : 'offline';
         })(),
         isPinned: false
       };
@@ -1158,8 +1167,8 @@ app.get('/api/ip-groups', async (req, res) => {
         SELECT 
           SUBSTRING(IPv4, 1, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4) + 1) + 1) - 1) + '.x' as subnet,
           COUNT(*) as totalComputers,
-          SUM(CASE WHEN DATEDIFF(DAY, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) <= 7 THEN 1 ELSE 0 END) as onlineCount,
-          SUM(CASE WHEN DATEDIFF(DAY, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) > 7 THEN 1 ELSE 0 END) as offlineCount,
+          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) <= 10 THEN 1 ELSE 0 END) as onlineCount,
+          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) > 10 THEN 1 ELSE 0 END) as offlineCount,
           0 as alertCount
         FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
         WHERE IPv4 IS NOT NULL AND IPv4 != ''
@@ -1736,7 +1745,7 @@ app.get('/api/computers/:machineID/status', async (req, res) => {
     }
 
     const computer = result.recordset[0];
-    const isOnline = computer.minutesSinceUpdate <= (7 * 24 * 60); // 7 days in minutes
+    const isOnline = computer.minutesSinceUpdate <= 10; // 10 minutes threshold
     
     res.json({
       machineID: computer.MachineID,
@@ -2836,6 +2845,8 @@ app.post('/api/test/add-sample-alerts', async (req, res) => {
     });
   }
 });
+
+
 
 // Start server
 server.listen(PORT, () => {

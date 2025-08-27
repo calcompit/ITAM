@@ -134,30 +134,30 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
 
 
   return (
-    <div className="w-64 h-screen bg-card border-r border-border flex flex-col">
+    <div className="w-64 h-screen bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Header */}
-      <div className="p-6 border-b border-border">
+      <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-xl font-bold text-foreground">IT Asset Monitor</h1>
+          <h1 className="text-xl font-bold text-sidebar-foreground">IT Asset Monitor</h1>
           <ThemeToggle size="sm" variant="ghost" />
         </div>
-        <p className="text-sm text-muted-foreground">Real-time tracking</p>
-        <p className="text-xs text-muted-foreground mt-2">User: {user.username}</p>
-        <div className="mt-2 p-2 bg-muted rounded text-xs">
+        <p className="text-sm text-sidebar-muted-foreground">Real-time tracking</p>
+        <p className="text-xs text-sidebar-muted-foreground mt-2">User: {user.username}</p>
+        <div className="mt-2 p-2 bg-sidebar-accent rounded text-xs">
           <div className="flex items-center gap-1">
             <div className={`w-2 h-2 rounded-full ${
-              connectionStatus === 'connected' ? 'bg-green-500 animate-pulse' :
-              connectionStatus === 'fallback' ? 'bg-yellow-500 animate-pulse' :
-              'bg-red-500'
+              connectionStatus === 'connected' ? 'bg-status-online animate-pulse' :
+              connectionStatus === 'fallback' ? 'bg-status-warning animate-pulse' :
+              'bg-status-offline'
             }`}></div>
-            <span className="text-muted-foreground">Last Update:</span>
+            <span className="text-sidebar-muted-foreground">Last Update:</span>
             <span className="font-mono">{lastUpdate.toLocaleTimeString()}</span>
           </div>
-          <div className="text-muted-foreground mt-1">
-            Status: <span className={
-              connectionStatus === 'connected' ? 'text-green-600' :
-              connectionStatus === 'fallback' ? 'text-yellow-600' :
-              'text-red-600'
+          <div className="text-sidebar-muted-foreground mt-1">
+            Status:             <span className={
+              connectionStatus === 'connected' ? 'text-status-online' :
+              connectionStatus === 'fallback' ? 'text-status-warning' :
+              'text-status-offline'
             }>
               {connectionStatus === 'connected' ? 'Connected' :
                connectionStatus === 'fallback' ? 'Using Cache' :
@@ -168,12 +168,12 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
       </div>
 
       {/* Pin Filter Button */}
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-sidebar-border">
         <Button
           variant={showPinnedOnly ? "default" : "outline"}
           className={cn(
             "w-full justify-start gap-3 h-12",
-            showPinnedOnly && "bg-blue-600 hover:bg-blue-700"
+            showPinnedOnly && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
           )}
           onClick={onPinnedToggle}
         >
@@ -196,17 +196,17 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
           return (
             <Button
               key={item.id}
-              variant={activeTab === item.id ? "secondary" : "ghost"}
+              variant={activeTab === item.id ? "default" : "ghost"}
               className={cn(
                 "w-full justify-start gap-3 h-12 relative",
-                activeTab === item.id && "bg-primary text-primary-foreground"
+                activeTab === item.id ? "bg-sidebar-primary text-sidebar-primary-foreground" : "hover:bg-sidebar-accent"
               )}
               onClick={() => onTabChange(item.id)}
             >
               <div className="relative">
                 <Icon className="h-5 w-5" />
                 {item.badge && (
-                  <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold min-w-[20px]">
+                  <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold min-w-[20px]">
                     {item.badge > 99 ? '99+' : item.badge}
                   </div>
                 )}
@@ -218,14 +218,14 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-border space-y-2">
+      <div className="p-4 border-t border-sidebar-border space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Light/Dark</span>
+          <span className="text-xs text-sidebar-muted-foreground">Light/Dark</span>
           <ThemeToggle size="sm" variant="outline" />
         </div>
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3 h-12 text-destructive hover:text-destructive"
+          className="w-full justify-start gap-3 h-12 text-destructive hover:bg-destructive/10"
           onClick={onLogout}
         >
           <LogOut className="h-5 w-5" />
