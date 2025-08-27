@@ -75,8 +75,12 @@ app.use(express.json());
 // Serve static files from the dist directory
 app.use(express.static(path.join(process.cwd(), 'dist')));
 
-// Serve index.html for all routes (SPA routing)
-app.get('*', (req, res) => {
+// Serve index.html for all non-API routes (SPA routing)
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
   res.sendFile(path.join(process.cwd(), 'dist', 'index.html'));
 });
 
