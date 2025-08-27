@@ -303,6 +303,26 @@ wss.on('connection', (ws) => {
     timestamp: new Date().toISOString()
   }));
   
+  // Send test alert notification for development
+  setTimeout(() => {
+    ws.send(JSON.stringify({
+      type: 'alert_notification',
+      alert: {
+        id: 'test-001',
+        machineID: 'TEST-MACHINE-001',
+        type: 'network',
+        severity: 'medium',
+        title: 'Test Alert Notification',
+        description: 'This is a test alert notification via WebSocket',
+        computerName: 'TEST-PC-001',
+        timestamp: new Date().toISOString(),
+        username: 'TEST_USER',
+        isRead: false
+      },
+      message: 'New alert received'
+    }));
+  }, 2000); // Send after 2 seconds
+  
   ws.on('close', () => {
     clients.delete(ws);
     // Remove from userClients if exists
@@ -340,6 +360,26 @@ wss.on('connection', (ws) => {
     }
   });
 });
+
+// Function to send alert notification to specific user
+function sendAlertNotificationToUser(username, alert) {
+  const userWsSet = userClients.get(username);
+  if (userWsSet) {
+    const notification = {
+      type: 'alert_notification',
+      alert: alert,
+      message: 'New alert received'
+    };
+    
+    userWsSet.forEach(ws => {
+      if (ws.readyState === 1) { // WebSocket.OPEN
+        ws.send(JSON.stringify(notification));
+      }
+    });
+    
+    console.log(`[WebSocket] Sent alert notification to user: ${username}`);
+  }
+}
 
 // VNC Helper Functions
 
