@@ -30,6 +30,12 @@ SET HUD_Version = '1.8.2',
     UpdatedAt = GETUTCDATE()
 WHERE MachineID = 'AEF413D40420EDE58113A347BCA5346BEBCF2EDDAA7A01441DB7983102F39A77';
 
+-- Update WK-SVR01 (the requested computer)
+UPDATE [mes].[dbo].[TBL_IT_MachinesCurrent]
+SET HUD_Version = '3.0.0',
+    UpdatedAt = GETUTCDATE()
+WHERE MachineID = '2AFF086F02635C0A0F42FC0051AC01B446C1BF455CD9CBA3945A6E3B98591712';
+
 -- Show the updated results
 SELECT MachineID, ComputerName, HUD_Version, UpdatedAt
 FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
