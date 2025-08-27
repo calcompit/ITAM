@@ -956,11 +956,12 @@ app.get('/api/computers', async (req, res) => {
           OS_Caption,
           OS_Version,
           OS_InstallDate,
-                  LastBoot,
-        IPv4,
-        UpdatedAt,
+          LastBoot,
+          IPv4,
+          UpdatedAt,
           HUD_Mode,
           HUD_ColorARGB,
+          HUD_Version,
           Win_Activated
         FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
         ORDER BY ComputerName
@@ -1011,7 +1012,8 @@ app.get('/api/computers', async (req, res) => {
         })(),
         hudMode: row.HUD_Mode,
         hudColorARGB: row.HUD_ColorARGB,
-                     winActivated: row.Win_Activated === 1 || row.Win_Activated === true,
+        hudVersion: row.HUD_Version,
+        winActivated: row.Win_Activated === 1 || row.Win_Activated === true,
         status: (() => {
           // Check if the computer is online based on UpdatedAt (10 minutes threshold)
           // Convert to Thai time for comparison
