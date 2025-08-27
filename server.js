@@ -634,38 +634,28 @@ async function startChangeMonitoring(pool) {
         ELSE
           SET @changeType = 'DELETE';
         
-        SET @message = (
+        -- Get all columns dynamically using INFORMATION_SCHEMA
+        DECLARE @columns NVARCHAR(MAX) = '';
+        SELECT @columns = STRING_AGG(COLUMN_NAME, ',') 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = 'dbo' 
+          AND TABLE_NAME = 'TBL_IT_MachinesCurrent'
+          AND TABLE_CATALOG = 'mes';
+        
+        -- Build dynamic SQL for JSON generation
+        DECLARE @sql NVARCHAR(MAX) = '
           SELECT 
-            @changeType as changeType,
+            ''' + @changeType + ''' as changeType,
             GETUTCDATE() as timestamp,
-            MachineID,
-            ComputerName,
-            Domain,
-            UUID,
-            SUser,
-            BoardSerial,
-            BiosSerial,
-            CPU_Model,
-            CPU_PhysicalCores,
-            CPU_LogicalCores,
-            RAM_TotalGB,
-            RAM_ModulesJson,
-            Storage_TotalGB,
-            Storage_Json,
-            GPU_Json,
-            NICs_Json,
-            OS_Caption,
-            OS_Version,
-            OS_InstallDate,
-            LastBoot,
-            IPv4,
-            UpdatedAt,
-            HUD_Mode,
-            HUD_ColorARGB,
-            Win_Activated
+            ' + @columns + '
           FROM inserted
           FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
-        );
+        ';
+        
+        -- Execute dynamic SQL
+        DECLARE @result NVARCHAR(MAX);
+        EXEC sp_executesql @sql, N'@result NVARCHAR(MAX) OUTPUT', @result OUTPUT;
+        SET @message = @result;
         
         IF @message IS NOT NULL
         BEGIN
