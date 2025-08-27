@@ -2588,6 +2588,36 @@ app.post('/api/setup/create-read-status-table', async (req, res) => {
   }
 });
 
+// Test endpoint to clear read status for a user
+app.post('/api/test/clear-read-status', async (req, res) => {
+  try {
+    const { username } = req.body;
+    const pool = await getDbConnection();
+    
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
+    const result = await pool.request()
+      .input('username', sql.VarChar, username)
+      .query(`
+        DELETE FROM TBL_IT_AlertReadStatus 
+        WHERE UserID = @username
+      `);
+    
+    res.json({ 
+      success: true, 
+      message: `Cleared read status for user: ${username}`,
+      deletedCount: result.rowsAffected[0]
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      error: 'Failed to clear read status', 
+      details: err.message 
+    });
+  }
+});
+
 // Test endpoint to add sample alerts
 app.post('/api/test/add-sample-alerts', async (req, res) => {
   try {

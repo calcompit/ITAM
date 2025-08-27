@@ -128,11 +128,14 @@ export function Alerts() {
   const loadAlerts = async () => {
     try {
       setIsLoading(true);
-      // Get current user from localStorage or use default
-      const currentUser = localStorage.getItem('currentUser') 
-        ? JSON.parse(localStorage.getItem('currentUser')!).username 
-        : 'admin';
+      // Get current user from localStorage - must be logged in
+      const currentUserData = localStorage.getItem('currentUser');
+      if (!currentUserData) {
+        console.error('No user logged in');
+        return;
+      }
       
+      const currentUser = JSON.parse(currentUserData).username;
       console.log('Loading alerts for user:', currentUser);
       const allAlerts = await apiService.getAlerts(currentUser);
       
@@ -179,10 +182,14 @@ export function Alerts() {
 
   const handleMarkAsRead = async (alert: AlertItem) => {
     try {
-      // Get current user
-      const currentUser = localStorage.getItem('currentUser') 
-        ? JSON.parse(localStorage.getItem('currentUser')!).username 
-        : 'admin';
+      // Get current user - must be logged in
+      const currentUserData = localStorage.getItem('currentUser');
+      if (!currentUserData) {
+        console.error('No user logged in');
+        return;
+      }
+      
+      const currentUser = JSON.parse(currentUserData).username;
       
       // Call backend API to mark as read
       await apiService.markAlertAsRead(currentUser, alert.id);
@@ -199,10 +206,14 @@ export function Alerts() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      // Get current user
-      const currentUser = localStorage.getItem('currentUser') 
-        ? JSON.parse(localStorage.getItem('currentUser')!).username 
-        : 'admin';
+      // Get current user - must be logged in
+      const currentUserData = localStorage.getItem('currentUser');
+      if (!currentUserData) {
+        console.error('No user logged in');
+        return;
+      }
+      
+      const currentUser = JSON.parse(currentUserData).username;
       
       // Call backend API to mark all as read
       await apiService.markAllAlertsAsRead(currentUser);
