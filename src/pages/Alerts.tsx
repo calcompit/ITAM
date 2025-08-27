@@ -536,17 +536,36 @@ export function Alerts() {
                             </div>
                           </div>
                           
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleMarkAsRead(alert);
-                            }}
-                            className="h-8 w-8 p-0 opacity-60 hover:opacity-100 hover:bg-gray-100 rounded-full"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            {!alert.isRead && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkAsRead(alert);
+                                }}
+                                className="h-8 px-3 text-xs bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 rounded-md"
+                                title="Mark as read"
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Read
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedAlert(alert);
+                                setShowDetails(true);
+                              }}
+                              className="h-8 w-8 p-0 opacity-60 hover:opacity-100 hover:bg-gray-100 rounded-full"
+                              title="View details"
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
