@@ -251,69 +251,69 @@ export function Alerts() {
 
       {/* Modern Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-300">
+        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Alerts
             </CardTitle>
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Bell className="h-4 w-4 text-blue-600" />
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Bell className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-900">{stats.total}</div>
-            <p className="text-xs text-blue-600 mt-1">
+            <div className="text-3xl font-bold text-foreground">{stats.total}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               All time alerts
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-all duration-300">
+        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-amber-700">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Unread
             </CardTitle>
-            <div className="p-2 bg-amber-100 rounded-lg">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <div className="p-2 bg-status-warning/10 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-status-warning" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-amber-900">{stats.unread}</div>
-            <p className="text-xs text-amber-600 mt-1">
+            <div className="text-3xl font-bold text-status-warning">{stats.unread}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Need attention
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg transition-all duration-300">
+        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-700">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               High Priority
             </CardTitle>
-            <div className="p-2 bg-red-100 rounded-lg">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
+            <div className="p-2 bg-status-offline/10 rounded-lg">
+              <AlertTriangle className="h-4 w-4 text-status-offline" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-900">{stats.highPriority}</div>
-            <p className="text-xs text-red-600 mt-1">
+            <div className="text-3xl font-bold text-status-offline">{stats.highPriority}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Critical issues
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all duration-300">
+        <Card className="bg-gradient-card border-border shadow-card hover:shadow-glow hover:scale-105 transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
               Today
             </CardTitle>
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Calendar className="h-4 w-4 text-green-600" />
+            <div className="p-2 bg-status-online/10 rounded-lg">
+              <Calendar className="h-4 w-4 text-status-online" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-900">{stats.today}</div>
-            <p className="text-xs text-green-600 mt-1">
+            <div className="text-3xl font-bold text-status-online">{stats.today}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Recent changes
             </p>
           </CardContent>
@@ -321,11 +321,11 @@ export function Alerts() {
       </div>
 
       {/* Modern Filters */}
-      <Card className="bg-gradient-to-r from-slate-50 to-slate-100 border-slate-200">
+      <Card className="bg-gradient-card border-border shadow-card">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-slate-700">
-            <div className="p-1.5 bg-slate-200 rounded-lg">
-              <Filter className="h-4 w-4 text-slate-600" />
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <div className="p-1.5 bg-muted rounded-lg">
+              <Filter className="h-4 w-4 text-muted-foreground" />
             </div>
             Filters & Search
           </CardTitle>
@@ -334,12 +334,12 @@ export function Alerts() {
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search alerts by computer name, user, or description..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="pl-10 bg-card border-border focus:border-primary focus:ring-primary"
                 />
               </div>
             </div>
@@ -581,7 +581,7 @@ export function Alerts() {
                     <div className="max-w-full overflow-x-auto">
                       <button
                         onClick={() => handleViewComputerDetails(selectedAlert.machineID || selectedAlert.id)}
-                        className="text-sm font-mono text-xs bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded cursor-pointer transition-colors duration-200 text-blue-700 hover:text-blue-800"
+                        className="text-sm font-mono text-xs bg-primary/10 hover:bg-primary/20 border border-primary/20 px-2 py-1 rounded cursor-pointer transition-colors duration-200 text-primary hover:text-primary/80"
                         title="Click to view computer details"
                       >
                         {selectedAlert.machineID || selectedAlert.id}
@@ -632,9 +632,9 @@ export function Alerts() {
                     {selectedAlert.changeDetails ? (
                       <div className="mt-2 space-y-3">
                         {selectedAlert.changeDetails.changes.map((change, index) => (
-                          <div key={index} className="bg-gradient-to-r from-red-50 to-green-50 border border-gray-200 rounded-lg p-4">
+                          <div key={index} className="bg-gradient-card border border-border rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm font-semibold text-gray-700 font-mono">
+                              <span className="text-sm font-semibold text-foreground font-mono">
                                 {change.field}
                               </span>
                               <Badge variant="outline" className="text-xs">
@@ -643,14 +643,14 @@ export function Alerts() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                               <div>
-                                <label className="text-xs font-medium text-red-600">Previous Value</label>
-                                <p className="text-sm bg-red-50 border border-red-200 rounded px-2 py-1 text-red-700 break-all">
+                                <label className="text-xs font-medium text-status-offline">Previous Value</label>
+                                <p className="text-sm bg-status-offline/10 border border-status-offline/20 rounded px-2 py-1 text-status-offline break-all">
                                   {change.oldValue}
                                 </p>
                               </div>
                               <div>
-                                <label className="text-xs font-medium text-green-600">New Value</label>
-                                <p className="text-sm bg-green-50 border border-green-200 rounded px-2 py-1 text-green-700 break-all">
+                                <label className="text-xs font-medium text-status-online">New Value</label>
+                                <p className="text-sm bg-status-online/10 border border-status-online/20 rounded px-2 py-1 text-status-online break-all">
                                   {change.newValue}
                                 </p>
                               </div>
