@@ -22,12 +22,17 @@ export class WebSocketService {
         this.reconnectAttempts = 0;
         
         // Send authentication message if user is logged in
-        const currentUser = localStorage.getItem('currentUser');
-        if (currentUser) {
-          this.ws?.send(JSON.stringify({
-            type: 'authenticate',
-            username: currentUser
-          }));
+        const savedUser = localStorage.getItem('it-asset-monitor-user');
+        if (savedUser) {
+          try {
+            const userData = JSON.parse(savedUser);
+            this.ws?.send(JSON.stringify({
+              type: 'authenticate',
+              username: userData.username
+            }));
+          } catch (err) {
+            console.error('Error parsing user data for WebSocket:', err);
+          }
         }
       };
 
@@ -70,8 +75,7 @@ export class WebSocketService {
     if (type === 'session_terminated') {
       console.log('Session terminated by server:', data.message);
       // Clear local storage and redirect to login
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('currentPassword');
+      localStorage.removeItem('it-asset-monitor-user');
       window.location.href = '/login';
       return;
     }

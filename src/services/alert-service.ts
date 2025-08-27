@@ -29,7 +29,17 @@ class AlertService {
   async getAlerts(page: number = 1, limit: number = 50, unreadOnly: boolean = false): Promise<AlertRecord[]> {
     try {
       // Get current user from localStorage
-      const currentUser = localStorage.getItem('currentUser') || 'testuser';
+      const savedUser = localStorage.getItem('it-asset-monitor-user');
+      let currentUser = 'testuser';
+      
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          currentUser = userData.username;
+        } catch (err) {
+          console.error('Error parsing user data:', err);
+        }
+      }
       
       const response = await fetch(
         `${this.baseUrl}/alerts/${currentUser}?page=${page}&limit=${limit}&unreadOnly=${unreadOnly}`,
@@ -101,8 +111,21 @@ class AlertService {
   // Mark alert as read
   async markAsRead(changeID: number): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/alerts/${changeID}/read`, {
-        method: 'PUT',
+      // Get current user from localStorage
+      const savedUser = localStorage.getItem('it-asset-monitor-user');
+      let currentUser = 'testuser';
+      
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          currentUser = userData.username;
+        } catch (err) {
+          console.error('Error parsing user data:', err);
+        }
+      }
+
+      const response = await fetch(`${this.baseUrl}/alerts/${currentUser}/read/${changeID}`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -118,8 +141,21 @@ class AlertService {
   // Mark all alerts as read
   async markAllAsRead(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/alerts/read-all`, {
-        method: 'PUT',
+      // Get current user from localStorage
+      const savedUser = localStorage.getItem('it-asset-monitor-user');
+      let currentUser = 'testuser';
+      
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          currentUser = userData.username;
+        } catch (err) {
+          console.error('Error parsing user data:', err);
+        }
+      }
+
+      const response = await fetch(`${this.baseUrl}/alerts/${currentUser}/read-all`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
