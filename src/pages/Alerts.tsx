@@ -20,7 +20,8 @@ import {
   Calendar,
   TrendingUp
 } from "lucide-react";
-import { apiService, type AlertItem } from "@/services/api";
+import { apiService, type AlertItem, type APIComputer } from "@/services/api";
+import { ComputerDetailsModal } from "@/components/computer-details-modal";
 
 export function Alerts() {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
@@ -34,6 +35,10 @@ export function Alerts() {
   const [selectedAlert, setSelectedAlert] = useState<AlertItem | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [currentUser] = useState(() => localStorage.getItem('it-asset-monitor-user') || 'admin');
+  
+  // Computer details modal state
+  const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
+  const [showComputerDetails, setShowComputerDetails] = useState(false);
 
   // Load alerts on mount
   useEffect(() => {
@@ -144,6 +149,24 @@ export function Alerts() {
       console.log('All alerts marked as read');
     } catch (error) {
       console.error('Error marking all alerts as read:', error);
+    }
+  };
+
+  const handleViewComputerDetails = async (machineID: string) => {
+    try {
+      // Fetch computer details from API
+      const computers = await apiService.getComputers();
+      const computer = computers.find(c => c.machineID === machineID);
+      
+      if (computer) {
+        setSelectedComputer(computer);
+        setShowComputerDetails(true);
+        setShowDetails(false); // Close alert details modal
+      } else {
+        console.error('Computer not found:', machineID);
+      }
+    } catch (error) {
+      console.error('Error fetching computer details:', error);
     }
   };
 
@@ -555,9 +578,15 @@ export function Alerts() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Machine ID</label>
-                    <p className="text-sm font-mono text-xs bg-muted px-2 py-1 rounded">
-                      {selectedAlert.machineID || selectedAlert.id}
-                    </p>
+                    <div className="max-w-full overflow-x-auto">
+                      <button
+                        onClick={() => handleViewComputerDetails(selectedAlert.machineID || selectedAlert.id)}
+                        className="text-sm font-mono text-xs bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2 py-1 rounded cursor-pointer transition-colors duration-200 text-blue-700 hover:text-blue-800"
+                        title="Click to view computer details"
+                      >
+                        {selectedAlert.machineID || selectedAlert.id}
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Changed By</label>
@@ -640,6 +669,16 @@ export function Alerts() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Computer Details Modal */}
+      <ComputerDetailsModal
+        computer={selectedComputer}
+        open={showComputerDetails}
+        onClose={() => {
+          setShowComputerDetails(false);
+          setSelectedComputer(null);
+        }}
+      />
     </div>
   );
 }
