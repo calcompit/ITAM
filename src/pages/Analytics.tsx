@@ -25,6 +25,7 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
   // Use global data context instead of local state
   const { computers, loading, error } = useData();
   
+  const [localComputers, setLocalComputers] = useState<APIComputer[]>([]);
   const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [cpuFilter, setCpuFilter] = useState<string>("all");
@@ -40,6 +41,30 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
     const links = getStoredVNCLinks();
     setVncLinks(links);
   }, []);
+
+  // Sync localComputers with global computers data and pinned status
+  useEffect(() => {
+    if (computers.length > 0) {
+      // Load pinned computers from localStorage
+      const loadPinnedComputers = (): string[] => {
+        try {
+          const pinned = localStorage.getItem('pinnedComputers');
+          return pinned ? JSON.parse(pinned) : [];
+        } catch (error) {
+          return [];
+        }
+      };
+      
+      const pinnedMachineIDs = loadPinnedComputers();
+      const updatedComputers = computers.map(computer => ({
+        ...computer,
+        isPinned: pinnedMachineIDs.includes(computer.machineID)
+      }));
+      setLocalComputers(updatedComputers);
+    } else {
+      setLocalComputers([]);
+    }
+  }, [computers]);
   
   // VNC Connection Modal States
   const [showVncModal, setShowVncModal] = useState(false);
@@ -244,8 +269,47 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
   }, []);
 
   const handlePin = (machineID: string) => {
-    // Pin functionality is handled by global data context
-    console.log('Pin functionality handled by global context');
+    // Load pinned computers from localStorage
+    const loadPinnedComputers = (): string[] => {
+      try {
+        const pinned = localStorage.getItem('pinnedComputers');
+        return pinned ? JSON.parse(pinned) : [];
+      } catch (error) {
+        return [];
+      }
+    };
+
+    // Save pinned computers to localStorage
+    const savePinnedComputers = (pinnedMachineIDs: string[]) => {
+      try {
+        localStorage.setItem('pinnedComputers', JSON.stringify(pinnedMachineIDs));
+      } catch (error) {
+        // Ignore localStorage errors
+      }
+    };
+
+    const computer = localComputers.find(c => c.machineID === machineID);
+    const isCurrentlyPinned = computer?.isPinned || false;
+    
+    // Update computer's pinned status
+    const updatedComputers = localComputers.map(computer => {
+      if (computer.machineID === machineID) {
+        return { ...computer, isPinned: !computer.isPinned };
+      }
+      return computer;
+    });
+    
+    // Update global computers state through DataContext
+    // Note: This will trigger a re-render of the component
+    
+    // Save to localStorage
+    const pinnedMachineIDs = updatedComputers
+      .filter(computer => computer.isPinned)
+      .map(computer => computer.machineID);
+    savePinnedComputers(pinnedMachineIDs);
+    
+    // Force re-render by updating the component state
+    setLocalComputers(updatedComputers);
   };
 
   // Extract CPU types
@@ -260,11 +324,11 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
   };
 
   const filteredComputers = useMemo(() => {
-    let computersToFilter = computers;
+    let computersToFilter = localComputers;
     
     // Apply pinned filter first (global filter)
     if (showPinnedOnly) {
-      computersToFilter = computers.filter(c => c.isPinned);
+      computersToFilter = localComputers.filter(c => c.isPinned);
     }
     
     const filtered = computersToFilter.filter(computer => {
@@ -324,7 +388,7 @@ export function Analytics({ showPinnedOnly = false }: AnalyticsProps) {
       // If IPs are equal or both empty, sort by computer name
       return (a.computerName || "").localeCompare(b.computerName || "");
     });
-  }, [computers, searchTerm, cpuFilter, ramFilter, storageFilter, activatedFilter, showPinnedOnly]);
+  }, [localComputers, searchTerm, cpuFilter, ramFilter, storageFilter, activatedFilter, showPinnedOnly]);
 
 
 

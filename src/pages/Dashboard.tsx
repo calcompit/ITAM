@@ -43,6 +43,7 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
   const { computers, ipGroups, loading, error, isUpdating } = useData();
   
   const [pinnedComputers, setPinnedComputers] = useState<string[]>([]);
+  const [localComputers, setLocalComputers] = useState<APIComputer[]>([]);
   const [selectedSubnet, setSelectedSubnet] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
@@ -86,11 +87,20 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
 
 
 
-  // Load pinned computers on mount
+  // Load pinned computers on mount and sync with computers data
   useEffect(() => {
     const pinnedMachineIDs = loadPinnedComputers();
     setPinnedComputers(pinnedMachineIDs);
-  }, []);
+    
+    // Sync pinned status with computers data
+    if (computers.length > 0) {
+      const updatedComputers = computers.map(computer => ({
+        ...computer,
+        isPinned: pinnedMachineIDs.includes(computer.machineID)
+      }));
+      setLocalComputers(updatedComputers);
+    }
+  }, [computers.length]);
 
   // Update pinned count when pinned computers change
   useEffect(() => {
@@ -99,28 +109,43 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
     }
   }, [pinnedComputers, onPinnedCountChange]);
 
+  // Sync pinned status when computers data changes
+  useEffect(() => {
+    if (computers.length > 0) {
+      const pinnedMachineIDs = loadPinnedComputers();
+      const updatedComputers = computers.map(computer => ({
+        ...computer,
+        isPinned: pinnedMachineIDs.includes(computer.machineID)
+      }));
+      setLocalComputers(updatedComputers);
+    } else {
+      setLocalComputers([]);
+    }
+  }, [computers]);
+
 
 
   const handlePin = (machineID: string) => {
-    const computer = computers.find(c => c.machineID === machineID);
+    const computer = localComputers.find(c => c.machineID === machineID);
     const isCurrentlyPinned = computer?.isPinned || false;
     
-    const updatedComputers = computers.map(computer => {
+    const updatedComputers = localComputers.map(computer => {
       if (computer.machineID === machineID) {
         return { ...computer, isPinned: !computer.isPinned };
       }
       return computer;
     });
     
-    setComputers(updatedComputers);
+    setLocalComputers(updatedComputers);
     
-    // Save to localStorage
-    const pinnedMachineIDs = updatedComputers
+    // Update pinnedComputers state
+    const newPinnedMachineIDs = updatedComputers
       .filter(computer => computer.isPinned)
       .map(computer => computer.machineID);
-    savePinnedComputers(pinnedMachineIDs);
-
-
+    setPinnedComputers(newPinnedMachineIDs);
+    
+    // Save to localStorage
+    savePinnedComputers(newPinnedMachineIDs);
   };
 
   const handleComputerClick = (computer: APIComputer) => {
@@ -299,20 +324,20 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
     }
   };
 
-  const filteredComputers = computers.filter(computer => 
+  const filteredComputers = localComputers.filter(computer => 
     computer.computerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     computer.machineID.toLowerCase().includes(searchTerm.toLowerCase()) ||
     computer.ipAddresses.some(ip => ip.includes(searchTerm)) ||
     computer.domain.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalComputers = computers.length;
-  const onlineComputers = computers.filter(c => c.status === "online").length;
-  const offlineComputers = computers.filter(c => c.status === "offline").length;
-  const alertComputers = computers.filter(c => c.status === "alert").length;
-  const activatedComputers = computers.filter(c => c.winActivated).length;
-  const notActivatedComputers = computers.filter(c => !c.winActivated).length;
-  const pinnedComputersList = computers.filter(c => c.isPinned);
+  const totalComputers = localComputers.length;
+  const onlineComputers = localComputers.filter(c => c.status === "online").length;
+  const offlineComputers = localComputers.filter(c => c.status === "offline").length;
+  const alertComputers = localComputers.filter(c => c.status === "alert").length;
+  const activatedComputers = localComputers.filter(c => c.winActivated).length;
+  const notActivatedComputers = localComputers.filter(c => !c.winActivated).length;
+  const pinnedComputersList = localComputers.filter(c => c.isPinned);
   
   // Update pinned count when it changes
   useEffect(() => {
@@ -320,7 +345,7 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
   }, [pinnedComputersList.length, onPinnedCountChange]);
   
   // Calculate stats for selected subnet
-  const subnetComputers = selectedSubnet ? computers.filter(computer => {
+  const subnetComputers = selectedSubnet ? localComputers.filter(computer => {
     const primaryIP = computer.ipAddresses[0] || "";
     if (!primaryIP) return false;
     const computerSubnet = primaryIP.substring(0, primaryIP.lastIndexOf('.')) + '.x';
@@ -331,7 +356,7 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
   const filteredIpGroups = useMemo(() => {
     if (showPinnedOnly) {
       // Filter computers by pinned status first
-      const pinnedComputers = computers.filter(c => c.isPinned);
+      const pinnedComputers = localComputers.filter(c => c.isPinned);
       
       // Group pinned computers by subnet
       const pinnedGroups = new Map<string, { subnet: string; computers: APIComputer[] }>();
@@ -357,7 +382,7 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
       }));
     }
     return ipGroups;
-  }, [ipGroups, showPinnedOnly, computers]);
+  }, [ipGroups, showPinnedOnly, localComputers]);
   
   const subnetTotal = subnetComputers.length;
   const subnetOnline = subnetComputers.filter(c => c.status === "online").length;
@@ -374,7 +399,7 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
     } else if (activeTab === "pinned") {
       computersToDisplay = pinnedComputersList;
     } else if (selectedSubnet) {
-      computersToDisplay = computers.filter(computer => {
+      computersToDisplay = localComputers.filter(computer => {
         const primaryIP = computer.ipAddresses[0] || "";
         if (!primaryIP) return false;
         const computerSubnet = primaryIP.substring(0, primaryIP.lastIndexOf('.')) + '.x';
