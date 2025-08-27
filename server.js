@@ -968,11 +968,23 @@ app.get('/api/computers', async (req, res) => {
       `);
 
     const computers = result.recordset.map(row => {
-      // Parse JSON fields safely
-      const ramModules = row.RAM_ModulesJson ? JSON.parse(row.RAM_ModulesJson) : [];
-      const storageDevices = row.Storage_Json ? JSON.parse(row.Storage_Json) : [];
-      const gpuList = row.GPU_Json ? JSON.parse(row.GPU_Json) : [];
-      const nicList = row.NICs_Json ? JSON.parse(row.NICs_Json) : [];
+      // Parse JSON fields safely with error handling
+      const parseJsonSafely = (jsonString) => {
+        if (!jsonString) return [];
+        try {
+          // Clean the JSON string by removing control characters
+          const cleanedJson = jsonString.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+          return JSON.parse(cleanedJson);
+        } catch (error) {
+          console.error('JSON parsing error:', error.message, 'for JSON:', jsonString?.substring(0, 100));
+          return [];
+        }
+      };
+      
+      const ramModules = parseJsonSafely(row.RAM_ModulesJson);
+      const storageDevices = parseJsonSafely(row.Storage_Json);
+      const gpuList = parseJsonSafely(row.GPU_Json);
+      const nicList = parseJsonSafely(row.NICs_Json);
       
       return {
         machineID: row.MachineID,
