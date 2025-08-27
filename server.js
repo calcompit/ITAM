@@ -1135,6 +1135,79 @@ app.get('/api/ip-groups', async (req, res) => {
   }
 });
 
+// Test alerts endpoint - Add test alerts for development
+app.post('/api/alerts/test', async (req, res) => {
+  try {
+    const { action, count = 5 } = req.body;
+    
+    if (action !== 'add_test_alerts') {
+      return res.status(400).json({ error: 'Invalid action' });
+    }
+    
+    const pool = await getDbConnection();
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
+    // Insert test alerts into changelog
+    const testAlerts = [];
+    const now = new Date();
+    
+    for (let i = 0; i < count; i++) {
+      const testAlert = {
+        ChangeID: 1000 + i,
+        MachineID: `TEST-MACHINE-${String(i + 1).padStart(3, '0')}`,
+        ChangeDate: new Date(now.getTime() - (i * 60000)), // Each alert 1 minute apart
+        ChangedSUser: 'TEST_USER',
+        SnapshotJson_Old: JSON.stringify({ 
+          IPv4: `192.168.1.${100 + i}`,
+          RAM_TotalGB: 8 + i,
+          CPU_Model: 'Intel Core i5'
+        }),
+        SnapshotJson_New: JSON.stringify({ 
+          IPv4: `192.168.1.${101 + i}`,
+          RAM_TotalGB: 16 + i,
+          CPU_Model: 'Intel Core i7'
+        })
+      };
+      
+      testAlerts.push(testAlert);
+    }
+    
+    // Insert test alerts into database
+    for (const alert of testAlerts) {
+      await pool.request()
+        .input('ChangeID', sql.Int, alert.ChangeID)
+        .input('MachineID', sql.VarChar, alert.MachineID)
+        .input('ChangeDate', sql.DateTime, alert.ChangeDate)
+        .input('ChangedSUser', sql.VarChar, alert.ChangedSUser)
+        .input('SnapshotJson_Old', sql.NVarChar, alert.SnapshotJson_Old)
+        .input('SnapshotJson_New', sql.NVarChar, alert.SnapshotJson_New)
+        .query(`
+          IF NOT EXISTS (SELECT 1 FROM [mes].[dbo].[TBL_IT_MachineChangeLog] WHERE ChangeID = @ChangeID)
+          INSERT INTO [mes].[dbo].[TBL_IT_MachineChangeLog] 
+          (ChangeID, MachineID, ChangeDate, ChangedSUser, SnapshotJson_Old, SnapshotJson_New)
+          VALUES (@ChangeID, @MachineID, @ChangeDate, @ChangedSUser, @SnapshotJson_Old, @SnapshotJson_New)
+        `);
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Added ${count} test alerts`,
+      alerts: testAlerts.map(a => ({
+        id: a.ChangeID,
+        machineID: a.MachineID,
+        timestamp: a.ChangeDate,
+        username: a.ChangedSUser
+      }))
+    });
+    
+  } catch (err) {
+    console.error('Error adding test alerts:', err.message);
+    res.status(500).json({ error: 'Failed to add test alerts' });
+  }
+});
+
 // Login endpoint
 app.post('/api/login', async (req, res) => {
   try {
