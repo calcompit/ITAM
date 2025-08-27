@@ -1391,12 +1391,14 @@ app.get('/api/alerts/:username/count', async (req, res) => {
     const { username } = req.params;
     const pool = await getDbConnection();
     
-    // Get unread alerts count - count all alerts for the user (since they're all unread by default)
+    // Get unread alerts count - count only unread alerts
     console.log(`[DEBUG] Fetching unread alerts count for user: ${username}`);
-    const result = await pool.request()
+    
+    // First get all alerts for the user
+    const alertsResult = await pool.request()
       .input('username', sql.VarChar, username)
       .query(`
-        SELECT COUNT(*) as unreadCount
+        SELECT c.ChangeID
         FROM [mes].[dbo].[TBL_IT_MachineChangeLog] c
         LEFT JOIN [mes].[dbo].[TBL_IT_MachinesCurrent] mc ON mc.MachineID = c.MachineID
         WHERE c.SnapshotJson_Old IS NOT NULL 
@@ -1405,7 +1407,20 @@ app.get('/api/alerts/:username/count', async (req, res) => {
           AND (c.ChangedSUser = @username OR @username = 'c270188')
       `);
     
-    const unreadCount = result.recordset[0]?.unreadCount || 0;
+    // Get read status for this user
+    const readStatusResult = await pool.request()
+      .input('username', sql.NVarChar, username)
+      .query(`
+        SELECT AlertID FROM TBL_IT_AlertReadStatus 
+        WHERE UserID = @username
+      `);
+    
+    const readAlertIds = new Set(readStatusResult.recordset.map(r => r.AlertID));
+    
+    // Count unread alerts
+    const unreadCount = alertsResult.recordset.filter(row => 
+      !readAlertIds.has(row.ChangeID.toString())
+    ).length;
     console.log(`[DEBUG] Unread alerts count for ${username}: ${unreadCount}`);
     
     res.json({ unreadCount });
