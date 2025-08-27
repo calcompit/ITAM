@@ -4,10 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, HardDrive, MemoryStick, Wifi, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Monitor, HardDrive, MemoryStick, Wifi, Calendar, MonitorCheck } from "lucide-react";
 import { MachineIdDisplay } from "@/components/ui/machine-id-display";
 import { ClickableText } from "@/components/ui/clickable-text";
 import { formatThailandTime } from "@/lib/utils";
+import { openVNCPopup } from "@/lib/popup-utils";
 
 import { APIComputer, apiService } from "@/services/api";
 
@@ -71,6 +73,10 @@ export function ComputerDetailsModal({ computer, open, onClose }: ComputerDetail
     }
   };
 
+  const handleVNC = (ip: string) => {
+    openVNCPopup(ip, computer.computerName);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -110,16 +116,38 @@ export function ComputerDetailsModal({ computer, open, onClose }: ComputerDetail
                     <span className="text-muted-foreground">Machine ID</span>
                     <MachineIdDisplay machineId={computer.machineID} />
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Primary IP Address</span>
-                    <span className="font-mono">{computer.ipAddresses[0] || "N/A"}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono">{computer.ipAddresses[0] || "N/A"}</span>
+                      {computer.ipAddresses[0] && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleVNC(computer.ipAddresses[0])}
+                          className="h-8 w-8 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                          title="VNC Connection"
+                        >
+                          <MonitorCheck className="h-4 w-4 text-blue-500" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   {computer.ipAddresses.length > 1 && (
                     <div className="space-y-1">
                       <span className="text-muted-foreground text-sm">All IP Addresses:</span>
                       {computer.ipAddresses.map((ip, index) => (
-                        <div key={index} className="font-mono text-sm bg-muted/50 px-2 py-1 rounded">
-                          {ip}
+                        <div key={index} className="flex items-center justify-between font-mono text-sm bg-muted/50 px-2 py-1 rounded">
+                          <span>{ip}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleVNC(ip)}
+                            className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                            title="VNC Connection"
+                          >
+                            <MonitorCheck className="h-3 w-3 text-blue-500" />
+                          </Button>
                         </div>
                       ))}
                     </div>
