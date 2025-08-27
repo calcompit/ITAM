@@ -110,14 +110,20 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
         notificationTimeoutRef.current = setTimeout(() => {
           console.log('[Sidebar] Received alert notification, refetching count...');
           fetchUnreadCount();
-        }, 1000); // Wait 1 second before refetching
+        }, 100); // Wait 100ms before refetching for faster response
       }
     };
     
     // Listen for alert read events
     const handleAlertRead = (data: any) => {
       if (data.type === 'alert_read' || data.type === 'alert_read_all') {
-        console.log('[Sidebar] Received alert read event, refetching count...');
+        console.log('[Sidebar] Received alert read event, refetching count immediately...');
+        // Clear any pending notification timeout
+        if (notificationTimeoutRef.current) {
+          clearTimeout(notificationTimeoutRef.current);
+          notificationTimeoutRef.current = null;
+        }
+        // Fetch count immediately for read events
         fetchUnreadCount();
       }
     };
@@ -126,11 +132,37 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
     websocketService.on('alert_read', handleAlertRead);
     websocketService.on('alert_read_all', handleAlertRead);
     
+    // Listen for immediate alert read events
+    const handleImmediateAlertRead = () => {
+      console.log('[Sidebar] Received immediate alert read event, updating count immediately...');
+      // Optimistically update count with animation
+      setUnreadAlertsCount(prev => {
+        const newCount = Math.max(0, prev - 1);
+        console.log(`[Sidebar] Count updated from ${prev} to ${newCount}`);
+        return newCount;
+      });
+      // Then fetch actual count after a short delay
+      setTimeout(() => fetchUnreadCount(), 500);
+    };
+    
+    const handleImmediateAlertReadAll = () => {
+      console.log('[Sidebar] Received immediate alert read all event, updating count immediately...');
+      // Optimistically update count to 0 with animation
+      setUnreadAlertsCount(0);
+      // Then fetch actual count after a short delay
+      setTimeout(() => fetchUnreadCount(), 500);
+    };
+    
+    window.addEventListener('alert-read', handleImmediateAlertRead);
+    window.addEventListener('alert-read-all', handleImmediateAlertReadAll);
+    
     return () => {
       clearInterval(interval);
       websocketService.off('alert_notification', handleAlertNotification);
       websocketService.off('alert_read', handleAlertRead);
       websocketService.off('alert_read_all', handleAlertRead);
+      window.removeEventListener('alert-read', handleImmediateAlertRead);
+      window.removeEventListener('alert-read-all', handleImmediateAlertReadAll);
       if (notificationTimeoutRef.current) {
         clearTimeout(notificationTimeoutRef.current);
       }
@@ -158,7 +190,7 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
     { id: "dashboard", label: "Dashboard", icon: Monitor },
     { id: "groups", label: "IP Groups", icon: Network },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "alerts", label: "Alerts", icon: Bell, badge: unreadAlertsCount > 0 ? unreadAlertsCount : undefined },
+    { id: "alerts", label: "Alerts", icon: Bell, badge: unreadAlertsCount > 0 ? unreadAlertsCount : null },
   ];
 
 
@@ -230,7 +262,7 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
           const Icon = item.icon;
           return (
             <Button
-              key={item.id}
+              key={`${item.id}-${item.badge || 0}`}
               variant={activeTab === item.id ? "default" : "ghost"}
               className={cn(
                 "w-full justify-start gap-3 h-12 relative btn-fast-enhanced stagger-item",
@@ -242,7 +274,28 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
               <div className="relative">
                 <Icon className="h-5 w-5" />
                 {item.badge && (
-                  <div className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold min-w-[20px]">
+                  <div 
+                    key={`badge-${item.badge}`}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold min-w-[20px] animate-pulse transition-all duration-75 scale-100"
+                    style={{ 
+                      animation: 'pulse 0.5s ease-in-out',
+                      transform: 'scale(1)',
+                      opacity: 1,
+                      transition: 'all 0.1s ease-in-out',
+                      willChange: 'transform, opacity',
+                      backfaceVisibility: 'hidden',
+                      transformStyle: 'preserve-3d',
+                      perspective: '1000px',
+                      zIndex: 10,
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                      WebkitFontSmoothing: 'antialiased',
+                      MozOsxFontSmoothing: 'grayscale',
+                      textRendering: 'optimizeLegibility',
+                      contain: 'layout style paint',
+                      isolation: 'isolate'
+                    }}
+                  >
                     {item.badge > 99 ? '99+' : item.badge}
                   </div>
                 )}

@@ -138,12 +138,17 @@ export function Alerts() {
         a.id === alert.id ? { ...a, isRead: true } : a
       ));
       
-      // Trigger sidebar update
+      // Trigger sidebar update immediately
       updateLastUpdate();
       
+      // Force sidebar to refresh count immediately
+      const event = new CustomEvent('alert-read', { 
+        detail: { alertId: alert.id, userId: currentUser } 
+      });
+      window.dispatchEvent(event);
+      
       // Send WebSocket notification to trigger sidebar refresh
-      websocketService.send({
-        type: 'alert_read',
+      websocketService.send('alert_read', {
         alertId: alert.id,
         userId: currentUser
       });
@@ -170,12 +175,17 @@ export function Alerts() {
       // Update state immediately for better UX
       setAlerts(prev => prev.map(a => ({ ...a, isRead: true })));
       
-      // Trigger sidebar update
+      // Trigger sidebar update immediately
       updateLastUpdate();
       
+      // Force sidebar to refresh count immediately
+      const event = new CustomEvent('alert-read-all', { 
+        detail: { userId: currentUser } 
+      });
+      window.dispatchEvent(event);
+      
       // Send WebSocket notification to trigger sidebar refresh
-      websocketService.send({
-        type: 'alert_read_all',
+      websocketService.send('alert_read_all', {
         userId: currentUser
       });
       

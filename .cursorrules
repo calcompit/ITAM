@@ -1,0 +1,8 @@
+rules:
+  - ต้องรันด้วยคำสั่ง `npm run mac:full` เท่านั้น
+  - ห้าม hardcode ค่า IP/PORT/KEY ในโค้ด
+  - ค่าทั้งหมดต้องอ่านจากไฟล์ `env` 
+      - ถ้า push ขึ้น Git แล้ว:
+      - ต้อง pull ลงเครื่อง Windows `dell-pc@100.117.205.41`
+      - ใช้ `sshpass` รหัส `010138259`
+      - path ปลายทางคือ `OneDrive/Documents/itam`
