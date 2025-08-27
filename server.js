@@ -2862,7 +2862,80 @@ app.post('/api/test/add-sample-alerts', async (req, res) => {
   }
 });
 
-
+// API endpoint to update HUD_Version
+app.post('/api/update-hud-version', async (req, res) => {
+  try {
+    const { machineID, hudVersion } = req.body;
+    const pool = await getDbConnection();
+    
+    if (!pool) {
+      return res.status(503).json({ error: 'Database connection unavailable' });
+    }
+    
+    // First, check current data
+    const checkBeforeQuery = `
+      SELECT MachineID, ComputerName, HUD_Version, UpdatedAt
+      FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
+      WHERE MachineID = @machineID;
+    `;
+    
+    const beforeResult = await pool.request()
+      .input('machineID', sql.VarChar, machineID)
+      .query(checkBeforeQuery);
+    
+    console.log('Current computer data:', beforeResult.recordset[0]);
+    
+    // Disable trigger temporarily
+    console.log('Disabling trigger temporarily...');
+    await pool.request().query(`DISABLE TRIGGER TR_IT_MachinesCurrent_Change ON [mes].[dbo].[TBL_IT_MachinesCurrent]`);
+    
+    // Update HUD_Version
+    const updateQuery = `
+      UPDATE [mes].[dbo].[TBL_IT_MachinesCurrent]
+      SET HUD_Version = @hudVersion,
+          UpdatedAt = GETUTCDATE()
+      WHERE MachineID = @machineID;
+    `;
+    
+    const result = await pool.request()
+      .input('machineID', sql.VarChar, machineID)
+      .input('hudVersion', sql.VarChar, hudVersion)
+      .query(updateQuery);
+    
+    console.log(`Rows affected: ${result.rowsAffected[0]}`);
+    
+    // Re-enable trigger
+    console.log('Re-enabling trigger...');
+    await pool.request().query(`ENABLE TRIGGER TR_IT_MachinesCurrent_Change ON [mes].[dbo].[TBL_IT_MachinesCurrent]`);
+    
+    // Check the result after update
+    const checkAfterQuery = `
+      SELECT MachineID, ComputerName, HUD_Version, UpdatedAt
+      FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
+      WHERE MachineID = @machineID;
+    `;
+    
+    const afterResult = await pool.request()
+      .input('machineID', sql.VarChar, machineID)
+      .query(checkAfterQuery);
+    
+    console.log('Updated computer data:', afterResult.recordset[0]);
+    
+    res.json({ 
+      success: true, 
+      message: 'HUD_Version updated successfully',
+      before: beforeResult.recordset[0],
+      after: afterResult.recordset[0],
+      rowsAffected: result.rowsAffected[0]
+    });
+  } catch (err) {
+    console.error('Error updating HUD_Version:', err);
+    res.status(500).json({ 
+      error: 'Failed to update HUD_Version', 
+      details: err.message 
+    });
+  }
+});
 
 // Start server
 server.listen(PORT, () => {
