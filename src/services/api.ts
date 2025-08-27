@@ -1,7 +1,7 @@
 import { Computer } from '../data/mock-data';
-import { API_CONFIG } from '../config/api';
+import { getApiConfig } from '../config/api';
 
-const API_BASE_URL = API_CONFIG.API_BASE_URL;
+const getApiBaseUrl = () => getApiConfig().API_BASE_URL;
 
 export interface APIComputer extends Computer {
   changelog?: Array<{
@@ -48,7 +48,7 @@ export interface AlertItem {
 class ApiService {
   private async request<T>(endpoint: string): Promise<T> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`);
+      const response = await fetch(`${getApiBaseUrl()}${endpoint}`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
@@ -240,7 +240,7 @@ class ApiService {
 
   async login(username: string, password: string): Promise<{ success: boolean; message: string; user?: { username: string } }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/login`, {
+      const response = await fetch(`${getApiBaseUrl()}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -307,7 +307,7 @@ class ApiService {
 
   async markAlertAsRead(username: string, alertId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/alerts/${username}/read/${alertId}`, {
+      const response = await fetch(`${getApiBaseUrl()}/alerts/${username}/read/${alertId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -327,7 +327,7 @@ class ApiService {
 
   async markAllAlertsAsRead(username: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/alerts/${username}/read-all`, {
+      const response = await fetch(`${getApiBaseUrl()}/alerts/${username}/read-all`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

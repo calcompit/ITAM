@@ -1,4 +1,4 @@
-import { API_CONFIG } from '../config/api';
+import { getApiConfig } from '../config/api';
 
 export interface AlertRecord {
   changeID: number;
@@ -21,7 +21,9 @@ export interface AlertSummary {
 }
 
 class AlertService {
-  private baseUrl = API_CONFIG.API_BASE_URL;
+  private get baseUrl() {
+    return getApiConfig().API_BASE_URL;
+  }
 
   // Get all alerts with pagination
   async getAlerts(page: number = 1, limit: number = 50, unreadOnly: boolean = false): Promise<AlertRecord[]> {

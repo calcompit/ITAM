@@ -43,7 +43,7 @@ const getNovncUrl = () => {
   return 'http://10.51.101.49:6081';
 };
 
-export const API_CONFIG = {
+export const getApiConfig = () => ({
   // Backend server URL - Use environment variables
   BACKEND_URL: getBackendUrl(),
   
@@ -65,7 +65,10 @@ export const API_CONFIG = {
   DEFAULT_VNC_PORT: 5900,
   DEFAULT_NOVNC_PORT: 6081,
   DEFAULT_VNC_PASSWORD: '123'
-};
+});
+
+// For backward compatibility
+export const API_CONFIG = getApiConfig();
 
 // Helper function to build noVNC URL and open in new window
 export const buildNovncUrl = (host: string, port: number = 5900) => {
