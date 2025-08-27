@@ -1167,8 +1167,8 @@ app.get('/api/ip-groups', async (req, res) => {
         SELECT 
           SUBSTRING(IPv4, 1, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4, CHARINDEX('.', IPv4) + 1) + 1) - 1) + '.x' as subnet,
           COUNT(*) as totalComputers,
-          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) <= 10 THEN 1 ELSE 0 END) as onlineCount,
-          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, DATEADD(HOUR, 7, GETUTCDATE())) > 10 THEN 1 ELSE 0 END) as offlineCount,
+          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, GETUTCDATE()) <= 10 THEN 1 ELSE 0 END) as onlineCount,
+          SUM(CASE WHEN DATEDIFF(MINUTE, UpdatedAt, GETUTCDATE()) > 10 THEN 1 ELSE 0 END) as offlineCount,
           0 as alertCount
         FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
         WHERE IPv4 IS NOT NULL AND IPv4 != ''
@@ -1450,6 +1450,7 @@ app.get('/api/alerts/:username', async (req, res) => {
     console.log(`[DEBUG] Request URL: ${req.url}`);
     console.log(`[DEBUG] Query params:`, req.query);
     const result = await pool.request()
+      .input('username', sql.VarChar, username)
       .query(`
         SELECT TOP 100
           c.ChangeID as id,
@@ -1464,6 +1465,7 @@ app.get('/api/alerts/:username', async (req, res) => {
         WHERE c.SnapshotJson_Old IS NOT NULL 
           AND c.SnapshotJson_Old != '{}' 
           AND c.SnapshotJson_Old != ''
+          AND (c.ChangedSUser = @username OR @username = 'c270188')
         ORDER BY c.ChangeDate DESC, c.ChangeID DESC
       `);
     
