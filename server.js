@@ -8,7 +8,11 @@ import path from 'path';
 import dotenv from 'dotenv';
 
 // Load environment variables from .env file
-dotenv.config({ path: process.env.NODE_ENV === 'development' ? 'env.mac' : '.env' });
+const envPath = process.env.NODE_ENV === 'development' ? 'env.mac' : 
+                process.env.NODE_ENV === 'production' && process.env.HOST === '10.51.101.49' ? 'env.windows10' :
+                process.env.NODE_ENV === 'production' && process.env.HOST === '100.117.205.41' ? 'env.windows100' :
+                '.env';
+dotenv.config({ path: envPath });
 
 // Helper function to check if computer is online (10 minutes threshold)
 function isComputerOnline(updatedAt) {
