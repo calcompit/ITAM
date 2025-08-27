@@ -53,8 +53,28 @@ export function SidebarNav({ activeTab, onTabChange, onLogout, user, showPinnedO
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const alerts = await alertService.getAlerts(1, 100, true); // Get unread only
-        setUnreadAlertsCount(alerts.length);
+        // Get current user from localStorage
+        const savedUser = localStorage.getItem('it-asset-monitor-user');
+        let currentUser = 'c270188';
+        
+        if (savedUser) {
+          try {
+            const userData = JSON.parse(savedUser);
+            currentUser = userData.username;
+          } catch (err) {
+            console.error('Error parsing user data:', err);
+          }
+        }
+        
+        // Use dedicated count endpoint
+        const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3002'}/api/alerts/${currentUser}/count`);
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadAlertsCount(data.unreadCount || 0);
+          console.log(`[Sidebar] Unread alerts count: ${data.unreadCount}`);
+        } else {
+          console.error('Failed to fetch unread count');
+        }
       } catch (error) {
         console.error('Error fetching unread alerts count:', error);
       }

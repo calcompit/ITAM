@@ -1385,6 +1385,36 @@ app.get('/api/analytics', async (req, res) => {
   }
 });
 
+// Alerts count endpoint - Get unread alerts count for specific user
+app.get('/api/alerts/:username/count', async (req, res) => {
+  try {
+    const { username } = req.params;
+    const pool = await getDbConnection();
+    
+    // Get unread alerts count
+    console.log(`[DEBUG] Fetching unread alerts count for user: ${username}`);
+    const result = await pool.request()
+      .query(`
+        SELECT COUNT(*) as unreadCount
+        FROM [mes].[dbo].[TBL_IT_MachineChangeLog] c
+        LEFT JOIN [mes].[dbo].[TBL_IT_MachinesCurrent] mc ON mc.MachineID = c.MachineID
+        WHERE c.SnapshotJson_Old IS NOT NULL 
+          AND c.SnapshotJson_Old != '{}' 
+          AND c.SnapshotJson_Old != ''
+          AND c.ChangedSUser = @username
+        ORDER BY c.ChangeDate DESC
+      `);
+    
+    const unreadCount = result.recordset[0]?.unreadCount || 0;
+    console.log(`[DEBUG] Unread alerts count for ${username}: ${unreadCount}`);
+    
+    res.json({ unreadCount });
+  } catch (err) {
+    console.error('Error fetching unread alerts count:', err.message);
+    res.status(500).json({ error: 'Failed to fetch unread alerts count' });
+  }
+});
+
 // Alerts endpoint - Get alerts for specific user
 app.get('/api/alerts/:username', async (req, res) => {
   try {
