@@ -1,3 +1,5 @@
+import { getApiConfig } from '@/config/api';
+
 export class WebSocketService {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
@@ -11,11 +13,13 @@ export class WebSocketService {
   constructor(private url?: string) {
     // Use provided URL or construct from backend URL
     if (!this.url) {
-      // Get the current hostname and port from window.location
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const hostname = window.location.hostname;
-      const port = '3002'; // Backend WebSocket port
-      this.url = `${protocol}//${hostname}:${port}`;
+      const config = getApiConfig();
+      const backendUrl = config.BACKEND_URL;
+      const protocol = backendUrl.startsWith('https:') ? 'wss:' : 'ws:';
+      const urlObj = new URL(backendUrl);
+      this.url = `${protocol}//${urlObj.hostname}:${urlObj.port || '3002'}`;
+      console.log('[WebSocket] Using backend URL:', backendUrl);
+      console.log('[WebSocket] WebSocket URL:', this.url);
     }
   }
 
