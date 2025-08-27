@@ -1,13 +1,10 @@
 import express from 'express';
 import sql from 'mssql';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import { spawn } from 'child_process';
 import path from 'path';
-
-dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
