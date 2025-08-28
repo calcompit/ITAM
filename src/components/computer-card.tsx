@@ -110,16 +110,14 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
           <div className="text-xs">
             <div className="flex items-center justify-between">
               <span className={cn(
-                "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 status-indicator hover:scale-110",
-                computer.status === 'online' 
-                  ? 'bg-status-online/20 text-status-online' 
-                  : 'bg-status-offline/20 text-status-offline',
-                isUpdated && "animate-status-change"
+                "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium status-indicator hover:scale-110",
+                computer.status === 'online' ? 'online' : 'offline',
+                isUpdated && updateType === 'status' && "status-online-update",
+                isUpdated && updateType === 'status' && "updating"
               )}>
                 <div className={cn(
-                  "w-2 h-2 rounded-full transition-all duration-100",
-                  computer.status === 'online' ? 'bg-status-online' : 'bg-status-offline',
-                  isUpdated && "animate-pulse"
+                  "w-2 h-2 rounded-full status-dot",
+                  computer.status === 'online' ? 'bg-status-online' : 'bg-status-offline'
                 )} />
                 {computer.status === 'online' ? 'Online' : 'Offline'}
               </span>

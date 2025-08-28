@@ -14,6 +14,7 @@ interface DataContextType {
   isUpdating: boolean;
   updatedMachineIDs: Set<string>;
   updateTypes: Map<string, 'status' | 'hud' | 'general' | 'new'>;
+  lastUpdateTime: Map<string, number>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -40,6 +41,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [updatedMachineIDs, setUpdatedMachineIDs] = useState<Set<string>>(new Set());
   const [updateTypes, setUpdateTypes] = useState<Map<string, 'status' | 'hud' | 'general' | 'new'>>(new Map());
+  const [lastUpdateTime, setLastUpdateTime] = useState<Map<string, number>>(new Map());
 
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();
@@ -166,7 +168,16 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           const newUpdatedIDs = new Set<string>();
           const newUpdateTypes = new Map<string, 'status' | 'hud' | 'general' | 'new'>();
           
-          data.data.updatedComputers.forEach((computer: any) => {
+                    data.data.updatedComputers.forEach((computer: any) => {
+            const now = Date.now();
+            const lastUpdate = lastUpdateTime.get(computer.machineID) || 0;
+            const timeSinceLastUpdate = now - lastUpdate;
+            
+            // Debounce: Only show animation if it's been at least 2 seconds since last update
+            if (timeSinceLastUpdate < 2000) {
+              return;
+            }
+            
             newUpdatedIDs.add(computer.machineID);
             
             // Determine update type based on what changed
@@ -177,17 +188,30 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             if (!existingComputer) {
               updateType = 'new';
             } else {
-              // Check if status changed
-              if (existingComputer.status !== computer.status) {
-                updateType = 'status';
-              }
-              // Check if HUD version changed
-              else if (existingComputer.hudVersion !== computer.hudVersion) {
-                updateType = 'hud';
-              }
+                           // Check if status changed (only trigger animation for actual status changes)
+             if (existingComputer.status !== computer.status) {
+               updateType = 'status';
+             }
+             // Check if HUD version changed
+             else if (existingComputer.hudVersion !== computer.hudVersion) {
+               updateType = 'hud';
+             }
+             // Check if other important fields changed (but not status or HUD)
+             else if (
+               existingComputer.ipAddresses[0] !== computer.ipAddresses[0] ||
+               existingComputer.domain !== computer.domain ||
+               existingComputer.sUser !== computer.sUser ||
+               existingComputer.winActivated !== computer.winActivated ||
+               existingComputer.cpu?.model !== computer.cpu?.model ||
+               existingComputer.ram?.totalGB !== computer.ram?.totalGB ||
+               existingComputer.storage?.totalGB !== computer.storage?.totalGB
+             ) {
+               updateType = 'general';
+             }
             }
             
             newUpdateTypes.set(computer.machineID, updateType);
+            lastUpdateTime.set(computer.machineID, now);
           });
           
           setUpdatedMachineIDs(newUpdatedIDs);
@@ -230,7 +254,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     refreshData,
     isUpdating,
     updatedMachineIDs,
-    updateTypes
+    updateTypes,
+    lastUpdateTime
   };
 
   return (
