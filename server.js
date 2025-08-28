@@ -1436,7 +1436,6 @@ app.get('/api/alerts/:username/count', async (req, res) => {
         WHERE c.SnapshotJson_Old IS NOT NULL 
           AND c.SnapshotJson_Old != '{}' 
           AND c.SnapshotJson_Old != ''
-          AND (c.ChangedSUser = @username OR @username = 'c270188')
       `);
     
     // Get read status for this user
@@ -1488,7 +1487,6 @@ app.get('/api/alerts/:username', async (req, res) => {
         WHERE c.SnapshotJson_Old IS NOT NULL 
           AND c.SnapshotJson_Old != '{}' 
           AND c.SnapshotJson_Old != ''
-          AND (c.ChangedSUser = @username OR @username = 'c270188')
         ORDER BY c.ChangeDate DESC, c.ChangeID DESC
       `);
     
