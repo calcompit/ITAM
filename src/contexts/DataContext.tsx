@@ -212,10 +212,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             const changedFields: string[] = [];
             let updateType: 'status' | 'hud' | 'general' | 'new' = 'general';
             
-            // Check each field for changes
-            if (existingComputer.status !== computer.status) {
-              changedFields.push('status');
-            }
+            // Check each field for changes (excluding status - it has its own indicator)
             if (existingComputer.hudVersion !== computer.hudVersion) {
               changedFields.push('hudVersion');
               updateType = 'hud';
@@ -242,15 +239,21 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
               changedFields.push('storage');
             }
             
-            // Only show animation if there are actual changes
-            if (changedFields.length === 0) {
+            // Handle status-only changes (no change indicator, just status animation)
+            if (changedFields.length === 0 && existingComputer.status !== computer.status) {
+              newUpdatedIDs.add(computer.machineID);
+              newUpdateTypes.set(computer.machineID, 'status');
+              lastUpdateTime.set(computer.machineID, now);
               return;
             }
             
-            newUpdatedIDs.add(computer.machineID);
-            newUpdateTypes.set(computer.machineID, updateType);
-            newChangedFields.set(computer.machineID, changedFields);
-            lastUpdateTime.set(computer.machineID, now);
+            // Handle other changes (show change indicator)
+            if (changedFields.length > 0) {
+              newUpdatedIDs.add(computer.machineID);
+              newUpdateTypes.set(computer.machineID, updateType);
+              newChangedFields.set(computer.machineID, changedFields);
+              lastUpdateTime.set(computer.machineID, now);
+            }
           });
           
           console.log('[Animation Debug] Updated computers:', Array.from(newUpdatedIDs));
