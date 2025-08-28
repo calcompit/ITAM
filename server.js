@@ -864,6 +864,7 @@ function startPollingMonitoring() {
           Storage_TotalGB,
           LastBoot
         FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
+        ORDER BY MachineID
       `);
       
       // Compare with cached data to detect changes
@@ -920,24 +921,36 @@ function startPollingMonitoring() {
           console.log(`[Real-time] New record detected: ${row.MachineID}`);
           changedRecords.push(row);
                  } else {
-           // Check for changes in important fields with proper null/undefined handling
+           // Helper function to normalize strings for comparison
+           const normalizeString = (str) => {
+             if (!str) return '';
+             return String(str).trim().replace(/\s+/g, ' ');
+           };
+           
+           // Helper function to normalize numbers for comparison
+           const normalizeNumber = (num) => {
+             if (num === null || num === undefined) return 0;
+             return Number(num) || 0;
+           };
+           
+           // Check for changes in important fields with proper normalization
            const hasChanged = 
-             String(row.HUD_Version || '') !== String(cachedData.HUD_Version || '') ||
-             String(row.HUD_Mode || '') !== String(cachedData.HUD_Mode || '') ||
-             String(row.HUD_ColorARGB || '') !== String(cachedData.HUD_ColorARGB || '') ||
-             String(row.IPv4 || '') !== String(cachedData.IPv4 || '') ||
-             String(row.Domain || '') !== String(cachedData.Domain || '') ||
-             String(row.SUser || '') !== String(cachedData.SUser || '') ||
-             Number(row.Win_Activated || 0) !== Number(cachedData.Win_Activated || 0) ||
-             String(row.CPU_Model || '') !== String(cachedData.CPU_Model || '') ||
-             Number(row.CPU_PhysicalCores || 0) !== Number(cachedData.CPU_PhysicalCores || 0) ||
-             Number(row.CPU_LogicalCores || 0) !== Number(cachedData.CPU_LogicalCores || 0) ||
-             Number(row.RAM_TotalGB || 0) !== Number(cachedData.RAM_TotalGB || 0) ||
-             Number(row.Storage_TotalGB || 0) !== Number(cachedData.Storage_TotalGB || 0) ||
-             String(row.LastBoot || '') !== String(cachedData.LastBoot || '');
+             normalizeString(row.HUD_Version) !== normalizeString(cachedData.HUD_Version) ||
+             normalizeString(row.HUD_Mode) !== normalizeString(cachedData.HUD_Mode) ||
+             normalizeString(row.HUD_ColorARGB) !== normalizeString(cachedData.HUD_ColorARGB) ||
+             normalizeString(row.IPv4) !== normalizeString(cachedData.IPv4) ||
+             normalizeString(row.Domain) !== normalizeString(cachedData.Domain) ||
+             normalizeString(row.SUser) !== normalizeString(cachedData.SUser) ||
+             normalizeNumber(row.Win_Activated) !== normalizeNumber(cachedData.Win_Activated) ||
+             normalizeString(row.CPU_Model) !== normalizeString(cachedData.CPU_Model) ||
+             normalizeNumber(row.CPU_PhysicalCores) !== normalizeNumber(cachedData.CPU_PhysicalCores) ||
+             normalizeNumber(row.CPU_LogicalCores) !== normalizeNumber(cachedData.CPU_LogicalCores) ||
+             normalizeNumber(row.RAM_TotalGB) !== normalizeNumber(cachedData.RAM_TotalGB) ||
+             normalizeNumber(row.Storage_TotalGB) !== normalizeNumber(cachedData.Storage_TotalGB) ||
+             normalizeString(row.LastBoot) !== normalizeString(cachedData.LastBoot);
             
           if (hasChanged) {
-            console.log(`[Real-time] Change detected for ${row.MachineID}: HUD_Version="${row.HUD_Version}" vs "${cachedData.HUD_Version}", CPU_Model="${row.CPU_Model}" vs "${cachedData.CPU_Model}"`);
+            console.log(`[Real-time] Change detected for ${row.MachineID}: HUD_Version="${normalizeString(row.HUD_Version)}" vs "${normalizeString(cachedData.HUD_Version)}", CPU_Model="${normalizeString(row.CPU_Model)}" vs "${normalizeString(cachedData.CPU_Model)}"`);
             changedRecords.push(row);
           }
         }
@@ -953,20 +966,32 @@ function startPollingMonitoring() {
            global.computerCache.delete(firstKey);
          }
          
+         // Helper function to normalize strings for storage
+         const normalizeString = (str) => {
+           if (!str) return '';
+           return String(str).trim().replace(/\s+/g, ' ');
+         };
+         
+         // Helper function to normalize numbers for storage
+         const normalizeNumber = (num) => {
+           if (num === null || num === undefined) return 0;
+           return Number(num) || 0;
+         };
+         
          global.computerCache.set(cacheKey, {
-           HUD_Version: row.HUD_Version,
-           HUD_Mode: row.HUD_Mode,
-           HUD_ColorARGB: row.HUD_ColorARGB,
-           IPv4: row.IPv4,
-           Domain: row.Domain,
-           SUser: row.SUser,
-           Win_Activated: row.Win_Activated,
-           CPU_Model: row.CPU_Model,
-           CPU_PhysicalCores: row.CPU_PhysicalCores,
-           CPU_LogicalCores: row.CPU_LogicalCores,
-           RAM_TotalGB: row.RAM_TotalGB,
-           Storage_TotalGB: row.Storage_TotalGB,
-           LastBoot: row.LastBoot
+           HUD_Version: normalizeString(row.HUD_Version),
+           HUD_Mode: normalizeString(row.HUD_Mode),
+           HUD_ColorARGB: normalizeString(row.HUD_ColorARGB),
+           IPv4: normalizeString(row.IPv4),
+           Domain: normalizeString(row.Domain),
+           SUser: normalizeString(row.SUser),
+           Win_Activated: normalizeNumber(row.Win_Activated),
+           CPU_Model: normalizeString(row.CPU_Model),
+           CPU_PhysicalCores: normalizeNumber(row.CPU_PhysicalCores),
+           CPU_LogicalCores: normalizeNumber(row.CPU_LogicalCores),
+           RAM_TotalGB: normalizeNumber(row.RAM_TotalGB),
+           Storage_TotalGB: normalizeNumber(row.Storage_TotalGB),
+           LastBoot: normalizeString(row.LastBoot)
          });
       }
       
