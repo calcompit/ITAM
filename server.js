@@ -870,31 +870,64 @@ function startPollingMonitoring() {
       const changedRecords = [];
       const currentData = result.recordset;
       
+      // Debug: Check if cache is properly initialized
+      if (!global.computerCache || global.computerCache.size === 0) {
+        console.log('[Real-time] Cache is empty, initializing...');
+        // Initialize cache with current data
+        if (!global.computerCache) {
+          global.computerCache = new Map();
+        }
+        currentData.forEach(row => {
+          const cacheKey = `computer_${row.MachineID}`;
+          global.computerCache.set(cacheKey, {
+            HUD_Version: row.HUD_Version,
+            HUD_Mode: row.HUD_Mode,
+            HUD_ColorARGB: row.HUD_ColorARGB,
+            IPv4: row.IPv4,
+            Domain: row.Domain,
+            SUser: row.SUser,
+            Win_Activated: row.Win_Activated,
+            CPU_Model: row.CPU_Model,
+            CPU_PhysicalCores: row.CPU_PhysicalCores,
+            CPU_LogicalCores: row.CPU_LogicalCores,
+            RAM_TotalGB: row.RAM_TotalGB,
+            Storage_TotalGB: row.Storage_TotalGB,
+            LastBoot: row.LastBoot
+          });
+        });
+        console.log(`[Real-time] Cache initialized with ${global.computerCache.size} records`);
+        // Don't broadcast on first run
+        setTimeout(pollForChanges, 10000);
+        return;
+      }
+      
       for (const row of currentData) {
         const cacheKey = `computer_${row.MachineID}`;
-        const cachedData = global.computerCache ? global.computerCache.get(cacheKey) : null;
+        const cachedData = global.computerCache.get(cacheKey);
         
-                 if (!cachedData) {
-           // New record
-           changedRecords.push(row);
-         } else {
-           // Check for changes in important fields
-           const hasChanged = 
-             row.HUD_Version !== cachedData.HUD_Version ||
-             row.HUD_Mode !== cachedData.HUD_Mode ||
-             row.HUD_ColorARGB !== cachedData.HUD_ColorARGB ||
-             row.IPv4 !== cachedData.IPv4 ||
-             row.Domain !== cachedData.Domain ||
-             row.SUser !== cachedData.SUser ||
-             row.Win_Activated !== cachedData.Win_Activated ||
-             row.CPU_Model !== cachedData.CPU_Model ||
-             row.CPU_PhysicalCores !== cachedData.CPU_PhysicalCores ||
-             row.CPU_LogicalCores !== cachedData.CPU_LogicalCores ||
-             row.RAM_TotalGB !== cachedData.RAM_TotalGB ||
-             row.Storage_TotalGB !== cachedData.Storage_TotalGB ||
-             row.LastBoot !== cachedData.LastBoot;
+        if (!cachedData) {
+          // New record
+          console.log(`[Real-time] New record detected: ${row.MachineID}`);
+          changedRecords.push(row);
+        } else {
+          // Check for changes in important fields with proper null/undefined handling
+          const hasChanged = 
+            (row.HUD_Version || null) !== (cachedData.HUD_Version || null) ||
+            (row.HUD_Mode || null) !== (cachedData.HUD_Mode || null) ||
+            (row.HUD_ColorARGB || null) !== (cachedData.HUD_ColorARGB || null) ||
+            (row.IPv4 || null) !== (cachedData.IPv4 || null) ||
+            (row.Domain || null) !== (cachedData.Domain || null) ||
+            (row.SUser || null) !== (cachedData.SUser || null) ||
+            (row.Win_Activated || null) !== (cachedData.Win_Activated || null) ||
+            (row.CPU_Model || null) !== (cachedData.CPU_Model || null) ||
+            (row.CPU_PhysicalCores || null) !== (cachedData.CPU_PhysicalCores || null) ||
+            (row.CPU_LogicalCores || null) !== (cachedData.CPU_LogicalCores || null) ||
+            (row.RAM_TotalGB || null) !== (cachedData.RAM_TotalGB || null) ||
+            (row.Storage_TotalGB || null) !== (cachedData.Storage_TotalGB || null) ||
+            (row.LastBoot || null) !== (cachedData.LastBoot || null);
             
           if (hasChanged) {
+            console.log(`[Real-time] Change detected for ${row.MachineID}: HUD_Version=${row.HUD_Version}, CPU_Model=${row.CPU_Model}`);
             changedRecords.push(row);
           }
         }
