@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { apiService, type APIComputer, type IPGroup } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { useStatus } from '@/contexts/StatusContext';
@@ -47,6 +47,23 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
 
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();
+
+  // Memoized computer data for comparison
+  const memoizedComputers = useMemo(() => {
+    return computers.map(computer => ({
+      machineID: computer.machineID,
+      status: computer.status,
+      hudVersion: computer.hudVersion,
+      ipAddresses: computer.ipAddresses,
+      domain: computer.domain,
+      sUser: computer.sUser,
+      winActivated: computer.winActivated,
+      cpu: computer.cpu,
+      ram: computer.ram,
+      storage: computer.storage,
+      updatedAt: computer.updatedAt
+    }));
+  }, [computers]);
 
   // Load pinned computers from localStorage
   const loadPinnedComputers = (): string[] => {
@@ -169,8 +186,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         if (data.data?.updatedComputers) {
           const newUpdatedIDs = new Set<string>();
           const newUpdateTypes = new Map<string, 'status' | 'hud' | 'general' | 'new'>();
+          const newChangedFields = new Map<string, string[]>();
           
-                    data.data.updatedComputers.forEach((computer: any) => {
+          data.data.updatedComputers.forEach((computer: any) => {
             const now = Date.now();
             const lastUpdate = lastUpdateTime.get(computer.machineID) || 0;
             const timeSinceLastUpdate = now - lastUpdate;
@@ -180,8 +198,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
               return;
             }
             
-            // Check if it's a new computer
-            const existingComputer = computers.find(c => c.machineID === computer.machineID);
+            // Find existing computer from memoized data
+            const existingComputer = memoizedComputers.find(c => c.machineID === computer.machineID);
+            
             if (!existingComputer) {
               // New computer - show animation
               newUpdatedIDs.add(computer.machineID);
@@ -189,81 +208,58 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
               return;
             }
             
-            // Check if any data actually changed
-            const hasChanges = 
-              existingComputer.status !== computer.status ||
-              existingComputer.hudVersion !== computer.hudVersion ||
-              existingComputer.ipAddresses[0] !== computer.ipAddresses[0] ||
-              existingComputer.domain !== computer.domain ||
-              existingComputer.sUser !== computer.sUser ||
-              existingComputer.winActivated !== computer.winActivated ||
-              existingComputer.cpu?.model !== computer.cpu?.model ||
-              existingComputer.ram?.totalGB !== computer.ram?.totalGB ||
-              existingComputer.storage?.totalGB !== computer.storage?.totalGB;
+            // Compare data using memoized values
+            const changedFields: string[] = [];
+            let updateType: 'status' | 'hud' | 'general' | 'new' = 'general';
+            
+            // Check each field for changes
+            if (existingComputer.status !== computer.status) {
+              changedFields.push('status');
+            }
+            if (existingComputer.hudVersion !== computer.hudVersion) {
+              changedFields.push('hudVersion');
+              updateType = 'hud';
+            }
+            if (existingComputer.ipAddresses[0] !== computer.ipAddresses[0]) {
+              changedFields.push('ipAddress');
+            }
+            if (existingComputer.domain !== computer.domain) {
+              changedFields.push('domain');
+            }
+            if (existingComputer.sUser !== computer.sUser) {
+              changedFields.push('user');
+            }
+            if (existingComputer.winActivated !== computer.winActivated) {
+              changedFields.push('windows');
+            }
+            if (existingComputer.cpu?.model !== computer.cpu?.model) {
+              changedFields.push('cpu');
+            }
+            if (existingComputer.ram?.totalGB !== computer.ram?.totalGB) {
+              changedFields.push('ram');
+            }
+            if (existingComputer.storage?.totalGB !== computer.storage?.totalGB) {
+              changedFields.push('storage');
+            }
             
             // Only show animation if there are actual changes
-            if (!hasChanges) {
+            if (changedFields.length === 0) {
               return;
             }
             
             newUpdatedIDs.add(computer.machineID);
-            
-            // Determine update type based on what changed
-            let updateType: 'status' | 'hud' | 'general' | 'new' = 'general';
-            
-            // existingComputer is already declared above
-            if (!existingComputer) {
-              updateType = 'new';
-            } else {
-                                       // Check if HUD version changed
-            if (existingComputer.hudVersion !== computer.hudVersion) {
-              updateType = 'hud';
-            }
-            // Check if other important fields changed (excluding status)
-            else if (
-              existingComputer.ipAddresses[0] !== computer.ipAddresses[0] ||
-              existingComputer.domain !== computer.domain ||
-              existingComputer.sUser !== computer.sUser ||
-              existingComputer.winActivated !== computer.winActivated ||
-              existingComputer.cpu?.model !== computer.cpu?.model ||
-              existingComputer.ram?.totalGB !== computer.ram?.totalGB ||
-              existingComputer.storage?.totalGB !== computer.storage?.totalGB
-            ) {
-              updateType = 'general';
-            }
-            // Note: Status changes are handled by the status indicator animation only
-            
-            // Store what specific fields changed for detailed animation (excluding status)
-            const changedFields: string[] = [];
-            // Note: status is excluded because it's already shown in the status indicator
-            if (existingComputer.hudVersion !== computer.hudVersion) changedFields.push('hudVersion');
-            if (existingComputer.ipAddresses[0] !== computer.ipAddresses[0]) changedFields.push('ipAddress');
-            if (existingComputer.domain !== computer.domain) changedFields.push('domain');
-            if (existingComputer.sUser !== computer.sUser) changedFields.push('user');
-            if (existingComputer.winActivated !== computer.winActivated) changedFields.push('windows');
-            if (existingComputer.cpu?.model !== computer.cpu?.model) changedFields.push('cpu');
-            if (existingComputer.ram?.totalGB !== computer.ram?.totalGB) changedFields.push('ram');
-            if (existingComputer.storage?.totalGB !== computer.storage?.totalGB) changedFields.push('storage');
-            
-            // Store changed fields for this computer (only if there are non-status changes)
-            if (changedFields.length > 0) {
-              newUpdateTypes.set(computer.machineID, updateType);
-              // Store detailed change info
-              setChangedFields(prev => new Map(prev).set(computer.machineID, changedFields));
-            } else if (existingComputer.status !== computer.status) {
-              // Only show status animation, no change indicator
-              newUpdateTypes.set(computer.machineID, 'status');
-            }
-            }
-            
+            newUpdateTypes.set(computer.machineID, updateType);
+            newChangedFields.set(computer.machineID, changedFields);
             lastUpdateTime.set(computer.machineID, now);
           });
           
           console.log('[Animation Debug] Updated computers:', Array.from(newUpdatedIDs));
           console.log('[Animation Debug] Update types:', Object.fromEntries(newUpdateTypes));
+          console.log('[Animation Debug] Changed fields:', Object.fromEntries(newChangedFields));
           
           setUpdatedMachineIDs(newUpdatedIDs);
           setUpdateTypes(newUpdateTypes);
+          setChangedFields(newChangedFields);
           
           // Clear animation after 3 seconds
           setTimeout(() => {
@@ -281,6 +277,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         });
       }
     };
+            
+
 
 
 
@@ -292,7 +290,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       websocketService.off('data_update', handleDataUpdate);
       websocketService.off('computer_update', handleDataUpdate);
     };
-  }, [toast, updateLastUpdate]);
+  }, [toast, updateLastUpdate, memoizedComputers, lastUpdateTime]);
 
   const value: DataContextType = {
     computers,
