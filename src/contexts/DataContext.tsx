@@ -190,15 +190,11 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             if (!existingComputer) {
               updateType = 'new';
             } else {
-                                       // Check if status changed (only trigger animation for actual status changes)
-            if (existingComputer.status !== computer.status) {
-              updateType = 'status';
-            }
-            // Check if HUD version changed
-            else if (existingComputer.hudVersion !== computer.hudVersion) {
+                                       // Check if HUD version changed
+            if (existingComputer.hudVersion !== computer.hudVersion) {
               updateType = 'hud';
             }
-            // Check if other important fields changed (but not status or HUD)
+            // Check if other important fields changed (excluding status)
             else if (
               existingComputer.ipAddresses[0] !== computer.ipAddresses[0] ||
               existingComputer.domain !== computer.domain ||
@@ -210,10 +206,11 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             ) {
               updateType = 'general';
             }
+            // Note: Status changes are handled by the status indicator animation only
             
-            // Store what specific fields changed for detailed animation
+            // Store what specific fields changed for detailed animation (excluding status)
             const changedFields: string[] = [];
-            if (existingComputer.status !== computer.status) changedFields.push('status');
+            // Note: status is excluded because it's already shown in the status indicator
             if (existingComputer.hudVersion !== computer.hudVersion) changedFields.push('hudVersion');
             if (existingComputer.ipAddresses[0] !== computer.ipAddresses[0]) changedFields.push('ipAddress');
             if (existingComputer.domain !== computer.domain) changedFields.push('domain');
@@ -223,11 +220,14 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             if (existingComputer.ram?.totalGB !== computer.ram?.totalGB) changedFields.push('ram');
             if (existingComputer.storage?.totalGB !== computer.storage?.totalGB) changedFields.push('storage');
             
-            // Store changed fields for this computer
+            // Store changed fields for this computer (only if there are non-status changes)
             if (changedFields.length > 0) {
               newUpdateTypes.set(computer.machineID, updateType);
               // Store detailed change info
               setChangedFields(prev => new Map(prev).set(computer.machineID, changedFields));
+            } else if (existingComputer.status !== computer.status) {
+              // Only show status animation, no change indicator
+              newUpdateTypes.set(computer.machineID, 'status');
             }
             }
             
