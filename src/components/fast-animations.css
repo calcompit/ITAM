@@ -319,31 +319,67 @@
   position: relative !important;
 }
 
-/* Test animation class for debugging */
-.test-animation {
-  animation: smooth-border-pulse 1s ease-in-out infinite !important;
-  border: 4px solid #ff0000 !important;
-  box-shadow: 0 0 30px rgba(255, 0, 0, 0.8) !important;
-  transform: scale(1.05) !important;
-}
+/* Test animation class for debugging - removed */
 
-/* Debug animation states */
-.debug-animation {
-  position: relative;
-}
-
-.debug-animation::before {
-  content: 'ANIMATION ACTIVE';
+/* Beautiful change indicator */
+.change-indicator-beautiful {
   position: absolute;
-  top: -25px;
-  left: 0;
-  background: #ff0000;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 10px;
-  z-index: 1000;
+  top: 8px;
+  right: 8px;
+  z-index: 50;
+  pointer-events: none;
 }
+
+.change-badge {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  animation: change-badge-slide-in 0.3s ease-out;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.change-icon {
+  font-size: 12px;
+  animation: change-icon-spin 1s ease-in-out;
+}
+
+.change-text {
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes change-badge-slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(20px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes change-icon-spin {
+  0% {
+    transform: rotate(0deg) scale(0.8);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* Debug animation states - removed */
 
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {

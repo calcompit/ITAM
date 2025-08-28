@@ -35,24 +35,20 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
       )}
       onClick={() => onClick(computer)}
     >
-      {/* Test animation button */}
-      <button 
-        onClick={(e) => {
-          e.stopPropagation();
-          const card = e.currentTarget.closest('.computer-card');
-          if (card) {
-            card.classList.add('test-animation', 'debug-animation');
-            console.log('Animation started on card:', card);
-            setTimeout(() => {
-              card.classList.remove('test-animation', 'debug-animation');
-              console.log('Animation ended on card:', card);
-            }, 3000);
-          }
-        }}
-        className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs rounded z-50"
-      >
-        Test
-      </button>
+      {/* Beautiful change indicator */}
+      {isUpdated && changedFields && changedFields.length > 0 && (
+        <div className="change-indicator-beautiful">
+          <div className="change-badge">
+            <span className="change-icon">✨</span>
+            <span className="change-text">
+              {changedFields.length === 1 
+                ? changedFields[0] 
+                : `${changedFields.length} fields updated`
+              }
+            </span>
+          </div>
+        </div>
+      )}
 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
