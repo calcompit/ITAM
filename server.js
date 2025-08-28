@@ -1771,14 +1771,13 @@ app.post('/api/vnc/start', async (req, res) => {
     // Use platform-specific command to prevent terminal window
     let websockifyProcess;
     if (process.platform === 'win32') {
-      websockifyProcess = spawn('pythonw', [
+      websockifyProcess = spawn('python', [
         '-m', 'websockify',
         webPort.toString(),
         target,
         '--web', '.',
         '--verbose',
-        '--log-file', `websockify-${host}-${port}.log`,
-        '--daemon=no'
+        '--log-file', `websockify-${host}-${port}.log`
       ], {
         cwd: novncDir,
         detached: true,
@@ -2107,8 +2106,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         // Detect platform and use appropriate command to run in background
     
     if (process.platform === 'win32') {
-      // Windows: Use pythonw.exe to prevent terminal window from appearing
-      const pythonCommand = 'pythonw';
+      // Windows: Use python.exe for better compatibility
+      const pythonCommand = 'python';
       console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
       console.log(`[VNC] Command: ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
       
@@ -2119,8 +2118,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
         '--web', path.join(process.cwd(), 'noVNC'), 
         '--verbose', 
         '--log-file', `websockify-${host}-${port}.log`,
-        '--idle-timeout', '300',
-        '--daemon=no'
+        '--idle-timeout', '300'
       ], {
         cwd: path.join(process.cwd(), 'noVNC'),
         stdio: 'ignore', // Ignore all stdio to prevent terminal window
@@ -2128,77 +2126,21 @@ app.post('/api/vnc/start-session', async (req, res) => {
         env: {
           ...process.env,
           PYTHONWARNINGS: 'ignore',
-          PYTHONPATH: path.join(process.cwd(), 'noVNC'),
-          PYTHONUNBUFFERED: '1'
+          PYTHONPATH: path.join(process.cwd(), 'noVNC')
         }
       });
     } else {
       // Linux/Mac: Use nohup to run in background
-      // Try to detect the correct Python command
-      let pythonCommand = 'python3';
-      
-      // Check if python3 is available, fallback to python
-      try {
-        const { exec } = await import('child_process');
-        const util = await import('util');
-        const execPromise = util.promisify(exec);
-        
-        // Try python3 first
-        try {
-          await execPromise('python3 --version');
-          pythonCommand = 'python3';
-        } catch (error) {
-          // Try python
-          try {
-            await execPromise('python --version');
-            pythonCommand = 'python';
-          } catch (error2) {
-            console.error('❌ [VNC ERROR] No Python found. Please install Python 3.x');
-            throw new Error('Python not found. Please install Python 3.x');
-          }
-        }
-      } catch (error) {
-        console.error('❌ [VNC ERROR] Error checking Python:', error.message);
-        throw error;
-      }
-      
+      const pythonCommand = 'python3';
       console.log(`[VNC] Using Python command: ${pythonCommand} on ${process.platform}`);
       
-      // Check if websockify module is available
-      try {
-        const { exec } = await import('child_process');
-        const util = await import('util');
-        const execPromise = util.promisify(exec);
-        
-        await execPromise(`${pythonCommand} -c "import websockify; print('websockify available')"`);
-        console.log(`✅ [VNC] Websockify module is available`);
-      } catch (error) {
-        console.error(`❌ [VNC ERROR] Websockify module not found. Installing...`);
-        
-        // Try to install websockify
-        try {
-          const { exec } = await import('child_process');
-          const util = await import('util');
-          const execPromise = util.promisify(exec);
-          
-          console.log(`📦 [VNC] Installing websockify...`);
-          await execPromise(`${pythonCommand} -m pip install websockify`);
-          console.log(`✅ [VNC] Websockify installed successfully`);
-        } catch (installError) {
-          console.error(`❌ [VNC ERROR] Failed to install websockify:`, installError.message);
-          throw new Error('Websockify module not found and could not be installed');
-        }
-      }
-      
-      websockifyProcess = spawn('nohup', [pythonCommand, '-W', 'ignore', '-m', 'websockify', websockifyPort.toString(), `${host}:${port}`, '--web', path.join(process.cwd(), 'noVNC'), '--verbose', '--log-file', `websockify-${host}-${port}.log`, '--idle-timeout', '300', '--daemon=no'], {
+      websockifyProcess = spawn('nohup', [pythonCommand, '-W', 'ignore', '-m', 'websockify', websockifyPort.toString(), `${host}:${port}`, '--web', path.join(process.cwd(), 'noVNC'), '--verbose', '--log-file', `websockify-${host}-${port}.log`, '--idle-timeout', '300'], {
         cwd: path.join(process.cwd(), 'noVNC'),
         stdio: 'ignore', // Changed to ignore all stdio to prevent terminal window
         detached: true,
         env: {
           ...process.env,
-          PYTHONWARNINGS: 'ignore',
-          PYTHONPATH: path.join(process.cwd(), 'noVNC'),
-          PYTHONUNBUFFERED: '1'
+          PYTHONWARNINGS: 'ignore'
         }
       });
     }
@@ -2279,18 +2221,6 @@ app.post('/api/vnc/start-session', async (req, res) => {
           } else {
             console.log(`⚠️ [VNC VERIFY] Process ${websockifyProcess.pid} is not running`);
           }
-        } else {
-          // For Mac/Linux, check if process is running
-          try {
-            const checkProcess = await execPromise(`ps -p ${websockifyProcess.pid}`);
-            if (checkProcess.stdout.includes(websockifyProcess.pid.toString())) {
-              console.log(`✅ [VNC VERIFY] Process ${websockifyProcess.pid} is still running`);
-            } else {
-              console.log(`⚠️ [VNC VERIFY] Process ${websockifyProcess.pid} is not running`);
-            }
-          } catch (psError) {
-            console.log(`⚠️ [VNC VERIFY] Could not check process status: ${psError.message}`);
-          }
         }
       } catch (error) {
         console.log(`⚠️ [VNC VERIFY] Could not verify process status: ${error.message}`);
@@ -2304,49 +2234,18 @@ app.post('/api/vnc/start-session', async (req, res) => {
           targetPort: port,
           sessionId: sessionInfo.sessionId,
           vncUrl: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`.replace(':6081', `:${websockifyPort}`),
-          fallbackUrl: `vnc://:123@${host}:${port}`, // Fallback for direct VNC connection
-          platform: process.platform,
-          pythonCommand: process.platform === 'win32' ? 'pythonw' : 'python3'
+          fallbackUrl: `vnc://:123@${host}:${port}` // Fallback for direct VNC connection
         }
       });
     }, 1000);
 
-      } catch (error) {
-      console.error('Start VNC session error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: error.message,
-        platform: process.platform,
-        details: 'Check if Python and websockify are installed correctly',
-        solution: process.platform === 'darwin' ? 'On Mac, try: brew install python3 && pip3 install websockify' : 'Install Python and websockify',
-        commands: process.platform === 'darwin' ? [
-          'brew install python3',
-          'pip3 install websockify',
-          'python3 -c "import websockify; print(\'OK\')"'
-        ] : [
-          'pip install websockify',
-          'python -c "import websockify; print(\'OK\')"'
-        ],
-        troubleshooting: process.platform === 'darwin' ? [
-          '1. Install Python 3: brew install python3',
-          '2. Install websockify: pip3 install websockify',
-          '3. Test: python3 -c "import websockify; print(\'OK\')"',
-          '4. Restart the server'
-        ] : [
-          '1. Install Python: https://python.org',
-          '2. Install websockify: pip install websockify',
-          '3. Test: python -c "import websockify; print(\'OK\')"',
-          '4. Restart the server'
-        ],
-        note: 'VNC requires Python and websockify to proxy VNC connections to web browsers',
-        alternative: 'If VNC still fails, try using the Windows server at 10.51.101.49:8080',
-        workaround: 'For Mac users: Use the Windows server URL directly: http://10.51.101.49:8080',
-        quickFix: process.platform === 'darwin' ? 'Run: brew install python3 && pip3 install websockify' : 'Install Python and websockify',
-        status: 'Python/websockify dependency issue detected',
-        recommendation: 'Use Windows server for VNC until Python dependencies are resolved on Mac'
-      });
-    }
+  } catch (error) {
+    console.error('Start VNC session error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
 });
 
 // Get active VNC sessions
