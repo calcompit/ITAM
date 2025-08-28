@@ -264,21 +264,12 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           setUpdateTypes(newUpdateTypes);
           setChangedFields(newChangedFields);
           
-          // Clear animation after 3 seconds
+          // Clear animation after 3 seconds (single clear)
           setTimeout(() => {
-            console.log('[Animation Debug] Clearing all animations');
             setUpdatedMachineIDs(new Set());
             setUpdateTypes(new Map());
             setChangedFields(new Map());
           }, 3000);
-          
-          // Force clear after 5 seconds as backup
-          setTimeout(() => {
-            console.log('[Animation Debug] Force clearing all animations (backup)');
-            setUpdatedMachineIDs(new Set());
-            setUpdateTypes(new Map());
-            setChangedFields(new Map());
-          }, 5000);
         }
         
         // Trigger data refresh with fast animation
@@ -286,14 +277,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         refreshData(false).then(() => {
           setIsUpdating(false);
           updateLastUpdate();
-          
-          // Clear any lingering animations after data refresh
-          setTimeout(() => {
-            console.log('[Animation Debug] Clearing animations after data refresh');
-            setUpdatedMachineIDs(new Set());
-            setUpdateTypes(new Map());
-            setChangedFields(new Map());
-          }, 1000);
         });
       }
     };
@@ -305,11 +288,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     return () => {
       websocketService.off('data_update', handleDataUpdate);
       websocketService.off('computer_update', handleDataUpdate);
-      
-      // Clear all animations on cleanup
-      setUpdatedMachineIDs(new Set());
-      setUpdateTypes(new Map());
-      setChangedFields(new Map());
     };
   }, [toast, updateLastUpdate, memoizedComputers, lastUpdateTime]);
 
