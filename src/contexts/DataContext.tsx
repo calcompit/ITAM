@@ -277,10 +277,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
         });
       }
     };
-            
-
-
-
 
     // Listen for WebSocket events
     websocketService.on('data_update', handleDataUpdate);
