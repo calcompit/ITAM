@@ -40,7 +40,7 @@ interface DashboardProps {
 
 export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPinnedCountChange }: DashboardProps & { onPinnedCountChange?: (count: number) => void }) {
   // Use global data context instead of local state
-  const { computers, ipGroups, loading, error, isUpdating } = useData();
+  const { computers, ipGroups, loading, error, isUpdating, updatedMachineIDs, updateTypes } = useData();
   
   const [pinnedComputers, setPinnedComputers] = useState<string[]>([]);
   const [localComputers, setLocalComputers] = useState<APIComputer[]>([]);
@@ -48,7 +48,6 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedComputer, setSelectedComputer] = useState<APIComputer | null>(null);
   const [showComputerDetails, setShowComputerDetails] = useState(false);
-  const [updatedMachineIDs, setUpdatedMachineIDs] = useState<Set<string>>(new Set());
   
   // VNC Connection Modal States
   const [showVncModal, setShowVncModal] = useState(false);
@@ -729,6 +728,7 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
               onClick={handleComputerClick}
               onVNC={handleVNC}
               isUpdated={updatedMachineIDs.has(computer.machineID)}
+              updateType={updateTypes.get(computer.machineID)}
             />
           </div>
         ))}

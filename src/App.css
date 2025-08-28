@@ -40,3 +40,95 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Real-time Update Animations */
+@keyframes highlight-update {
+  0% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+  50% {
+    background-color: rgba(59, 130, 246, 0.1);
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-update {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-update {
+  0% {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes glow-update {
+  0% {
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.3);
+  }
+}
+
+.real-time-update {
+  animation: highlight-update 1.5s ease-in-out;
+}
+
+.real-time-update-pulse {
+  animation: pulse-update 0.8s ease-in-out;
+}
+
+.real-time-update-slide {
+  animation: slide-in-update 0.6s ease-out;
+}
+
+.real-time-update-glow {
+  animation: glow-update 1s ease-in-out;
+}
+
+/* Status change animations */
+.status-online-update {
+  animation: highlight-update 1s ease-in-out;
+}
+
+.status-offline-update {
+  animation: pulse-update 1.2s ease-in-out;
+}
+
+/* HUD Version change animation */
+.hud-version-update {
+  animation: glow-update 1.5s ease-in-out;
+}
+
+/* Smooth transitions for all changes */
+.computer-card {
+  transition: all 0.3s ease-in-out;
+}
+
+.computer-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}

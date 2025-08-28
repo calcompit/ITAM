@@ -12,6 +12,8 @@ interface DataContextType {
   error: string | null;
   refreshData: (showLoading?: boolean) => Promise<void>;
   isUpdating: boolean;
+  updatedMachineIDs: Set<string>;
+  updateTypes: Map<string, 'status' | 'hud' | 'general' | 'new'>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -36,6 +38,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [updatedMachineIDs, setUpdatedMachineIDs] = useState<Set<string>>(new Set());
+  const [updateTypes, setUpdateTypes] = useState<Map<string, 'status' | 'hud' | 'general' | 'new'>>(new Map());
 
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();
@@ -157,6 +161,45 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
       console.log('[DataContext] Received realtime update:', data);
       
       if (data.type === 'data_update' || data.type === 'computer_update') {
+        // Show animation for updated computers
+        if (data.data?.updatedComputers) {
+          const newUpdatedIDs = new Set<string>();
+          const newUpdateTypes = new Map<string, 'status' | 'hud' | 'general' | 'new'>();
+          
+          data.data.updatedComputers.forEach((computer: any) => {
+            newUpdatedIDs.add(computer.machineID);
+            
+            // Determine update type based on what changed
+            let updateType: 'status' | 'hud' | 'general' | 'new' = 'general';
+            
+            // Check if it's a new computer
+            const existingComputer = computers.find(c => c.machineID === computer.machineID);
+            if (!existingComputer) {
+              updateType = 'new';
+            } else {
+              // Check if status changed
+              if (existingComputer.status !== computer.status) {
+                updateType = 'status';
+              }
+              // Check if HUD version changed
+              else if (existingComputer.hudVersion !== computer.hudVersion) {
+                updateType = 'hud';
+              }
+            }
+            
+            newUpdateTypes.set(computer.machineID, updateType);
+          });
+          
+          setUpdatedMachineIDs(newUpdatedIDs);
+          setUpdateTypes(newUpdateTypes);
+          
+          // Clear animation after 3 seconds
+          setTimeout(() => {
+            setUpdatedMachineIDs(new Set());
+            setUpdateTypes(new Map());
+          }, 3000);
+        }
+        
         // Trigger data refresh with fast animation
         setIsUpdating(true);
         refreshData(false).then(() => {
@@ -185,7 +228,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     loading,
     error,
     refreshData,
-    isUpdating
+    isUpdating,
+    updatedMachineIDs,
+    updateTypes
   };
 
   return (

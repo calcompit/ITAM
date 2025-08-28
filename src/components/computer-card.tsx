@@ -16,15 +16,20 @@ interface ComputerCardProps {
   onClick: (computer: Computer) => void;
   onVNC?: (ip: string, computerName: string) => void;
   isUpdated?: boolean;
+  updateType?: 'status' | 'hud' | 'general' | 'new';
 }
 
-export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: ComputerCardProps) {
+export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updateType }: ComputerCardProps) {
   return (
     <Card 
       className={cn(
         "relative overflow-hidden cursor-pointer computer-card card-fast-hover fast-animation",
         "bg-gradient-card border-border hover:border-primary/50 min-h-[280px]",
-        isUpdated && "data-update ring-2 ring-primary ring-opacity-50"
+        isUpdated && "data-update ring-2 ring-primary ring-opacity-50",
+        isUpdated && updateType === 'status' && "status-online-update",
+        isUpdated && updateType === 'hud' && "hud-version-update",
+        isUpdated && updateType === 'general' && "real-time-update",
+        isUpdated && updateType === 'new' && "real-time-update-slide"
       )}
       onClick={() => onClick(computer)}
     >
@@ -141,7 +146,10 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated }: Com
             <div>Domain: {computer.domain}</div>
             <div>User: {computer.sUser ? computer.sUser.split('\\').pop() : 'N/A'}</div>
             {computer.hudVersion && (
-              <div className="flex items-center gap-1 text-primary font-medium">
+              <div className={cn(
+                "flex items-center gap-1 text-primary font-medium",
+                isUpdated && updateType === 'hud' && "real-time-update-glow"
+              )}>
                 Tracker: {computer.hudVersion}
               </div>
             )}
