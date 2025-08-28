@@ -101,21 +101,35 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
             <span className="text-sm text-muted-foreground">Primary IP</span>
             <div className="flex items-center gap-2">
               <ClickableText 
-                text={computer.ipAddresses[0] || "N/A"}
+                text={(() => {
+                  // Find primary IP (10.51.x.x or 172.x.x.x)
+                  const primaryIP = computer.ipAddresses.find(ip => 
+                    ip.startsWith('10.51.') || ip.startsWith('172.')
+                  );
+                  return primaryIP || computer.ipAddresses[0] || "N/A";
+                })()}
                 className={cn(
                   "text-sm font-mono text-card-foreground hover:text-primary",
                   isUpdated && changedFields?.includes('ipAddress') && "updating-field"
                 )}
                 onClick={(e) => e.stopPropagation()}
               />
-              {onVNC && computer.ipAddresses[0] && (
+              {onVNC && (() => {
+                const primaryIP = computer.ipAddresses.find(ip => 
+                  ip.startsWith('10.51.') || ip.startsWith('172.')
+                );
+                return primaryIP || computer.ipAddresses[0];
+              })() && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onVNC) {
-                      onVNC(computer.ipAddresses[0], computer.computerName);
+                      const primaryIP = computer.ipAddresses.find(ip => 
+                        ip.startsWith('10.51.') || ip.startsWith('172.')
+                      );
+                      onVNC(primaryIP || computer.ipAddresses[0], computer.computerName);
                     }
                   }}
                   className="h-8 w-8 p-0 hover:bg-accent btn-fast-enhanced hover:scale-110"

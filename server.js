@@ -644,34 +644,199 @@ async function startChangeMonitoring(pool) {
         
         DECLARE @message NVARCHAR(MAX);
         DECLARE @changeType NVARCHAR(10);
+        DECLARE @oldIPv4 NVARCHAR(MAX);
+        DECLARE @newIPv4 NVARCHAR(MAX);
+        DECLARE @significantChange BIT = 0;
         
         IF EXISTS(SELECT * FROM inserted) AND EXISTS(SELECT * FROM deleted)
+        BEGIN
           SET @changeType = 'UPDATE';
+          
+          -- Get old and new IP values
+          SELECT @oldIPv4 = IPv4 FROM deleted;
+          SELECT @newIPv4 = IPv4 FROM inserted;
+          
+          -- Check if Primary IP changed (10.51.x.x or 172.x.x.x)
+          IF (@oldIPv4 IS NOT NULL AND @newIPv4 IS NOT NULL)
+          BEGIN
+            DECLARE @oldPrimaryIP NVARCHAR(15) = NULL;
+            DECLARE @newPrimaryIP NVARCHAR(15) = NULL;
+            
+            -- Extract primary IP from old IPv4
+            SELECT @oldPrimaryIP = value FROM STRING_SPLIT(@oldIPv4, ',') 
+            WHERE value LIKE '10.51.%' OR value LIKE '172.%';
+            
+            -- Extract primary IP from new IPv4  
+            SELECT @newPrimaryIP = value FROM STRING_SPLIT(@newIPv4, ',')
+            WHERE value LIKE '10.51.%' OR value LIKE '172.%';
+            
+            -- If no primary IP found, use first IP
+            IF @oldPrimaryIP IS NULL
+              SELECT @oldPrimaryIP = value FROM STRING_SPLIT(@oldIPv4, ',') WHERE value IS NOT NULL;
+            IF @newPrimaryIP IS NULL
+              SELECT @newPrimaryIP = value FROM STRING_SPLIT(@newIPv4, ',') WHERE value IS NOT NULL;
+            
+            -- Check if primary IP changed
+            IF @oldPrimaryIP != @newPrimaryIP
+            BEGIN
+              SET @significantChange = 1;
+              
+              -- Log the primary IP change to TBL_IT_MachineChangeLog
+              INSERT INTO [mes].[dbo].[TBL_IT_MachineChangeLog] 
+              (MachineID, ChangeDate, ChangedSUser, SnapshotJson_Old, SnapshotJson_New)
+              SELECT 
+                MachineID,
+                GETUTCDATE(),
+                'System',
+                JSON_QUERY((
+                  SELECT 
+                    'Primary IP Change' as changeType,
+                    @oldPrimaryIP as oldPrimaryIP,
+                    @newPrimaryIP as newPrimaryIP,
+                    IPv4 as oldIPv4,
+                    HUD_Version,
+                    ComputerName,
+                    Domain,
+                    SUser
+                  FROM deleted
+                )),
+                JSON_QUERY((
+                  SELECT 
+                    'Primary IP Change' as changeType,
+                    @oldPrimaryIP as oldPrimaryIP,
+                    @newPrimaryIP as newPrimaryIP,
+                    IPv4 as newIPv4,
+                    HUD_Version,
+                    ComputerName,
+                    Domain,
+                    SUser
+                  FROM inserted
+                ))
+              FROM inserted;
+            END
+          END
+        END
         ELSE IF EXISTS(SELECT * FROM inserted)
           SET @changeType = 'INSERT';
         ELSE
           SET @changeType = 'DELETE';
         
-        SET @message = JSON_QUERY((
-          SELECT 
-            @changeType as changeType,
-            GETUTCDATE() as timestamp,
-            *
-          FROM inserted
-        ));
-        
-        IF @message IS NOT NULL
+        -- Log ALL changes to TBL_IT_MachineChangeLog (except excluded fields)
+        -- Excluded fields: UpdatedAt, HUD_Mode, HUD_ColorARGB, LastBoot, HUD_Version, Temporary IPs (10.0.x.x)
+        IF @changeType = 'INSERT' OR @changeType = 'DELETE' OR 
+           (@changeType = 'UPDATE' AND (
+             @significantChange = 1 OR 
+             -- Check if any non-excluded field changed (except temporary IPs)
+             EXISTS (
+               SELECT 1 FROM inserted i, deleted d 
+               WHERE i.MachineID = d.MachineID AND (
+                 ISNULL(i.ComputerName, '') != ISNULL(d.ComputerName, '') OR
+                 ISNULL(i.Domain, '') != ISNULL(d.Domain, '') OR
+                 ISNULL(i.SUser, '') != ISNULL(d.SUser, '') OR
+                 ISNULL(i.CPU_Model, '') != ISNULL(d.CPU_Model, '') OR
+                 ISNULL(i.CPU_Cores, 0) != ISNULL(d.CPU_Cores, 0) OR
+                 ISNULL(i.CPU_Threads, 0) != ISNULL(d.CPU_Threads, 0) OR
+                 ISNULL(i.RAM_Total, 0) != ISNULL(d.RAM_Total, 0) OR
+                 ISNULL(i.RAM_Available, 0) != ISNULL(d.RAM_Available, 0) OR
+                 ISNULL(i.Disk_Total, 0) != ISNULL(d.Disk_Total, 0) OR
+                 ISNULL(i.Disk_Available, 0) != ISNULL(d.Disk_Available, 0) OR
+                 ISNULL(i.OS_Name, '') != ISNULL(d.OS_Name, '') OR
+                 ISNULL(i.OS_Version, '') != ISNULL(d.OS_Version, '') OR
+                 ISNULL(i.OS_Build, '') != ISNULL(d.OS_Build, '') OR
+                 ISNULL(i.OS_Architecture, '') != ISNULL(d.OS_Architecture, '') OR
+                 ISNULL(i.Network_Adapter, '') != ISNULL(d.Network_Adapter, '') OR
+                 ISNULL(i.Network_Speed, '') != ISNULL(d.Network_Speed, '') OR
+                 ISNULL(i.Network_Status, '') != ISNULL(d.Network_Status, '') OR
+                 ISNULL(i.LastSeen, '') != ISNULL(d.LastSeen, '') OR
+                 ISNULL(i.Status, '') != ISNULL(d.Status, '')
+               )
+             )
+           ))
         BEGIN
-          DECLARE @dialog_handle UNIQUEIDENTIFIER;
-          BEGIN DIALOG CONVERSATION @dialog_handle
-            FROM SERVICE [ITAssetChangeService]
-            TO SERVICE 'ITAssetChangeService'
-            ON CONTRACT [ITAssetChangeContract]
-            WITH ENCRYPTION = OFF;
+          INSERT INTO [mes].[dbo].[TBL_IT_MachineChangeLog] 
+          (MachineID, ChangeDate, ChangedSUser, SnapshotJson_Old, SnapshotJson_New)
+          SELECT 
+            MachineID,
+            GETUTCDATE(),
+            'System',
+            JSON_QUERY((
+              SELECT 
+                @changeType as changeType,
+                MachineID,
+                ComputerName,
+                Domain,
+                SUser,
+                IPv4,
+                CPU_Model,
+                CPU_Cores,
+                CPU_Threads,
+                RAM_Total,
+                RAM_Available,
+                Disk_Total,
+                Disk_Available,
+                OS_Name,
+                OS_Version,
+                OS_Build,
+                OS_Architecture,
+                Network_Adapter,
+                Network_Speed,
+                Network_Status,
+                LastSeen,
+                Status
+                -- Excluded: UpdatedAt, HUD_Mode, HUD_ColorARGB, LastBoot, HUD_Version, Temporary IPs (10.0.x.x)
+              FROM deleted
+            )),
+            JSON_QUERY((
+              SELECT 
+                @changeType as changeType,
+                MachineID,
+                ComputerName,
+                Domain,
+                SUser,
+                IPv4,
+                CPU_Model,
+                CPU_Cores,
+                CPU_Threads,
+                RAM_Total,
+                RAM_Available,
+                Disk_Total,
+                Disk_Available,
+                OS_Name,
+                OS_Version,
+                OS_Build,
+                OS_Architecture,
+                Network_Adapter,
+                Network_Speed,
+                Network_Status,
+                LastSeen,
+                Status
+                -- Excluded: UpdatedAt, HUD_Mode, HUD_ColorARGB, LastBoot, HUD_Version, Temporary IPs (10.0.x.x)
+              FROM inserted
+            ))
+          FROM inserted;
+        END
           
-          SEND ON CONVERSATION @dialog_handle
-            MESSAGE TYPE [ITAssetChangeMessage]
-            (@message);
+          SET @message = JSON_QUERY((
+            SELECT 
+              @changeType as changeType,
+              GETUTCDATE() as timestamp,
+              *
+            FROM inserted
+          ));
+          
+          IF @message IS NOT NULL
+          BEGIN
+            DECLARE @dialog_handle UNIQUEIDENTIFIER;
+            BEGIN DIALOG CONVERSATION @dialog_handle
+              FROM SERVICE [ITAssetChangeService]
+              TO SERVICE 'ITAssetChangeService'
+              ON CONTRACT [ITAssetChangeContract]
+              WITH ENCRYPTION = OFF;
+            
+            SEND ON CONVERSATION @dialog_handle
+              MESSAGE TYPE [ITAssetChangeMessage]
+              (@message);
+          END
         END
       END
     `);
@@ -921,17 +1086,37 @@ function startPollingMonitoring() {
           console.log(`[Real-time] New record detected: ${row.MachineID}`);
           changedRecords.push(row);
                  } else {
-           // Helper function to normalize strings for comparison
-           const normalizeString = (str) => {
-             if (!str) return '';
-             return String(str).trim().replace(/\s+/g, ' ');
-           };
-           
-           // Helper function to normalize numbers for comparison
-           const normalizeNumber = (num) => {
-             if (num === null || num === undefined) return 0;
-             return Number(num) || 0;
-           };
+                   // Helper function to normalize strings for comparison
+        const normalizeString = (str) => {
+          if (!str) return '';
+          return String(str).trim().replace(/\s+/g, ' ');
+        };
+        
+        // Helper function to normalize numbers for comparison
+        const normalizeNumber = (num) => {
+          if (num === null || num === undefined) return 0;
+          return Number(num) || 0;
+        };
+
+        // Helper function to extract primary IP (10.51.x.x or 172.x.x.x)
+        const extractPrimaryIP = (ipString) => {
+          if (!ipString) return '';
+          const ips = ipString.split(',').map(ip => ip.trim());
+          
+          // Priority: 10.51.x.x first, then 172.x.x.x
+          const primaryIP = ips.find(ip => 
+            ip.startsWith('10.51.') || ip.startsWith('172.')
+          );
+          
+          return primaryIP || ips[0] || ''; // Return first IP if no primary found
+        };
+
+        // Helper function to check if IP change is significant (primary IP changed)
+        const isSignificantIPChange = (oldIPs, newIPs) => {
+          const oldPrimary = extractPrimaryIP(oldIPs);
+          const newPrimary = extractPrimaryIP(newIPs);
+          return oldPrimary !== newPrimary;
+        };
            
            // Check for changes in important fields with proper normalization
            const normalizedRow = {
@@ -950,11 +1135,14 @@ function startPollingMonitoring() {
              LastBoot: normalizeString(row.LastBoot)
            };
            
+           // Check for significant changes (excluding temporary IP changes)
+           const hasSignificantIPChange = isSignificantIPChange(cachedData.IPv4, normalizedRow.IPv4);
+           
            const hasChanged = 
              normalizedRow.HUD_Version !== cachedData.HUD_Version ||
              normalizedRow.HUD_Mode !== cachedData.HUD_Mode ||
              normalizedRow.HUD_ColorARGB !== cachedData.HUD_ColorARGB ||
-             normalizedRow.IPv4 !== cachedData.IPv4 ||
+             hasSignificantIPChange || // Only count significant IP changes
              normalizedRow.Domain !== cachedData.Domain ||
              normalizedRow.SUser !== cachedData.SUser ||
              normalizedRow.Win_Activated !== cachedData.Win_Activated ||
@@ -966,12 +1154,16 @@ function startPollingMonitoring() {
              normalizedRow.LastBoot !== cachedData.LastBoot;
             
           if (hasChanged) {
-            console.log(`[Real-time] Change detected for ${row.MachineID}: HUD_Version="${normalizedRow.HUD_Version}" vs "${cachedData.HUD_Version}", CPU_Model="${normalizedRow.CPU_Model}" vs "${cachedData.CPU_Model}"`);
+            const oldPrimaryIP = extractPrimaryIP(cachedData.IPv4);
+            const newPrimaryIP = extractPrimaryIP(normalizedRow.IPv4);
+            
+            console.log(`[Real-time] Change detected for ${row.MachineID}: HUD_Version="${normalizedRow.HUD_Version}" vs "${cachedData.HUD_Version}", Primary IP="${oldPrimaryIP}" -> "${newPrimaryIP}"`);
             changedRecords.push(row);
           } else {
             // Debug: Log when no change is detected (for troubleshooting)
             if (Math.random() < 0.1) { // Log 10% of the time to avoid spam
-              console.log(`[Real-time] No change for ${row.MachineID}: HUD_Version="${normalizedRow.HUD_Version}", CPU_Model="${normalizedRow.CPU_Model}"`);
+              const primaryIP = extractPrimaryIP(normalizedRow.IPv4);
+              console.log(`[Real-time] No significant change for ${row.MachineID}: Primary IP="${primaryIP}", HUD_Version="${normalizedRow.HUD_Version}"`);
             }
           }
           

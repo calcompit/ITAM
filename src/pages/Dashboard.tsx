@@ -408,30 +408,28 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
       computersToDisplay = filteredComputers;
     }
     
-    // Sort by IP address and separate online/offline
+    // Sort by Primary IP (10.51.x.x or 172.x.x.x) for better organization
     return computersToDisplay.sort((a, b) => {
-      const ipA = a.ipAddresses[0] || "";
-      const ipB = b.ipAddresses[0] || "";
-      
       // First sort by status (online first, then offline)
       if (a.status !== b.status) {
         return a.status === 'online' ? -1 : 1;
       }
       
-      // Then sort by IP address (numeric comparison)
-      if (ipA && ipB) {
-        const ipPartsA = ipA.split('.').map(part => parseInt(part, 10));
-        const ipPartsB = ipB.split('.').map(part => parseInt(part, 10));
-        
-        for (let i = 0; i < 4; i++) {
-          if (ipPartsA[i] !== ipPartsB[i]) {
-            return ipPartsA[i] - ipPartsB[i];
-          }
-        }
-      }
+      // Extract Primary IP (10.51.x.x or 172.x.x.x)
+      const getPrimaryIP = (ipAddresses: string[]) => {
+        if (!ipAddresses || ipAddresses.length === 0) return "";
+        // Find primary IP (10.51.x.x or 172.x.x.x)
+        const primaryIP = ipAddresses.find(ip => 
+          ip.startsWith('10.51.') || ip.startsWith('172.')
+        );
+        return primaryIP || ipAddresses[0] || ""; // Return first IP if no primary found
+      };
       
-      // If IPs are equal or both empty, sort by computer name
-      return (a.computerName || "").localeCompare(b.computerName || "");
+      const aPrimaryIP = getPrimaryIP(a.ipAddresses);
+      const bPrimaryIP = getPrimaryIP(b.ipAddresses);
+      
+      // Then sort by Primary IP
+      return aPrimaryIP.localeCompare(bPrimaryIP);
     });
   };
 
