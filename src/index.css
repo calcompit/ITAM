@@ -1,9 +1,9 @@
-/* Import fast animations for realtime websocket updates */
-@import './components/fast-animations.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import fast animations for realtime websocket updates */
+@import './components/fast-animations.css';
 
 /* Prevent animation during page load to avoid FOUC */
 * {
@@ -19,6 +19,17 @@
 /* Re-enable transitions after page load */
 .loaded * {
   transition: inherit;
+}
+
+/* Enable animations for real-time updates */
+.real-time-update,
+.computer-card.updating,
+.status-online-update,
+.status-offline-update,
+.hud-version-update,
+.data-update {
+  transition: all 0.3s ease-in-out !important;
+  animation-play-state: running !important;
 }
 
 /* Keep sidebar transitions disabled even after load */
