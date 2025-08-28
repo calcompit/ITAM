@@ -26,12 +26,14 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
       className={cn(
         "relative overflow-hidden cursor-pointer computer-card card-fast-hover fast-animation",
         "bg-gradient-card border-border hover:border-primary/50 min-h-[280px]",
-        isUpdated && "data-update ring-2 ring-primary ring-opacity-50",
+        // Only show border pulse animation if there are changed fields (not just status)
+        isUpdated && changedFields && changedFields.length > 0 && "data-update ring-2 ring-primary ring-opacity-50",
         isUpdated && updateType === 'status' && "status-online-update",
         isUpdated && updateType === 'hud' && "hud-version-update",
         isUpdated && updateType === 'general' && "real-time-update",
         isUpdated && updateType === 'new' && "real-time-update-slide",
-        isUpdated && "updating"
+        // Only apply updating class if there are changed fields
+        isUpdated && changedFields && changedFields.length > 0 && "updating"
       )}
       onClick={() => onClick(computer)}
     >
