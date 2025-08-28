@@ -15,6 +15,7 @@ interface DataContextType {
   updatedMachineIDs: Set<string>;
   updateTypes: Map<string, 'status' | 'hud' | 'general' | 'new'>;
   lastUpdateTime: Map<string, number>;
+  changedFields: Map<string, string[]>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -42,6 +43,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   const [updatedMachineIDs, setUpdatedMachineIDs] = useState<Set<string>>(new Set());
   const [updateTypes, setUpdateTypes] = useState<Map<string, 'status' | 'hud' | 'general' | 'new'>>(new Map());
   const [lastUpdateTime, setLastUpdateTime] = useState<Map<string, number>>(new Map());
+  const [changedFields, setChangedFields] = useState<Map<string, string[]>>(new Map());
 
   const { toast } = useToast();
   const { updateStatus, updateLastUpdate } = useStatus();
@@ -188,26 +190,45 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             if (!existingComputer) {
               updateType = 'new';
             } else {
-                           // Check if status changed (only trigger animation for actual status changes)
-             if (existingComputer.status !== computer.status) {
-               updateType = 'status';
-             }
-             // Check if HUD version changed
-             else if (existingComputer.hudVersion !== computer.hudVersion) {
-               updateType = 'hud';
-             }
-             // Check if other important fields changed (but not status or HUD)
-             else if (
-               existingComputer.ipAddresses[0] !== computer.ipAddresses[0] ||
-               existingComputer.domain !== computer.domain ||
-               existingComputer.sUser !== computer.sUser ||
-               existingComputer.winActivated !== computer.winActivated ||
-               existingComputer.cpu?.model !== computer.cpu?.model ||
-               existingComputer.ram?.totalGB !== computer.ram?.totalGB ||
-               existingComputer.storage?.totalGB !== computer.storage?.totalGB
-             ) {
-               updateType = 'general';
-             }
+                                       // Check if status changed (only trigger animation for actual status changes)
+            if (existingComputer.status !== computer.status) {
+              updateType = 'status';
+            }
+            // Check if HUD version changed
+            else if (existingComputer.hudVersion !== computer.hudVersion) {
+              updateType = 'hud';
+            }
+            // Check if other important fields changed (but not status or HUD)
+            else if (
+              existingComputer.ipAddresses[0] !== computer.ipAddresses[0] ||
+              existingComputer.domain !== computer.domain ||
+              existingComputer.sUser !== computer.sUser ||
+              existingComputer.winActivated !== computer.winActivated ||
+              existingComputer.cpu?.model !== computer.cpu?.model ||
+              existingComputer.ram?.totalGB !== computer.ram?.totalGB ||
+              existingComputer.storage?.totalGB !== computer.storage?.totalGB
+            ) {
+              updateType = 'general';
+            }
+            
+            // Store what specific fields changed for detailed animation
+            const changedFields: string[] = [];
+            if (existingComputer.status !== computer.status) changedFields.push('status');
+            if (existingComputer.hudVersion !== computer.hudVersion) changedFields.push('hudVersion');
+            if (existingComputer.ipAddresses[0] !== computer.ipAddresses[0]) changedFields.push('ipAddress');
+            if (existingComputer.domain !== computer.domain) changedFields.push('domain');
+            if (existingComputer.sUser !== computer.sUser) changedFields.push('user');
+            if (existingComputer.winActivated !== computer.winActivated) changedFields.push('windows');
+            if (existingComputer.cpu?.model !== computer.cpu?.model) changedFields.push('cpu');
+            if (existingComputer.ram?.totalGB !== computer.ram?.totalGB) changedFields.push('ram');
+            if (existingComputer.storage?.totalGB !== computer.storage?.totalGB) changedFields.push('storage');
+            
+            // Store changed fields for this computer
+            if (changedFields.length > 0) {
+              newUpdateTypes.set(computer.machineID, updateType);
+              // Store detailed change info
+              setChangedFields(prev => new Map(prev).set(computer.machineID, changedFields));
+            }
             }
             
             newUpdateTypes.set(computer.machineID, updateType);
@@ -221,6 +242,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
           setTimeout(() => {
             setUpdatedMachineIDs(new Set());
             setUpdateTypes(new Map());
+            setChangedFields(new Map());
           }, 3000);
         }
         
@@ -255,7 +277,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
     isUpdating,
     updatedMachineIDs,
     updateTypes,
-    lastUpdateTime
+    lastUpdateTime,
+    changedFields
   };
 
   return (

@@ -40,7 +40,7 @@ interface DashboardProps {
 
 export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPinnedCountChange }: DashboardProps & { onPinnedCountChange?: (count: number) => void }) {
   // Use global data context instead of local state
-  const { computers, ipGroups, loading, error, isUpdating, updatedMachineIDs, updateTypes } = useData();
+  const { computers, ipGroups, loading, error, isUpdating, updatedMachineIDs, updateTypes, changedFields } = useData();
   
   const [pinnedComputers, setPinnedComputers] = useState<string[]>([]);
   const [localComputers, setLocalComputers] = useState<APIComputer[]>([]);
@@ -729,6 +729,7 @@ export function Dashboard({ activeTab, onTabChange, showPinnedOnly = false, onPi
               onVNC={handleVNC}
               isUpdated={updatedMachineIDs.has(computer.machineID)}
               updateType={updateTypes.get(computer.machineID)}
+              changedFields={changedFields.get(computer.machineID)}
             />
           </div>
         ))}

@@ -46,15 +46,67 @@
   0% {
     background-color: transparent;
     transform: scale(1);
+    border-color: transparent;
+  }
+  25% {
+    background-color: rgba(59, 130, 246, 0.05);
+    transform: scale(1.01);
+    border-color: rgba(59, 130, 246, 0.3);
   }
   50% {
     background-color: rgba(59, 130, 246, 0.1);
     transform: scale(1.02);
+    border-color: rgba(59, 130, 246, 0.6);
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+  75% {
+    background-color: rgba(59, 130, 246, 0.05);
+    transform: scale(1.01);
+    border-color: rgba(59, 130, 246, 0.3);
   }
   100% {
     background-color: transparent;
     transform: scale(1);
+    border-color: transparent;
+  }
+}
+
+@keyframes smooth-border-pulse {
+  0% {
+    border-color: rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    border-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+  }
+  100% {
+    border-color: rgba(59, 130, 246, 0.2);
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+  }
+}
+
+@keyframes spinner-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-in-out {
+  0% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(5px);
   }
 }
 
@@ -94,7 +146,7 @@
 }
 
 .real-time-update {
-  animation: highlight-update 1.5s ease-in-out;
+  animation: smooth-border-pulse 3s ease-in-out infinite;
 }
 
 .real-time-update-pulse {
@@ -107,6 +159,55 @@
 
 .real-time-update-glow {
   animation: glow-update 1s ease-in-out;
+}
+
+/* Loading spinner for updating elements */
+.updating-spinner {
+  animation: spinner-rotate 1s linear infinite;
+}
+
+/* Change indicator */
+.change-indicator {
+  animation: fade-in-out 2s ease-in-out;
+  background: linear-gradient(45deg, rgba(59, 130, 246, 0.1), rgba(34, 197, 94, 0.1));
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(59, 130, 246);
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+/* Smooth card transitions */
+.computer-card {
+  transition: all 0.3s ease-in-out;
+  position: relative;
+}
+
+.computer-card.updating {
+  animation: smooth-border-pulse 3s ease-in-out infinite;
+}
+
+.computer-card.updating .updating-field {
+  position: relative;
+}
+
+.computer-card.updating .updating-field::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -15px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  border-top: 2px solid rgb(59, 130, 246);
+  border-radius: 50%;
+  animation: spinner-rotate 1s linear infinite;
+  transform: translateY(-50%);
 }
 
 /* Status change animations */

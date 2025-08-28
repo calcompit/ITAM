@@ -17,9 +17,10 @@ interface ComputerCardProps {
   onVNC?: (ip: string, computerName: string) => void;
   isUpdated?: boolean;
   updateType?: 'status' | 'hud' | 'general' | 'new';
+  changedFields?: string[];
 }
 
-export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updateType }: ComputerCardProps) {
+export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updateType, changedFields }: ComputerCardProps) {
   return (
     <Card 
       className={cn(
@@ -29,10 +30,17 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
         isUpdated && updateType === 'status' && "status-online-update",
         isUpdated && updateType === 'hud' && "hud-version-update",
         isUpdated && updateType === 'general' && "real-time-update",
-        isUpdated && updateType === 'new' && "real-time-update-slide"
+        isUpdated && updateType === 'new' && "real-time-update-slide",
+        isUpdated && "updating"
       )}
       onClick={() => onClick(computer)}
     >
+      {/* Change indicator */}
+      {isUpdated && changedFields && changedFields.length > 0 && (
+        <div className="change-indicator">
+          {changedFields.length === 1 ? changedFields[0] : `${changedFields.length} changes`}
+        </div>
+      )}
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
                       <Monitor className="h-5 w-5 text-primary" />
@@ -72,7 +80,10 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
             <div className="flex items-center gap-2">
               <ClickableText 
                 text={computer.ipAddresses[0] || "N/A"}
-                className="text-sm font-mono text-card-foreground hover:text-primary"
+                className={cn(
+                  "text-sm font-mono text-card-foreground hover:text-primary",
+                  isUpdated && changedFields?.includes('ipAddress') && "updating-field"
+                )}
                 onClick={(e) => e.stopPropagation()}
               />
               {onVNC && computer.ipAddresses[0] && (
@@ -126,13 +137,17 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
           </div>
           
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
+            <div className={cn(
+              isUpdated && changedFields?.includes('ram') && "updating-field"
+            )}>
               <span className="text-muted-foreground">RAM:</span>
               <span className="ml-1 text-card-foreground">
                 {computer.ram?.totalGB ? `${computer.ram.totalGB}GB` : 'N/A'}
               </span>
             </div>
-            <div>
+            <div className={cn(
+              isUpdated && changedFields?.includes('storage') && "updating-field"
+            )}>
               <span className="text-muted-foreground">Storage:</span>
               <span className="ml-1 text-card-foreground">
                 {computer.storage?.totalGB ? `${computer.storage.totalGB}GB` : 'N/A'}
@@ -141,17 +156,29 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
           </div>
           
           <div className="text-xs text-muted-foreground mt-auto">
-            <div>Domain: {computer.domain}</div>
-            <div>User: {computer.sUser ? computer.sUser.split('\\').pop() : 'N/A'}</div>
+            <div className={cn(
+              isUpdated && changedFields?.includes('domain') && "updating-field"
+            )}>
+              Domain: {computer.domain}
+            </div>
+            <div className={cn(
+              isUpdated && changedFields?.includes('user') && "updating-field"
+            )}>
+              User: {computer.sUser ? computer.sUser.split('\\').pop() : 'N/A'}
+            </div>
             {computer.hudVersion && (
               <div className={cn(
                 "flex items-center gap-1 text-primary font-medium",
-                isUpdated && updateType === 'hud' && "real-time-update-glow"
+                isUpdated && updateType === 'hud' && "real-time-update-glow",
+                isUpdated && changedFields?.includes('hudVersion') && "updating-field"
               )}>
                 Tracker: {computer.hudVersion}
               </div>
             )}
-            <div className={`flex items-center gap-1 ${computer.winActivated ? 'text-status-online' : 'text-status-warning'}`}>
+            <div className={cn(
+              `flex items-center gap-1 ${computer.winActivated ? 'text-status-online' : 'text-status-warning'}`,
+              isUpdated && changedFields?.includes('windows') && "updating-field"
+            )}>
               Windows: {computer.winActivated ? 'Activated' : 'Not Activated'}
             </div>
             <div className="mt-2">
