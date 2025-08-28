@@ -1820,7 +1820,7 @@ app.post('/api/vnc/start', async (req, res) => {
     // Use platform-specific command to prevent terminal window
     let websockifyProcess;
     if (process.platform === 'win32') {
-      websockifyProcess = spawn('python', [
+      websockifyProcess = spawn('pythonw', [
         '-m', 'websockify',
         webPort.toString(),
         target,
@@ -2155,8 +2155,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         // Detect platform and use appropriate command to run in background
     
     if (process.platform === 'win32') {
-      // Windows: Use python.exe for better compatibility
-      const pythonCommand = 'python';
+      // Windows: Use pythonw.exe to prevent terminal window
+      const pythonCommand = 'pythonw';
       console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
       console.log(`[VNC] Command: ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
       
