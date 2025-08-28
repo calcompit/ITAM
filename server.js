@@ -896,6 +896,16 @@ function startPollingMonitoring() {
           });
         });
         console.log(`[Real-time] Cache initialized with ${global.computerCache.size} records`);
+        
+        // Debug: Show first few cache entries
+        let debugCount = 0;
+        for (const [key, value] of global.computerCache.entries()) {
+          if (debugCount < 3) {
+            console.log(`[Real-time] Cache entry ${key}: HUD_Version="${value.HUD_Version}", CPU_Model="${value.CPU_Model}"`);
+            debugCount++;
+          }
+        }
+        
         // Don't broadcast on first run
         setTimeout(pollForChanges, 10000);
         return;
@@ -909,25 +919,25 @@ function startPollingMonitoring() {
           // New record
           console.log(`[Real-time] New record detected: ${row.MachineID}`);
           changedRecords.push(row);
-        } else {
-          // Check for changes in important fields with proper null/undefined handling
-          const hasChanged = 
-            (row.HUD_Version || null) !== (cachedData.HUD_Version || null) ||
-            (row.HUD_Mode || null) !== (cachedData.HUD_Mode || null) ||
-            (row.HUD_ColorARGB || null) !== (cachedData.HUD_ColorARGB || null) ||
-            (row.IPv4 || null) !== (cachedData.IPv4 || null) ||
-            (row.Domain || null) !== (cachedData.Domain || null) ||
-            (row.SUser || null) !== (cachedData.SUser || null) ||
-            (row.Win_Activated || null) !== (cachedData.Win_Activated || null) ||
-            (row.CPU_Model || null) !== (cachedData.CPU_Model || null) ||
-            (row.CPU_PhysicalCores || null) !== (cachedData.CPU_PhysicalCores || null) ||
-            (row.CPU_LogicalCores || null) !== (cachedData.CPU_LogicalCores || null) ||
-            (row.RAM_TotalGB || null) !== (cachedData.RAM_TotalGB || null) ||
-            (row.Storage_TotalGB || null) !== (cachedData.Storage_TotalGB || null) ||
-            (row.LastBoot || null) !== (cachedData.LastBoot || null);
+                 } else {
+           // Check for changes in important fields with proper null/undefined handling
+           const hasChanged = 
+             String(row.HUD_Version || '') !== String(cachedData.HUD_Version || '') ||
+             String(row.HUD_Mode || '') !== String(cachedData.HUD_Mode || '') ||
+             String(row.HUD_ColorARGB || '') !== String(cachedData.HUD_ColorARGB || '') ||
+             String(row.IPv4 || '') !== String(cachedData.IPv4 || '') ||
+             String(row.Domain || '') !== String(cachedData.Domain || '') ||
+             String(row.SUser || '') !== String(cachedData.SUser || '') ||
+             Number(row.Win_Activated || 0) !== Number(cachedData.Win_Activated || 0) ||
+             String(row.CPU_Model || '') !== String(cachedData.CPU_Model || '') ||
+             Number(row.CPU_PhysicalCores || 0) !== Number(cachedData.CPU_PhysicalCores || 0) ||
+             Number(row.CPU_LogicalCores || 0) !== Number(cachedData.CPU_LogicalCores || 0) ||
+             Number(row.RAM_TotalGB || 0) !== Number(cachedData.RAM_TotalGB || 0) ||
+             Number(row.Storage_TotalGB || 0) !== Number(cachedData.Storage_TotalGB || 0) ||
+             String(row.LastBoot || '') !== String(cachedData.LastBoot || '');
             
           if (hasChanged) {
-            console.log(`[Real-time] Change detected for ${row.MachineID}: HUD_Version=${row.HUD_Version}, CPU_Model=${row.CPU_Model}`);
+            console.log(`[Real-time] Change detected for ${row.MachineID}: HUD_Version="${row.HUD_Version}" vs "${cachedData.HUD_Version}", CPU_Model="${row.CPU_Model}" vs "${cachedData.CPU_Model}"`);
             changedRecords.push(row);
           }
         }
