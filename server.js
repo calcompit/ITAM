@@ -2302,7 +2302,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
           vncUrl: `${process.env.NOVNC_URL || `http://${HOST}:6081`}/vnc.html?autoconnect=true&resize=scale&scale_cursor=true&clip=true&shared=true&repeaterID=&password=123`.replace(':6081', `:${websockifyPort}`),
           fallbackUrl: `vnc://:123@${host}:${port}`, // Fallback for direct VNC connection
           platform: process.platform,
-          pythonCommand: pythonCommand || 'python3'
+          pythonCommand: process.platform === 'win32' ? 'python' : 'python3'
         }
       });
     }, 1000);
