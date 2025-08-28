@@ -1036,7 +1036,65 @@ function startPollingMonitoring() {
   };
   
   console.log('[Real-time] Starting polling monitoring...');
-  pollForChanges();
+  
+  // Initialize cache with current data first
+  const initializeCache = async () => {
+    try {
+      const pool = await getDbConnection();
+      if (pool) {
+        const result = await pool.request().query(`
+          SELECT 
+            MachineID,
+            HUD_Version,
+            HUD_Mode,
+            HUD_ColorARGB,
+            IPv4,
+            Domain,
+            SUser,
+            Win_Activated,
+            CPU_Model,
+            CPU_PhysicalCores,
+            CPU_LogicalCores,
+            RAM_TotalGB,
+            Storage_TotalGB,
+            LastBoot
+          FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
+        `);
+        
+        if (!global.computerCache) {
+          global.computerCache = new Map();
+        }
+        
+        result.recordset.forEach(row => {
+          const cacheKey = `computer_${row.MachineID}`;
+          global.computerCache.set(cacheKey, {
+            HUD_Version: row.HUD_Version,
+            HUD_Mode: row.HUD_Mode,
+            HUD_ColorARGB: row.HUD_ColorARGB,
+            IPv4: row.IPv4,
+            Domain: row.Domain,
+            SUser: row.SUser,
+            Win_Activated: row.Win_Activated,
+            CPU_Model: row.CPU_Model,
+            CPU_PhysicalCores: row.CPU_PhysicalCores,
+            CPU_LogicalCores: row.CPU_LogicalCores,
+            RAM_TotalGB: row.RAM_TotalGB,
+            Storage_TotalGB: row.Storage_TotalGB,
+            LastBoot: row.LastBoot
+          });
+        });
+        
+        console.log(`[Real-time] Cache initialized with ${global.computerCache.size} records`);
+      }
+    } catch (err) {
+      console.error('[Real-time] Cache initialization error:', err.message);
+    }
+  };
+  
+  // Initialize cache first, then start polling
+  initializeCache().then(() => {
+    pollForChanges();
+  });
 }
 
 // Get all computers from TBL_IT_MachinesCurrent
