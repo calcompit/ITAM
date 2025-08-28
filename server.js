@@ -974,33 +974,21 @@ function startPollingMonitoring() {
               console.log(`[Real-time] No change for ${row.MachineID}: HUD_Version="${normalizedRow.HUD_Version}", CPU_Model="${normalizedRow.CPU_Model}"`);
             }
           }
+          
+          // Update cache with the same normalized values
+          global.computerCache.set(cacheKey, normalizedRow);
         }
         
-                 // Update cache with size limit
-         if (!global.computerCache) {
-           global.computerCache = new Map();
-         }
-         
-         // Limit cache size to prevent memory leaks (max 1000 records)
-         if (global.computerCache.size >= 1000) {
-           const firstKey = global.computerCache.keys().next().value;
-           global.computerCache.delete(firstKey);
-         }
-         
-         // Helper function to normalize strings for storage
-         const normalizeString = (str) => {
-           if (!str) return '';
-           return String(str).trim().replace(/\s+/g, ' ');
-         };
-         
-         // Helper function to normalize numbers for storage
-         const normalizeNumber = (num) => {
-           if (num === null || num === undefined) return 0;
-           return Number(num) || 0;
-         };
-         
-         // Use the same normalized values for cache storage
-         global.computerCache.set(cacheKey, normalizedRow);
+        // Update cache with size limit
+        if (!global.computerCache) {
+          global.computerCache = new Map();
+        }
+        
+        // Limit cache size to prevent memory leaks (max 1000 records)
+        if (global.computerCache.size >= 1000) {
+          const firstKey = global.computerCache.keys().next().value;
+          global.computerCache.delete(firstKey);
+        }
       }
       
       if (changedRecords.length > 0) {
@@ -1047,7 +1035,7 @@ function startPollingMonitoring() {
           gpu: [],
           nics: [],
           lastBoot: row.LastBoot,
-          updatedAt: row.UpdatedAt,
+          updatedAt: row.UpdatedAt, // Add UpdatedAt to real-time updates
           winActivated: row.Win_Activated === 1,
           isPinned: false // Will be preserved by frontend
         }));
