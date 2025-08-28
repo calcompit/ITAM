@@ -21,19 +21,30 @@ interface ComputerCardProps {
 }
 
 export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updateType, changedFields }: ComputerCardProps) {
+  // Animation lock to prevent interruption
+  const [animationLock, setAnimationLock] = React.useState(false);
+  
+  React.useEffect(() => {
+    if (isUpdated && changedFields && changedFields.length > 0) {
+      setAnimationLock(true);
+      const timer = setTimeout(() => setAnimationLock(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isUpdated, changedFields]);
+  
   return (
     <Card 
       className={cn(
         "relative overflow-hidden cursor-pointer computer-card card-fast-hover fast-animation",
         "bg-gradient-card border-border hover:border-primary/50 min-h-[280px]",
-        // Only show border pulse animation if there are changed fields (not just status)
-        isUpdated && changedFields && changedFields.length > 0 && "data-update ring-2 ring-primary ring-opacity-50",
+        // Only show border pulse animation if there are changed fields and not locked
+        isUpdated && changedFields && changedFields.length > 0 && !animationLock && "data-update ring-2 ring-primary ring-opacity-50",
         isUpdated && updateType === 'status' && "status-online-update",
         isUpdated && updateType === 'hud' && "hud-version-update",
         isUpdated && updateType === 'general' && "real-time-update",
         isUpdated && updateType === 'new' && "real-time-update-slide",
-        // Only apply updating class if there are changed fields
-        isUpdated && changedFields && changedFields.length > 0 && "updating"
+        // Only apply updating class if there are changed fields and not locked
+        isUpdated && changedFields && changedFields.length > 0 && !animationLock && "updating"
       )}
       onClick={() => onClick(computer)}
     >

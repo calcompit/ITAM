@@ -930,6 +930,15 @@ function startPollingMonitoring() {
       if (changedRecords.length > 0) {
         console.log(`[Real-time] Found ${changedRecords.length} changes, broadcasting to ${clients.size} clients`);
         
+        // Debounce: Only broadcast if enough time has passed since last broadcast
+        const now = Date.now();
+        if (global.lastBroadcastTime && (now - global.lastBroadcastTime) < 3000) {
+          console.log(`[Real-time] Debouncing broadcast (${now - global.lastBroadcastTime}ms since last)`);
+          setTimeout(pollForChanges, 2000);
+          return;
+        }
+        global.lastBroadcastTime = now;
+        
         // Process the changed records directly
         const updatedComputers = changedRecords.map(row => ({
           machineID: row.MachineID,

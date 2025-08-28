@@ -247,13 +247,20 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
               return;
             }
             
-            // Handle other changes (show change indicator)
-            if (changedFields.length > 0) {
-              newUpdatedIDs.add(computer.machineID);
-              newUpdateTypes.set(computer.machineID, updateType);
-              newChangedFields.set(computer.machineID, changedFields);
-              lastUpdateTime.set(computer.machineID, now);
-            }
+                    // Handle other changes (show change indicator)
+        if (changedFields.length > 0) {
+          // Check if animation is already running for this computer
+          const lastUpdate = lastUpdateTime.get(computer.machineID);
+          if (lastUpdate && (now - lastUpdate) < 3000) {
+            console.log(`[Animation Debug] Skipping animation for ${computer.machineID} - too soon`);
+            return;
+          }
+          
+          newUpdatedIDs.add(computer.machineID);
+          newUpdateTypes.set(computer.machineID, updateType);
+          newChangedFields.set(computer.machineID, changedFields);
+          lastUpdateTime.set(computer.machineID, now);
+        }
           });
           
           console.log('[Animation Debug] Updated computers:', Array.from(newUpdatedIDs));
