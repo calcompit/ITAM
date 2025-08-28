@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animation Test</title>
+    <style>
+        /* Test animations */
+        @keyframes smooth-border-pulse {
+            0%, 100% {
+                border-color: #3b82f6;
+                box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+                transform: scale(1.02);
+            }
+            50% {
+                border-color: #1d4ed8;
+                box-shadow: 0 0 25px rgba(59, 130, 246, 0.8);
+                transform: scale(1.03);
+            }
+        }
+
+        .test-card {
+            width: 300px;
+            height: 200px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            margin: 20px;
+            padding: 20px;
+            background: white;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .test-card.animate {
+            animation: smooth-border-pulse 2s ease-in-out infinite !important;
+            border: 3px solid #3b82f6 !important;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.6) !important;
+            transform: scale(1.02) !important;
+        }
+
+        .test-button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        .test-button:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <h1>Animation Test</h1>
+    
+    <div class="test-card" id="testCard">
+        <h3>Test Card</h3>
+        <p>This card will animate when you click the button below.</p>
+    </div>
+
+    <button class="test-button" onclick="toggleAnimation()">Toggle Animation</button>
+    <button class="test-button" onclick="testAnimation()">Test Animation (3s)</button>
+
+    <script>
+        function toggleAnimation() {
+            const card = document.getElementById('testCard');
+            card.classList.toggle('animate');
+        }
+
+        function testAnimation() {
+            const card = document.getElementById('testCard');
+            card.classList.add('animate');
+            setTimeout(() => {
+                card.classList.remove('animate');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

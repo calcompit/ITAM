@@ -41,8 +41,12 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
           e.stopPropagation();
           const card = e.currentTarget.closest('.computer-card');
           if (card) {
-            card.classList.add('test-animation');
-            setTimeout(() => card.classList.remove('test-animation'), 3000);
+            card.classList.add('test-animation', 'debug-animation');
+            console.log('Animation started on card:', card);
+            setTimeout(() => {
+              card.classList.remove('test-animation', 'debug-animation');
+              console.log('Animation ended on card:', card);
+            }, 3000);
           }
         }}
         className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs rounded z-50"

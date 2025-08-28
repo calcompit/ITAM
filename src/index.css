@@ -1,9 +1,9 @@
+/* Import fast animations for realtime websocket updates */
+@import './components/fast-animations.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import fast animations for realtime websocket updates */
-@import './components/fast-animations.css';
 
 /* Prevent animation during page load to avoid FOUC */
 * {
