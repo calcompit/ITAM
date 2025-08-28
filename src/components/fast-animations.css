@@ -99,6 +99,22 @@
   transition: all 0.1s ease-out;
 }
 
+/* Animation reset utilities */
+.animation-reset {
+  animation: none !important;
+  transition: none !important;
+}
+
+.animation-clear {
+  animation-play-state: paused !important;
+}
+
+/* Force stop all animations */
+.force-stop-animations * {
+  animation: none !important;
+  transition: none !important;
+}
+
 .fast-focus:focus {
   transform: scale(1.02);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
