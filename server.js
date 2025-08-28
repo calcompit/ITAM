@@ -934,24 +934,45 @@ function startPollingMonitoring() {
            };
            
            // Check for changes in important fields with proper normalization
+           const normalizedRow = {
+             HUD_Version: normalizeString(row.HUD_Version),
+             HUD_Mode: normalizeString(row.HUD_Mode),
+             HUD_ColorARGB: normalizeString(row.HUD_ColorARGB),
+             IPv4: normalizeString(row.IPv4),
+             Domain: normalizeString(row.Domain),
+             SUser: normalizeString(row.SUser),
+             Win_Activated: normalizeNumber(row.Win_Activated),
+             CPU_Model: normalizeString(row.CPU_Model),
+             CPU_PhysicalCores: normalizeNumber(row.CPU_PhysicalCores),
+             CPU_LogicalCores: normalizeNumber(row.CPU_LogicalCores),
+             RAM_TotalGB: normalizeNumber(row.RAM_TotalGB),
+             Storage_TotalGB: normalizeNumber(row.Storage_TotalGB),
+             LastBoot: normalizeString(row.LastBoot)
+           };
+           
            const hasChanged = 
-             normalizeString(row.HUD_Version) !== normalizeString(cachedData.HUD_Version) ||
-             normalizeString(row.HUD_Mode) !== normalizeString(cachedData.HUD_Mode) ||
-             normalizeString(row.HUD_ColorARGB) !== normalizeString(cachedData.HUD_ColorARGB) ||
-             normalizeString(row.IPv4) !== normalizeString(cachedData.IPv4) ||
-             normalizeString(row.Domain) !== normalizeString(cachedData.Domain) ||
-             normalizeString(row.SUser) !== normalizeString(cachedData.SUser) ||
-             normalizeNumber(row.Win_Activated) !== normalizeNumber(cachedData.Win_Activated) ||
-             normalizeString(row.CPU_Model) !== normalizeString(cachedData.CPU_Model) ||
-             normalizeNumber(row.CPU_PhysicalCores) !== normalizeNumber(cachedData.CPU_PhysicalCores) ||
-             normalizeNumber(row.CPU_LogicalCores) !== normalizeNumber(cachedData.CPU_LogicalCores) ||
-             normalizeNumber(row.RAM_TotalGB) !== normalizeNumber(cachedData.RAM_TotalGB) ||
-             normalizeNumber(row.Storage_TotalGB) !== normalizeNumber(cachedData.Storage_TotalGB) ||
-             normalizeString(row.LastBoot) !== normalizeString(cachedData.LastBoot);
+             normalizedRow.HUD_Version !== cachedData.HUD_Version ||
+             normalizedRow.HUD_Mode !== cachedData.HUD_Mode ||
+             normalizedRow.HUD_ColorARGB !== cachedData.HUD_ColorARGB ||
+             normalizedRow.IPv4 !== cachedData.IPv4 ||
+             normalizedRow.Domain !== cachedData.Domain ||
+             normalizedRow.SUser !== cachedData.SUser ||
+             normalizedRow.Win_Activated !== cachedData.Win_Activated ||
+             normalizedRow.CPU_Model !== cachedData.CPU_Model ||
+             normalizedRow.CPU_PhysicalCores !== cachedData.CPU_PhysicalCores ||
+             normalizedRow.CPU_LogicalCores !== cachedData.CPU_LogicalCores ||
+             normalizedRow.RAM_TotalGB !== cachedData.RAM_TotalGB ||
+             normalizedRow.Storage_TotalGB !== cachedData.Storage_TotalGB ||
+             normalizedRow.LastBoot !== cachedData.LastBoot;
             
           if (hasChanged) {
-            console.log(`[Real-time] Change detected for ${row.MachineID}: HUD_Version="${normalizeString(row.HUD_Version)}" vs "${normalizeString(cachedData.HUD_Version)}", CPU_Model="${normalizeString(row.CPU_Model)}" vs "${normalizeString(cachedData.CPU_Model)}"`);
+            console.log(`[Real-time] Change detected for ${row.MachineID}: HUD_Version="${normalizedRow.HUD_Version}" vs "${cachedData.HUD_Version}", CPU_Model="${normalizedRow.CPU_Model}" vs "${cachedData.CPU_Model}"`);
             changedRecords.push(row);
+          } else {
+            // Debug: Log when no change is detected (for troubleshooting)
+            if (Math.random() < 0.1) { // Log 10% of the time to avoid spam
+              console.log(`[Real-time] No change for ${row.MachineID}: HUD_Version="${normalizedRow.HUD_Version}", CPU_Model="${normalizedRow.CPU_Model}"`);
+            }
           }
         }
         
@@ -978,21 +999,8 @@ function startPollingMonitoring() {
            return Number(num) || 0;
          };
          
-         global.computerCache.set(cacheKey, {
-           HUD_Version: normalizeString(row.HUD_Version),
-           HUD_Mode: normalizeString(row.HUD_Mode),
-           HUD_ColorARGB: normalizeString(row.HUD_ColorARGB),
-           IPv4: normalizeString(row.IPv4),
-           Domain: normalizeString(row.Domain),
-           SUser: normalizeString(row.SUser),
-           Win_Activated: normalizeNumber(row.Win_Activated),
-           CPU_Model: normalizeString(row.CPU_Model),
-           CPU_PhysicalCores: normalizeNumber(row.CPU_PhysicalCores),
-           CPU_LogicalCores: normalizeNumber(row.CPU_LogicalCores),
-           RAM_TotalGB: normalizeNumber(row.RAM_TotalGB),
-           Storage_TotalGB: normalizeNumber(row.Storage_TotalGB),
-           LastBoot: normalizeString(row.LastBoot)
-         });
+         // Use the same normalized values for cache storage
+         global.computerCache.set(cacheKey, normalizedRow);
       }
       
       if (changedRecords.length > 0) {
