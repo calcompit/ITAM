@@ -828,40 +828,110 @@ function startPollingMonitoring() {
   let lastCheck = new Date();
   
   const pollForChanges = async () => {
+    const startTime = Date.now();
     try {
       const pool = await getDbConnection();
       if (!pool || pool.closed) {
-        console.log('[Real-time] Database pool is closed, skipping polling...');
+        console.log('[Real-time] Database pool is closed, attempting to reconnect...');
+        try {
+          await createConnectionPool();
+          console.log('[Real-time] Database reconnected successfully');
+        } catch (reconnectError) {
+          console.log('[Real-time] Database reconnection failed, will retry...');
+        }
         // Continue polling even if database is down
         setTimeout(pollForChanges, 5000);
         return;
       }
       
-      const result = await pool.request()
-        .input('lastCheck', sql.DateTime, lastCheck)
-        .query(`
-          SELECT 
-            MachineID,
-            ComputerName,
-            UpdatedAt,
-            COUNT(*) as changeCount
-          FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
-          WHERE UpdatedAt > @lastCheck
-          GROUP BY MachineID, ComputerName, UpdatedAt
-        `);
+      // Get all current data to compare with cached data
+      const result = await pool.request().query(`
+        SELECT 
+          MachineID,
+          ComputerName,
+          UpdatedAt,
+          HUD_Version,
+          HUD_Mode,
+          HUD_ColorARGB,
+          IPv4,
+          Domain,
+          SUser,
+          Win_Activated,
+          CPU_Model,
+          CPU_PhysicalCores,
+          CPU_LogicalCores,
+          RAM_TotalGB,
+          Storage_TotalGB,
+          LastBoot
+        FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
+      `);
       
-      if (result.recordset.length > 0) {
-        console.log(`[Real-time] Found ${result.recordset.length} changes, broadcasting to ${clients.size} clients`);
+      // Compare with cached data to detect changes
+      const changedRecords = [];
+      const currentData = result.recordset;
+      
+      for (const row of currentData) {
+        const cacheKey = `computer_${row.MachineID}`;
+        const cachedData = global.computerCache ? global.computerCache.get(cacheKey) : null;
         
-        // Get full updated data for changed records
-        const machineIDs = result.recordset.map(r => `'${r.MachineID}'`).join(',');
-        const fullDataResult = await pool.request().query(`
-          SELECT * FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
-          WHERE MachineID IN (${machineIDs})
-        `);
+                 if (!cachedData) {
+           // New record
+           changedRecords.push(row);
+         } else {
+           // Check for changes in important fields
+           const hasChanged = 
+             row.HUD_Version !== cachedData.HUD_Version ||
+             row.HUD_Mode !== cachedData.HUD_Mode ||
+             row.HUD_ColorARGB !== cachedData.HUD_ColorARGB ||
+             row.IPv4 !== cachedData.IPv4 ||
+             row.Domain !== cachedData.Domain ||
+             row.SUser !== cachedData.SUser ||
+             row.Win_Activated !== cachedData.Win_Activated ||
+             row.CPU_Model !== cachedData.CPU_Model ||
+             row.CPU_PhysicalCores !== cachedData.CPU_PhysicalCores ||
+             row.CPU_LogicalCores !== cachedData.CPU_LogicalCores ||
+             row.RAM_TotalGB !== cachedData.RAM_TotalGB ||
+             row.Storage_TotalGB !== cachedData.Storage_TotalGB ||
+             row.LastBoot !== cachedData.LastBoot;
+            
+          if (hasChanged) {
+            changedRecords.push(row);
+          }
+        }
         
-        // Process the data similar to main API
-        const updatedComputers = fullDataResult.recordset.map(row => ({
+                 // Update cache with size limit
+         if (!global.computerCache) {
+           global.computerCache = new Map();
+         }
+         
+         // Limit cache size to prevent memory leaks (max 1000 records)
+         if (global.computerCache.size >= 1000) {
+           const firstKey = global.computerCache.keys().next().value;
+           global.computerCache.delete(firstKey);
+         }
+         
+         global.computerCache.set(cacheKey, {
+           HUD_Version: row.HUD_Version,
+           HUD_Mode: row.HUD_Mode,
+           HUD_ColorARGB: row.HUD_ColorARGB,
+           IPv4: row.IPv4,
+           Domain: row.Domain,
+           SUser: row.SUser,
+           Win_Activated: row.Win_Activated,
+           CPU_Model: row.CPU_Model,
+           CPU_PhysicalCores: row.CPU_PhysicalCores,
+           CPU_LogicalCores: row.CPU_LogicalCores,
+           RAM_TotalGB: row.RAM_TotalGB,
+           Storage_TotalGB: row.Storage_TotalGB,
+           LastBoot: row.LastBoot
+         });
+      }
+      
+      if (changedRecords.length > 0) {
+        console.log(`[Real-time] Found ${changedRecords.length} changes, broadcasting to ${clients.size} clients`);
+        
+        // Process the changed records directly
+        const updatedComputers = changedRecords.map(row => ({
           machineID: row.MachineID,
           hudMode: row.HUD_Mode,
           hudColorARGB: row.HUD_ColorARGB,
@@ -876,53 +946,84 @@ function startPollingMonitoring() {
             const diffInMinutes = (now - updatedAt) / (1000 * 60);
             return diffInMinutes <= 10 ? 'online' : 'offline';
           })(),
-          cpu: row.CPU_Json ? JSON.parse(row.CPU_Json) : { model: '', cores: 0, speed: 0 },
-          ram: row.RAM_ModulesJson ? JSON.parse(row.RAM_ModulesJson) : { totalGB: 0, modules: [] },
-          storage: row.Storage_Json ? JSON.parse(row.Storage_Json) : { totalGB: 0, drives: [] },
-          gpu: row.GPU_Json ? JSON.parse(row.GPU_Json) : { model: '', memory: 0 },
-          network: row.NIC_Json ? JSON.parse(row.NIC_Json) : { adapters: [] },
+          cpu: {
+            model: row.CPU_Model || '',
+            physicalCores: row.CPU_PhysicalCores || 0,
+            logicalCores: row.CPU_LogicalCores || 0
+          },
+          ram: {
+            totalGB: row.RAM_TotalGB || 0,
+            modules: []
+          },
+          storage: {
+            totalGB: row.Storage_TotalGB || 0,
+            devices: []
+          },
+          gpu: [],
+          nics: [],
           lastBoot: row.LastBoot,
           updatedAt: row.UpdatedAt,
           winActivated: row.Win_Activated === 1,
           isPinned: false // Will be preserved by frontend
         }));
         
-        broadcast({
-          type: 'data_update',
-          data: {
-            changeType: 'UPDATE',
-            updatedComputers: updatedComputers,
-            timestamp: new Date().toISOString()
-          }
-        });
+        // Only broadcast if there are actual changes
+        if (updatedComputers.length > 0) {
+          console.log(`[Real-time] Broadcasting ${updatedComputers.length} changes to ${clients.size} clients`);
+          broadcast({
+            type: 'data_update',
+            data: {
+              changeType: 'UPDATE',
+              updatedComputers: updatedComputers,
+              timestamp: new Date().toISOString()
+            }
+          });
+        }
       }
       
-      // Update lastCheck only if no changes detected, or use the latest UpdatedAt
-      if (result.recordset.length === 0) {
+      // Update lastCheck based on changes detected
+      if (changedRecords.length === 0) {
         lastCheck = new Date();
       } else {
         // Use the latest UpdatedAt from the changes
-        const latestUpdate = Math.max(...result.recordset.map(r => new Date(r.UpdatedAt).getTime()));
+        const latestUpdate = Math.max(...changedRecords.map(r => new Date(r.UpdatedAt).getTime()));
         lastCheck = new Date(latestUpdate);
       }
       // Don't close the pool, keep it for reuse
       
     } catch (err) {
       console.error('[Real-time] Database polling error:', err.message);
+      
       // If connection is closed, try to reconnect
       if (err.message.includes('Connection is closed') || err.message.includes('Connection lost')) {
         console.log('[Real-time] Connection lost, attempting to reconnect...');
         try {
           await createConnectionPool();
+          console.log('[Real-time] Reconnection successful');
         } catch (reconnectError) {
           console.log('[Real-time] Reconnection failed, will continue polling');
         }
       }
+      
+      // Clear cache on critical errors to prevent stale data
+      if (err.message.includes('Invalid column name') || err.message.includes('Table not found')) {
+        console.log('[Real-time] Clearing cache due to schema error');
+        global.computerCache = new Map();
+      }
+      
       // Continue polling even if there's an error
     }
     
-    // Poll every 2 seconds for faster updates
-    setTimeout(pollForChanges, 2000);
+          const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      // Log performance metrics if polling takes too long
+      if (duration > 5000) {
+        console.log(`[Real-time] Slow polling detected: ${duration}ms`);
+      }
+      
+      // Poll every 10 seconds for better performance
+      setTimeout(pollForChanges, 10000);
   };
   
   console.log('[Real-time] Starting polling monitoring...');
