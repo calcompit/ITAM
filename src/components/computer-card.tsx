@@ -21,16 +21,6 @@ interface ComputerCardProps {
 }
 
 export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updateType, changedFields }: ComputerCardProps) {
-  // Debug log
-  if (isUpdated) {
-    console.log(`[Card Debug] ${computer.computerName}:`, {
-      isUpdated,
-      updateType,
-      changedFields,
-      machineID: computer.machineID
-    });
-  }
-  
   return (
     <Card 
       className={cn(
@@ -45,24 +35,7 @@ export function ComputerCard({ computer, onPin, onClick, onVNC, isUpdated, updat
       )}
       onClick={() => onClick(computer)}
     >
-      {/* Change indicator */}
-      {isUpdated && changedFields && changedFields.length > 0 && (
-        <div className="change-indicator">
-          {changedFields.length === 1 ? changedFields[0] : `${changedFields.length} changes`}
-        </div>
-      )}
-      
-      {/* Test animation button */}
-      <button 
-        onClick={(e) => {
-          e.stopPropagation();
-          console.log('Test animation clicked');
-        }}
-        className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs rounded"
-        style={{ zIndex: 1000 }}
-      >
-        Test
-      </button>
+
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
                       <Monitor className="h-5 w-5 text-primary" />

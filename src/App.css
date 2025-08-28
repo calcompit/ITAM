@@ -72,17 +72,15 @@
 }
 
 @keyframes smooth-border-pulse {
-  0% {
-    border-color: rgba(59, 130, 246, 0.2);
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+  0%, 100% {
+    border-color: #3b82f6;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+    transform: scale(1.02);
   }
   50% {
-    border-color: rgba(59, 130, 246, 0.8);
-    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
-  }
-  100% {
-    border-color: rgba(59, 130, 246, 0.2);
-    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+    border-color: #1d4ed8;
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.8);
+    transform: scale(1.03);
   }
 }
 
@@ -146,9 +144,10 @@
 }
 
 .real-time-update {
-  animation: smooth-border-pulse 3s ease-in-out infinite;
-  border: 2px solid rgba(59, 130, 246, 0.8) !important;
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4) !important;
+  animation: smooth-border-pulse 2s ease-in-out infinite !important;
+  border: 3px solid #3b82f6 !important;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.6) !important;
+  transform: scale(1.02) !important;
 }
 
 .real-time-update-pulse {
@@ -191,9 +190,10 @@
 }
 
 .computer-card.updating {
-  animation: smooth-border-pulse 3s ease-in-out infinite;
-  border: 2px solid rgba(59, 130, 246, 0.8) !important;
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4) !important;
+  animation: smooth-border-pulse 2s ease-in-out infinite !important;
+  border: 3px solid #3b82f6 !important;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.6) !important;
+  transform: scale(1.02) !important;
 }
 
 .computer-card.updating .updating-field {

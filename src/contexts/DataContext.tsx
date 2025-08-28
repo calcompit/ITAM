@@ -234,10 +234,6 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             lastUpdateTime.set(computer.machineID, now);
           });
           
-          console.log('[Animation Debug] Updated IDs:', Array.from(newUpdatedIDs));
-          console.log('[Animation Debug] Update Types:', Object.fromEntries(newUpdateTypes));
-          console.log('[Animation Debug] Changed Fields:', Object.fromEntries(changedFields));
-          
           setUpdatedMachineIDs(newUpdatedIDs);
           setUpdateTypes(newUpdateTypes);
           
