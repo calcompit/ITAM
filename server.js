@@ -401,17 +401,35 @@ async function validateVNCPrerequisites(host, port) {
     const util = await import('util');
     const execPromise = util.promisify(exec);
     
-    // 1. Check Python
-    try {
-      const pythonCheck = await execPromise('python --version');
-      console.log(`✅ [VNC VALIDATE] Python: ${pythonCheck.stdout.trim()}`);
-    } catch (error) {
-      throw new Error(`Python not found: ${error.message}`);
+    // 1. Check Python (platform-specific)
+    let pythonCommand;
+    let pythonVersion = '';
+    
+    if (process.platform === 'win32') {
+      // Windows: Use python command
+      try {
+        const pythonCheck = await execPromise('python --version');
+        pythonCommand = 'python';
+        pythonVersion = pythonCheck.stdout.trim();
+        console.log(`✅ [VNC VALIDATE] Windows Python: ${pythonVersion}`);
+      } catch (error) {
+        throw new Error(`Python not found on Windows: ${error.message}`);
+      }
+    } else {
+      // Mac/Linux: Use python3 command
+      try {
+        const python3Check = await execPromise('python3 --version');
+        pythonCommand = 'python3';
+        pythonVersion = python3Check.stdout.trim();
+        console.log(`✅ [VNC VALIDATE] Mac/Linux Python3: ${pythonVersion}`);
+      } catch (error) {
+        throw new Error(`Python3 not found on Mac/Linux: ${error.message}`);
+      }
     }
     
     // 2. Check websockify module
     try {
-      await execPromise('python -c "import websockify; print(\'websockify available\')"');
+      await execPromise(`${pythonCommand} -c "import websockify; print('websockify available')"`);
       console.log(`✅ [VNC VALIDATE] Websockify module available`);
     } catch (error) {
       throw new Error(`Websockify module not found: ${error.message}`);
@@ -444,7 +462,7 @@ async function validateVNCPrerequisites(host, port) {
     
     await connectTest;
     console.log(`🎉 [VNC VALIDATE] All prerequisites passed for ${host}:${port}`);
-    return true;
+    return pythonCommand;
     
   } catch (error) {
     console.error(`❌ [VNC VALIDATE] Failed for ${host}:${port}:`, error.message);
@@ -699,6 +717,9 @@ async function startMessageListener(pool) {
               const row = fullDataResult.recordset[0];
               const updatedComputer = {
                 machineID: row.MachineID,
+                hudMode: row.HUD_Mode,
+                hudColorARGB: row.HUD_ColorARGB,
+                hudVersion: row.HUD_Version,
                 computerName: row.ComputerName,
                 ipAddresses: row.IPv4 ? row.IPv4.split(',').map(ip => ip.trim()) : [],
                 domain: row.Domain || '',
@@ -842,6 +863,9 @@ function startPollingMonitoring() {
         // Process the data similar to main API
         const updatedComputers = fullDataResult.recordset.map(row => ({
           machineID: row.MachineID,
+          hudMode: row.HUD_Mode,
+          hudColorARGB: row.HUD_ColorARGB,
+          hudVersion: row.HUD_Version,
           computerName: row.ComputerName,
           ipAddresses: row.IPv4 ? row.IPv4.split(',').map(ip => ip.trim()) : [],
           domain: row.Domain || '',
@@ -941,11 +965,12 @@ app.get('/api/computers', async (req, res) => {
           OS_Caption,
           OS_Version,
           OS_InstallDate,
-                  LastBoot,
-        IPv4,
-        UpdatedAt,
+          LastBoot,
+          IPv4,
+          UpdatedAt,
           HUD_Mode,
           HUD_ColorARGB,
+          HUD_Version,
           Win_Activated
         FROM [mes].[dbo].[TBL_IT_MachinesCurrent]
         ORDER BY ComputerName
@@ -996,7 +1021,8 @@ app.get('/api/computers', async (req, res) => {
         })(),
         hudMode: row.HUD_Mode,
         hudColorARGB: row.HUD_ColorARGB,
-                     winActivated: row.Win_Activated === 1 || row.Win_Activated === true,
+        hudVersion: row.HUD_Version,
+        winActivated: row.Win_Activated === 1 || row.Win_Activated === true,
         status: (() => {
           // Check if the computer is online based on UpdatedAt (10 minutes threshold)
           // Convert to Thai time for comparison
@@ -2087,8 +2113,9 @@ app.post('/api/vnc/start-session', async (req, res) => {
     console.log('[VNC Start Session] User ready:', username);
 
     // 🎯 STEP 1: Validate prerequisites for 100% accuracy
+    let pythonCommand;
     try {
-      await validateVNCPrerequisites(host, port);
+      pythonCommand = await validateVNCPrerequisites(host, port);
     } catch (error) {
       console.error(`❌ [VNC VALIDATE] Prerequisites failed for ${host}:${port}:`, error.message);
       return res.status(400).json({
@@ -2149,18 +2176,18 @@ app.post('/api/vnc/start-session', async (req, res) => {
     // Kill any existing websockify process on this port
     await killWebsockify(websockifyPort);
 
-    // Start websockify process (no password required) - Cross-platform
+    // Start websockify process (platform-specific)
     let websockifyProcess;
     
-        // Detect platform and use appropriate command to run in background
+    console.log(`[VNC] Platform: ${process.platform}, Using Python command: ${pythonCommand}`);
     
     if (process.platform === 'win32') {
       // Windows: Use pythonw.exe to prevent terminal window
-      const pythonCommand = 'pythonw';
-      console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
-      console.log(`[VNC] Command: ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
+      const windowsPythonCommand = 'pythonw';
+      console.log(`[VNC] Windows: Using ${windowsPythonCommand} for background execution`);
+      console.log(`[VNC] Command: ${windowsPythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
       
-      websockifyProcess = spawn(pythonCommand, [
+      websockifyProcess = spawn(windowsPythonCommand, [
         '-m', 'websockify', 
         websockifyPort.toString(), 
         `${host}:${port}`, 
@@ -2179,9 +2206,9 @@ app.post('/api/vnc/start-session', async (req, res) => {
         }
       });
     } else {
-      // Linux/Mac: Use nohup to run in background
-      const pythonCommand = 'python3';
-      console.log(`[VNC] Using Python command: ${pythonCommand} on ${process.platform}`);
+      // Mac/Linux: Use nohup with python3
+      console.log(`[VNC] Mac/Linux: Using nohup with ${pythonCommand}`);
+      console.log(`[VNC] Command: nohup ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
       
       websockifyProcess = spawn('nohup', [pythonCommand, '-W', 'ignore', '-m', 'websockify', websockifyPort.toString(), `${host}:${port}`, '--web', path.join(process.cwd(), 'noVNC'), '--verbose', '--log-file', `websockify-${host}-${port}.log`, '--idle-timeout', '300'], {
         cwd: path.join(process.cwd(), 'noVNC'),
@@ -2197,7 +2224,11 @@ app.post('/api/vnc/start-session', async (req, res) => {
     // Handle process events with detailed logging for 100% accuracy
     websockifyProcess.on('error', (error) => {
       console.error(`❌ [VNC ERROR] Websockify process error on port ${websockifyPort}:`, error.message);
-      console.error(`❌ [VNC ERROR] Command was: python -m websockify ${websockifyPort} ${host}:${port}`);
+      if (process.platform === 'win32') {
+        console.error(`❌ [VNC ERROR] Command was: pythonw -m websockify ${websockifyPort} ${host}:${port}`);
+      } else {
+        console.error(`❌ [VNC ERROR] Command was: nohup ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
+      }
       console.error(`❌ [VNC ERROR] Full error:`, error);
       cleanupSession(websockifyPort);
     });
