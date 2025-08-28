@@ -1777,7 +1777,8 @@ app.post('/api/vnc/start', async (req, res) => {
         target,
         '--web', '.',
         '--verbose',
-        '--log-file', `websockify-${host}-${port}.log`
+        '--log-file', `websockify-${host}-${port}.log`,
+        '--daemon=no'
       ], {
         cwd: novncDir,
         detached: true,
@@ -2118,7 +2119,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         '--web', path.join(process.cwd(), 'noVNC'), 
         '--verbose', 
         '--log-file', `websockify-${host}-${port}.log`,
-        '--idle-timeout', '300'
+        '--idle-timeout', '300',
+        '--daemon=no'
       ], {
         cwd: path.join(process.cwd(), 'noVNC'),
         stdio: 'ignore', // Ignore all stdio to prevent terminal window
@@ -2126,7 +2128,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         env: {
           ...process.env,
           PYTHONWARNINGS: 'ignore',
-          PYTHONPATH: path.join(process.cwd(), 'noVNC')
+          PYTHONPATH: path.join(process.cwd(), 'noVNC'),
+          PYTHONUNBUFFERED: '1'
         }
       });
     } else {
@@ -2187,14 +2190,15 @@ app.post('/api/vnc/start-session', async (req, res) => {
         }
       }
       
-      websockifyProcess = spawn('nohup', [pythonCommand, '-W', 'ignore', '-m', 'websockify', websockifyPort.toString(), `${host}:${port}`, '--web', path.join(process.cwd(), 'noVNC'), '--verbose', '--log-file', `websockify-${host}-${port}.log`, '--idle-timeout', '300'], {
+      websockifyProcess = spawn('nohup', [pythonCommand, '-W', 'ignore', '-m', 'websockify', websockifyPort.toString(), `${host}:${port}`, '--web', path.join(process.cwd(), 'noVNC'), '--verbose', '--log-file', `websockify-${host}-${port}.log`, '--idle-timeout', '300', '--daemon=no'], {
         cwd: path.join(process.cwd(), 'noVNC'),
         stdio: 'ignore', // Changed to ignore all stdio to prevent terminal window
         detached: true,
         env: {
           ...process.env,
           PYTHONWARNINGS: 'ignore',
-          PYTHONPATH: path.join(process.cwd(), 'noVNC')
+          PYTHONPATH: path.join(process.cwd(), 'noVNC'),
+          PYTHONUNBUFFERED: '1'
         }
       });
     }
