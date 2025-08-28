@@ -180,13 +180,38 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
               return;
             }
             
+            // Check if it's a new computer
+            const existingComputer = computers.find(c => c.machineID === computer.machineID);
+            if (!existingComputer) {
+              // New computer - show animation
+              newUpdatedIDs.add(computer.machineID);
+              newUpdateTypes.set(computer.machineID, 'new');
+              return;
+            }
+            
+            // Check if any data actually changed
+            const hasChanges = 
+              existingComputer.status !== computer.status ||
+              existingComputer.hudVersion !== computer.hudVersion ||
+              existingComputer.ipAddresses[0] !== computer.ipAddresses[0] ||
+              existingComputer.domain !== computer.domain ||
+              existingComputer.sUser !== computer.sUser ||
+              existingComputer.winActivated !== computer.winActivated ||
+              existingComputer.cpu?.model !== computer.cpu?.model ||
+              existingComputer.ram?.totalGB !== computer.ram?.totalGB ||
+              existingComputer.storage?.totalGB !== computer.storage?.totalGB;
+            
+            // Only show animation if there are actual changes
+            if (!hasChanges) {
+              return;
+            }
+            
             newUpdatedIDs.add(computer.machineID);
             
             // Determine update type based on what changed
             let updateType: 'status' | 'hud' | 'general' | 'new' = 'general';
             
-            // Check if it's a new computer
-            const existingComputer = computers.find(c => c.machineID === computer.machineID);
+            // existingComputer is already declared above
             if (!existingComputer) {
               updateType = 'new';
             } else {
@@ -233,6 +258,9 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
             
             lastUpdateTime.set(computer.machineID, now);
           });
+          
+          console.log('[Animation Debug] Updated computers:', Array.from(newUpdatedIDs));
+          console.log('[Animation Debug] Update types:', Object.fromEntries(newUpdateTypes));
           
           setUpdatedMachineIDs(newUpdatedIDs);
           setUpdateTypes(newUpdateTypes);
