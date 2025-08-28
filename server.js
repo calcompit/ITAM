@@ -1771,14 +1771,13 @@ app.post('/api/vnc/start', async (req, res) => {
     // Use platform-specific command to prevent terminal window
     let websockifyProcess;
     if (process.platform === 'win32') {
-      websockifyProcess = spawn('pythonw', [
+      websockifyProcess = spawn('python', [
         '-m', 'websockify',
         webPort.toString(),
         target,
         '--web', '.',
         '--verbose',
-        '--log-file', `websockify-${host}-${port}.log`,
-        '--run-once' // Run once and exit to prevent terminal window
+        '--log-file', `websockify-${host}-${port}.log`
       ], {
         cwd: novncDir,
         detached: true,
@@ -2107,8 +2106,8 @@ app.post('/api/vnc/start-session', async (req, res) => {
         // Detect platform and use appropriate command to run in background
     
     if (process.platform === 'win32') {
-      // Windows: Use pythonw.exe with --daemon=no to prevent daemonizing
-      const pythonCommand = 'pythonw';
+      // Windows: Use python.exe (not pythonw) for better compatibility
+      const pythonCommand = 'python';
       console.log(`[VNC] Using Python command: ${pythonCommand} on Windows`);
       console.log(`[VNC] Command: ${pythonCommand} -m websockify ${websockifyPort} ${host}:${port}`);
       
@@ -2119,8 +2118,7 @@ app.post('/api/vnc/start-session', async (req, res) => {
         '--web', path.join(process.cwd(), 'noVNC'), 
         '--verbose', 
         '--log-file', `websockify-${host}-${port}.log`,
-        '--idle-timeout', '300',
-        '--run-once' // Run once and exit to prevent terminal window
+        '--idle-timeout', '300'
       ], {
         cwd: path.join(process.cwd(), 'noVNC'),
         stdio: 'ignore', // Ignore all stdio to prevent terminal window
