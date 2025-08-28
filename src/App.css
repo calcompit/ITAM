@@ -147,6 +147,8 @@
 
 .real-time-update {
   animation: smooth-border-pulse 3s ease-in-out infinite;
+  border: 2px solid rgba(59, 130, 246, 0.8) !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4) !important;
 }
 
 .real-time-update-pulse {
@@ -190,6 +192,8 @@
 
 .computer-card.updating {
   animation: smooth-border-pulse 3s ease-in-out infinite;
+  border: 2px solid rgba(59, 130, 246, 0.8) !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4) !important;
 }
 
 .computer-card.updating .updating-field {
