@@ -6,3 +6,5 @@ rules:
       - ต้อง pull ลงเครื่อง Windows `dell-pc@100.117.205.41`
       - ใช้ `sshpass` รหัส `010138259`
       - path ปลายทางคือ `OneDrive/Documents/itam`
+  - sql server รันอยู่ที่ 10.53.64.205
+  

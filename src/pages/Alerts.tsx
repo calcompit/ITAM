@@ -197,9 +197,8 @@ export function Alerts() {
 
   const handleViewComputerDetails = async (machineID: string) => {
     try {
-      // Fetch computer details from API
-      const computers = await apiService.getComputers();
-      const computer = computers.find(c => c.machineID === machineID);
+      // Fetch computer details from API using the new method
+      const computer = await apiService.getComputerByMachineID(machineID);
       
       if (computer) {
         setSelectedComputer(computer);
@@ -207,9 +206,12 @@ export function Alerts() {
         setShowDetails(false); // Close alert details modal
       } else {
         console.error('Computer not found:', machineID);
+        // Show error message to user
+        alert(`Computer with Machine ID ${machineID} not found in the system.`);
       }
     } catch (error) {
       console.error('Error fetching computer details:', error);
+      alert('Error loading computer details. Please try again.');
     }
   };
 

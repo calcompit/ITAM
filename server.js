@@ -694,7 +694,6 @@ async function startChangeMonitoring(pool) {
                     @oldPrimaryIP as oldPrimaryIP,
                     @newPrimaryIP as newPrimaryIP,
                     IPv4 as oldIPv4,
-                    HUD_Version,
                     ComputerName,
                     Domain,
                     SUser
@@ -706,7 +705,6 @@ async function startChangeMonitoring(pool) {
                     @oldPrimaryIP as oldPrimaryIP,
                     @newPrimaryIP as newPrimaryIP,
                     IPv4 as newIPv4,
-                    HUD_Version,
                     ComputerName,
                     Domain,
                     SUser
@@ -721,38 +719,12 @@ async function startChangeMonitoring(pool) {
         ELSE
           SET @changeType = 'DELETE';
         
-        -- Log ALL changes to TBL_IT_MachineChangeLog (except excluded fields)
+        -- Log ONLY significant changes to TBL_IT_MachineChangeLog
         -- Excluded fields: UpdatedAt, HUD_Mode, HUD_ColorARGB, LastBoot, HUD_Version, Temporary IPs (10.0.x.x)
         IF @changeType = 'INSERT' OR @changeType = 'DELETE' OR 
-           (@changeType = 'UPDATE' AND (
-             @significantChange = 1 OR 
-             -- Check if any non-excluded field changed (except temporary IPs)
-             EXISTS (
-               SELECT 1 FROM inserted i, deleted d 
-               WHERE i.MachineID = d.MachineID AND (
-                 ISNULL(i.ComputerName, '') != ISNULL(d.ComputerName, '') OR
-                 ISNULL(i.Domain, '') != ISNULL(d.Domain, '') OR
-                 ISNULL(i.SUser, '') != ISNULL(d.SUser, '') OR
-                 ISNULL(i.CPU_Model, '') != ISNULL(d.CPU_Model, '') OR
-                 ISNULL(i.CPU_Cores, 0) != ISNULL(d.CPU_Cores, 0) OR
-                 ISNULL(i.CPU_Threads, 0) != ISNULL(d.CPU_Threads, 0) OR
-                 ISNULL(i.RAM_Total, 0) != ISNULL(d.RAM_Total, 0) OR
-                 ISNULL(i.RAM_Available, 0) != ISNULL(d.RAM_Available, 0) OR
-                 ISNULL(i.Disk_Total, 0) != ISNULL(d.Disk_Total, 0) OR
-                 ISNULL(i.Disk_Available, 0) != ISNULL(d.Disk_Available, 0) OR
-                 ISNULL(i.OS_Name, '') != ISNULL(d.OS_Name, '') OR
-                 ISNULL(i.OS_Version, '') != ISNULL(d.OS_Version, '') OR
-                 ISNULL(i.OS_Build, '') != ISNULL(d.OS_Build, '') OR
-                 ISNULL(i.OS_Architecture, '') != ISNULL(d.OS_Architecture, '') OR
-                 ISNULL(i.Network_Adapter, '') != ISNULL(d.Network_Adapter, '') OR
-                 ISNULL(i.Network_Speed, '') != ISNULL(d.Network_Speed, '') OR
-                 ISNULL(i.Network_Status, '') != ISNULL(d.Network_Status, '') OR
-                 ISNULL(i.LastSeen, '') != ISNULL(d.LastSeen, '') OR
-                 ISNULL(i.Status, '') != ISNULL(d.Status, '')
-               )
-             )
-           ))
+           (@changeType = 'UPDATE' AND @significantChange = 1)
         BEGIN
+          -- Only log if it's INSERT, DELETE, or UPDATE with significant Primary IP change
           INSERT INTO [mes].[dbo].[TBL_IT_MachineChangeLog] 
           (MachineID, ChangeDate, ChangedSUser, SnapshotJson_Old, SnapshotJson_New)
           SELECT 
@@ -1139,7 +1111,7 @@ function startPollingMonitoring() {
            const hasSignificantIPChange = isSignificantIPChange(cachedData.IPv4, normalizedRow.IPv4);
            
            const hasChanged = 
-             normalizedRow.HUD_Version !== cachedData.HUD_Version ||
+             // HUD_Version excluded from change detection ||
              normalizedRow.HUD_Mode !== cachedData.HUD_Mode ||
              normalizedRow.HUD_ColorARGB !== cachedData.HUD_ColorARGB ||
              hasSignificantIPChange || // Only count significant IP changes
@@ -2023,6 +1995,9 @@ app.get('/api/alerts/:username', async (req, res) => {
         isRead: readAlertIds.has(row.id.toString()), // Check if user has read this alert
         isOldAlert, // Flag to indicate this is an old alert
         changeDetails: allChanges.length > 0 ? {
+          field: firstChange.field, // For backward compatibility
+          oldValue: firstChange.old,
+          newValue: firstChange.new,
           fields: allChanges.map(change => change.field),
           changes: allChanges.map(change => ({
             field: change.field,

@@ -277,6 +277,17 @@ class ApiService {
     }>(`/computers/${machineID}/status`);
   }
 
+  async getComputerByMachineID(machineID: string): Promise<APIComputer | null> {
+    try {
+      const computers = await this.getComputers();
+      const computer = computers.find(c => c.machineID === machineID);
+      return computer || null;
+    } catch (error) {
+      console.error('Error getting computer by machineID:', error);
+      return null;
+    }
+  }
+
   async getAnalytics(): Promise<{
     totalComputers: number;
     cpuTypes: Record<string, number>;
